@@ -1,10 +1,10 @@
-(defproject buddy/buddy-sign "0.3.0-SNAPSHOT"
+(defproject buddy/buddy-sign "0.3.0"
   :description "Security library for Clojure"
   :url "https://github.com/niwibe/buddy"
   :license {:name "BSD (2-Clause)"
             :url "http://opensource.org/licenses/BSD-2-Clause"}
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [buddy/buddy-core "0.3.0-SNAPSHOT"]
+                 [buddy/buddy-core "0.3.0"]
                  [org.clojure/algo.monads "0.1.5"]
                  [com.taoensso/nippy "2.7.1"]
                  [clj-time "0.9.0"]

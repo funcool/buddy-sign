@@ -1,6 +1,6 @@
-= buddy-sign - Message Signature (high level)
+= buddy-sign - High level message signing.
 Andrey Antukh, <niwi@niwi.be>
-0.3.0-SNAPSHOT
+0.3.0
 :toc: left
 :numbered:
 :source-highlighter: pygments
@@ -31,7 +31,7 @@ This section covers the _buddy-sign_ library installing process and its requirem
 
 === Requirements
 
-_suricatta_ is tested with these platforms:
+_buddy-sign_ is tested with these platforms:
 
 - JDK7
 - JDK8
@@ -45,7 +45,7 @@ vector on your *_project.clj_* file:
 ._on project.clj_
 [source,clojure]
 ----
-[buddy/buddy-sign "0.3.0-SNAPSHOT"]
+[buddy/buddy-sign "0.3.0"]
 ----
 
 === Gradle
@@ -54,7 +54,7 @@ If you are using gradle, this is a dependency line for gradle dsl:
 
 [source,groovy]
 ----
-compile "buddy:buddy-sign:0.3.0-SNAPSHOT"
+compile "buddy:buddy-sign:0.3.0"
 ----
 
 
