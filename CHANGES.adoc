@@ -2,6 +2,7 @@
 
 == Version 0.3.0
 
-Date: unreleased
+Date: 2014-01-18
 
 - First version splitted from monolitic buddy package.
+- No changes from original version.
