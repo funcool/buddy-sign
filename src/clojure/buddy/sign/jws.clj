@@ -70,6 +70,10 @@
   (to-timestamp [obj]
     (quot (jodac/to-long obj) 1000)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Implementation details
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn- normalize-date-claims
   "Normalize date related claims and return transformed object."
   [data]
@@ -84,16 +88,16 @@
   [data]
   (into {} (remove (comp nil? second) data)))
 
-(defn- make-headers
+(defn- encode-header
   "Encode jws header"
-  [alg extra-headers]
-  (-> (or extra-headers {})
-      (merge {:alg (.toUpperCase (name alg)) :typ "JWS"})
-      (json/generate-string)
-      (codecs/str->bytes)
-      (codecs/bytes->safebase64)))
+  [alg extra]
+  (let [algorithm (.toUpperCase (name alg))]
+    (-> (merge {:alg algorithm :typ "JWS"} extra)
+        (json/generate-string)
+        (codecs/str->bytes)
+        (codecs/bytes->safebase64))))
 
-(defn- make-claims
+(defn- encode-claims
   "Encode jws claims."
   [input exp nbf iat]
   (-> (normalize-nil-claims {:exp exp :nbf nbf :iat iat})
@@ -129,14 +133,14 @@
 (defn- get-verifier-for-algorithm
   "Get verifier function for algorithm name."
   [^Keyword alg]
-  (when (contains? gsign/*signers-map* alg)
-    (get-in gsign/*signers-map* [alg :verifier])))
+  (when (contains? *signers-map* alg)
+    (get-in *signers-map* [alg :verifier])))
 
 (defn- get-signer-for-algorithm
   "Get signer function for algorithm name."
   [^Keyword alg]
-  (when (contains? gsign/*signers-map* alg)
-    (get-in gsign/*signers-map* [alg :signer])))
+  (when (contains? *signers-map* alg)
+    (get-in *signers-map* [alg :signer])))
 
 (defn- safe-encode
   "Properly encode string into
@@ -146,7 +150,7 @@
       (codecs/str->bytes)
       (codecs/bytes->safebase64)))
 
-(defn- make-signature
+(defn- calculate-signature
   "Make a jws signature."
   [pkey alg header claims]
   (let [candidate (str/join "." [header claims])
@@ -154,35 +158,63 @@
     (-> (signer candidate pkey)
         (codecs/bytes->safebase64))))
 
-(defn sign
-  "Sign arbitrary length string/byte array using json web signature."
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Public Api
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn encode
+  "Sign arbitrary length string/byte array using
+  json web token/signature."
   [claims pkey & [{:keys [alg exp nbf iat headers] :or {alg :hs256 headers {}}}]]
   {:pre [(map? claims)]}
-  (let [headers-data (make-headers alg headers)
-        claims-data  (make-claims claims exp nbf iat)
-        signature    (make-signature pkey alg headers-data claims-data)]
-    (str/join "." [headers-data claims-data signature])))
+  (let [header (encode-header alg headers)
+        claims (encode-claims claims exp nbf iat)
+        signature (calculate-signature pkey alg header claims)]
+    (either/right (str/join "." [header claims signature]))))
 
-(defn unsign
-  "Unsings jws and return clear caims as clojure map."
+(defn decode
+  "Given a signed message, verify it and return
+  the decoded claims.
+
+  This function returns a monadic either instance,
+  and if some error is happens in process of decoding
+  and verification, it will be reported in an
+  either/left instance."
   [input pkey & [{:keys [maxage] :as opts}]]
   {:pre [(string? input)]}
-  (let [[header claims signature] (str/split input #"\." 3)]
-    (maybe-let [candidate (str/join "." [header claims])
-                header    (parse-header header)
-                claims    (parse-claims claims)
-                algorithm (parse-algorithm header)
-                signature (codecs/safebase64->bytes signature)
-                verifier  (get-verifier-for-algorithm algorithm)
-                now       (-> (jodat/now) (to-timestamp))]
-      (when-let [isok? (verifier candidate signature pkey)]
-        (maybe-let [_ (if (:exp claims)
-                        (or (< now (:exp claims)) nil)
-                        true)
-                    _ (if (:nbf claims)
-                        (or (< now (:nbf claims)) nil)
-                        true)
-                    _ (if (and (:iat claims) maxage)
-                        (or (< (- now (:iat claims)) maxage) nil)
-                        true)]
-          claims)))))
+  (let [[header claims signature] (str/split input #"\." 3)
+        candidate (str/join "." [header claims])
+        header (parse-header header)
+        claims (parse-claims claims)
+        algorithm (parse-algorithm header)
+        signature (codecs/safebase64->bytes signature)
+        verifier (get-verifier-for-algorithm algorithm)
+        result (verifier candidate signature pkey)]
+    (if (false? result)
+      (either/left "Invalid token.")
+      (let [now (to-timestamp (jodat/now))]
+        ;; (println 2222 (> now (:exp claims)))
+        (cond
+          (and (:exp claims) (> now (:exp claims)))
+          (either/left (format "Token is older than :exp (%s)" (:exp claims)))
+
+          (and (:nbf claims) (> now (:nbf claims)))
+          (either/left (format "Token is older than :nbf (%s)" (:nbf claims)))
+
+          (and (:iat claims) (number? maxage) (< (- now (:iat claims)) maxage))
+          (either/left (format "Token is older than :iat (%s)" (:iat claims)))
+
+          :else
+          (either/right claims))))))
+
+(defn sign
+  "Not monadic version of encode."
+  [& args]
+  (either/from-either (apply encode args)))
+
+(defn unsign
+  "Not monadic version of decode."
+  [& args]
+  (let [result (apply decode args)]
+    (when (either/right? result)
+      result)))
