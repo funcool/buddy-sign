@@ -10,6 +10,7 @@ Date: unreleased
   are conserved for backward compatibility but maybe in future will be removed.
 - Rename parameter `maxage` to `max-age` on jws implementation. This change
   introduces a little backward incompatibility.
+- Django based generic signing is deprecated.
 
 == Version 0.3.0
 
