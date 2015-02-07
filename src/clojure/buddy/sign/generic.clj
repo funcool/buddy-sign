@@ -13,6 +13,11 @@
 ;; limitations under the License.
 
 (ns buddy.sign.generic
+  "The generic singin is mainly based on django's Cryptographic signing
+  library but extended with various signing algorithms and cryptography
+  support.
+
+  NOTE: deprecated since 0.4.0."
   (:require [buddy.core.codecs :refer :all]
             [buddy.core.keys :refer :all]
             [buddy.core.mac.hmac :as hmac]
