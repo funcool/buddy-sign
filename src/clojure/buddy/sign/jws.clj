@@ -21,13 +21,38 @@
   "Json Web Signature implementation."
   (:require [buddy.core.codecs :as codecs]
             [buddy.core.mac.hmac :as hmac]
+            [buddy.core.sign.rsapss :as rsapss]
+            [buddy.core.sign.rsapkcs15 :as rsapkcs]
+            [buddy.core.sign.ecdsa :as ecdsa]
             [buddy.core.util :refer [maybe-let]]
-            [buddy.sign.generic :as gsign]
             [clj-time.coerce :as jodac]
             [clj-time.core :as jodat]
             [clojure.string :as str]
             [cheshire.core :as json])
   (:import clojure.lang.Keyword))
+
+(def ^{:doc "List of supported signing algorithms"
+       :dynamic true}
+  *signers-map* {:hs256 {:signer   #(hmac/hmac %1 %2 :sha256)
+                         :verifier #(hmac/verify %1 %2 %3 :sha256)}
+                 :hs512 {:signer   #(hmac/hmac %1 %2 :sha512)
+                         :verifier #(hmac/verify %1 %2 %3 :sha512)}
+                 :rs256 {:signer   #(rsapkcs/rsapkcs15 %1 %2 :sha256)
+                         :verifier #(rsapkcs/verify %1 %2 %3 :sha256)}
+                 :rs512 {:signer   #(rsapkcs/rsapkcs15 %1 %2 :sha512)
+                         :verifier #(rsapkcs/verify %1 %2 %3 :sha512)}
+                 :ps256 {:signer   #(rsapss/rsapss %1 %2 :sha256)
+                         :verifier #(rsapss/verify %1 %2 %3 :sha256)}
+                 :ps512 {:signer   #(rsapss/rsapss %1 %2 :sha512)
+                         :verifier #(rsapss/verify %1 %2 %3 :sha512)}
+                 :es256 {:signer   #(ecdsa/ecdsa %1 %2 :sha256)
+                         :verifier #(ecdsa/verify %1 %2 %3 :sha256)}
+                 :es512 {:signer   #(ecdsa/ecdsa %1 %2 :sha512)
+                         :verifier #(ecdsa/verify %1 %2 %3 :sha512)}})
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Utils protocols related to time checking
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defprotocol ITimestamp
   "Default protocol for convert any tipe to
