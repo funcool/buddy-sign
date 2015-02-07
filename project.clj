@@ -11,7 +11,4 @@
                  [cheshire "5.4.0"]]
   :source-paths ["src/clojure"]
   :javac-options ["-target" "1.7" "-source" "1.7" "-Xlint:-options"]
-  :test-paths ["test"]
-  :profiles {:speclj {:dependencies [[speclj "3.1.0"]]
-                      :test-paths ["spec"]
-                      :plugins [[speclj "3.1.0"]]}})
+  :test-paths ["test"])
