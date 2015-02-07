@@ -28,7 +28,8 @@
             [clj-time.coerce :as jodac]
             [clj-time.core :as jodat]
             [clojure.string :as str]
-            [cheshire.core :as json])
+            [cheshire.core :as json]
+            [cats.monad.either :as either])
   (:import clojure.lang.Keyword))
 
 (def ^{:doc "List of supported signing algorithms"
