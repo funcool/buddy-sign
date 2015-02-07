@@ -1,5 +1,16 @@
 = Changelog
 
+== Version 0.4.0
+
+Date: unreleased
+
+- Add encode/decode functions to JWS/JWT implementation. Them instead of return
+  plain value, return a monadic either. That allows granular error reporting
+  instead something like nil that not very useful. The previous sign/unsign
+  are conserved for backward compatibility but maybe in future will be removed.
+
+-
+
 == Version 0.3.0
 
 Date: 2014-01-18
