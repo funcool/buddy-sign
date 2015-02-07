@@ -193,7 +193,6 @@
     (if (false? result)
       (either/left "Invalid token.")
       (let [now (to-timestamp (jodat/now))]
-        ;; (println 2222 (> now (:exp claims)))
         (cond
           (and (:exp claims) (> now (:exp claims)))
           (either/left (format "Token is older than :exp (%s)" (:exp claims)))
