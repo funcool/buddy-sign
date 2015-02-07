@@ -13,8 +13,9 @@
 ;; limitations under the License.
 
 ;; Links to rfcs:
-;; - http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-19
-;; - http://tools.ietf.org/html/draft-ietf-jose-json-web-signature-25
+;; - http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32
+;; - http://tools.ietf.org/html/draft-ietf-jose-json-web-signature-40
+;; - https://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-40
 
 (ns buddy.sign.jws
   "Json Web Signature implementation."
