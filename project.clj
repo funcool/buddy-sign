@@ -4,9 +4,9 @@
   :license {:name "BSD (2-Clause)"
             :url "http://opensource.org/licenses/BSD-2-Clause"}
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [buddy/buddy-core "0.3.0"]
-                 [org.clojure/algo.monads "0.1.5"]
                  [com.taoensso/nippy "2.7.1"]
+                 [buddy/buddy-core "0.3.0"]
+                 [cats "0.2.0"]
                  [clj-time "0.9.0"]
                  [cheshire "5.4.0"]]
   :source-paths ["src/clojure"]
