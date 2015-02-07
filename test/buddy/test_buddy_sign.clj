@@ -20,7 +20,8 @@
             [buddy.sign.jws :as jws]
             [clj-time.coerce :as jodac]
             [clj-time.core :as jodat]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [cats.monad.either :as either])
   (:import java.util.Arrays))
 
 (def secret "test")
@@ -67,54 +68,78 @@
     (testing "Pass exp as claim or parameter shoult return same result"
       (let [candidate1 {"iss" "joe" :exp 1300819380}
             candidate2 {"iss" "joe"}
-            result1    (jws/sign candidate1 plainkey)
-            result2    (jws/sign candidate2 plainkey {:exp 1300819380})]
+            result1    (jws/encode candidate1 plainkey)
+            result2    (jws/encode candidate2 plainkey {:exp 1300819380})]
         (is (= result1 result2))))
 
     (testing "Unsing simple jws"
-      (let [candidate1 {:foo "bar"}
-            signed1    (jws/sign candidate1 plainkey)
-            unsigned1   (jws/unsign signed1 plainkey)]
-        (is (= unsigned1 candidate1))))
+      (let [candidate {:foo "bar"}
+            result    (-> (jws/encode candidate plainkey)
+                          (either/from-either)
+                          (jws/decode plainkey))]
+        (is (either/right? result))
+        (is (= (either/from-either result) candidate))))
 
     (testing "Unsigning jws with exp"
-      (let [candidate1 {:foo "bar"}
-            now        (-> (jodat/now) (jws/to-timestamp))
-            exp        (+ now 2)
-            signed1    (jws/sign candidate1 plainkey {:exp exp})]
-        (let [unsigned1 (jws/unsign signed1 plainkey)]
-          (is (= unsigned1 (assoc candidate1 :exp exp))))
-        (Thread/sleep 2100)
-        (let [unsigned1 (jws/unsign signed1 plainkey)]
-          (is (nil? unsigned1)))))
+      (let [candidate {:foo "bar"}
+            now       (jws/to-timestamp (jodat/now))
+            exp       (+ now 2)
+            signed    (-> (jws/encode candidate plainkey {:exp exp})
+                          (either/from-either))]
+        (let [unsigned (-> (jws/decode signed plainkey)
+                           (either/from-either))]
+          (is (= unsigned (assoc candidate :exp exp))))
+
+        (Thread/sleep 3000)
+
+        (let [unsigned (jws/decode signed plainkey)]
+          (is (either/left? unsigned)))))
 
     (testing "Unsigning jws with nbf"
-      (let [candidate1 {:foo "bar"}
-            now        (-> (jodat/now) (jws/to-timestamp))
-            nbf        (+ now 2)
-            signed1    (jws/sign candidate1 plainkey {:nbf nbf})]
-        (let [unsigned1 (jws/unsign signed1 plainkey)]
-          (is (= unsigned1 (assoc candidate1 :nbf nbf))))
-        (Thread/sleep 2100)
-        (let [unsigned1 (jws/unsign signed1 plainkey)]
-          (is (nil? unsigned1)))))
+      (let [candidate {:foo "bar"}
+            now       (jws/to-timestamp (jodat/now))
+            nbf       (+ now 2)
+            signed    (-> (jws/encode candidate plainkey {:nbf nbf})
+                          (either/from-either))]
+        (let [unsigned (jws/decode signed plainkey)]
+          (is (either/right? unsigned))
+          (is (= (either/from-either unsigned) (assoc candidate :nbf nbf))))
+
+        (Thread/sleep 3000)
+
+        (let [unsigned (jws/decode signed plainkey)]
+          (is (either/left? unsigned)))))
+
+    (testing "Using :hs256 hmac with expired token."
+      (let [secret (safebase64->bytes (str "KdnIJv7h5r--N2Na7XfS0EiHUKrZm_"
+                                           "qucUbF6PmE6FOMrelLwzBOGEmI17Uqmaeu"))
+            data (str "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL29yc"
+                      "GhpZC10ZXN0LmF1dGgwLmNvbS8iLCJzdWIiOiJhdXRoMHw1NGNhZmM0YzJlMGU"
+                      "5YzZiMTQ5ZDMwY2QiLCJhdWQiOiJIdTRxd3FRaU9nVHJCNlliT2NHTXBUQTdpN"
+                      "jFSNVp1SCIsImV4cCI6MTQyMjYyNTA5MCwiaWF0IjoxNDIyNTg5MDkwfQ.3wKN"
+                      "ZzgghjpsPBi5gDwv-RkbzvhG22Npcfyl8SUZriI")
+            result (jws/decode data secret {:alg :hs256})]
+        (is (either/left? result))))
 
     (testing "Using :rs256 digital signature"
-      (let [candidate1  {:foo "bar"}
-            signed1     (jws/sign candidate1 rsa-privkey {:alg :rs256})
-            unsigned1   (jws/unsign signed1 rsa-pubkey {:alg :rs256})]
-        (is (= unsigned1 candidate1))))
+      (let [candidate {:foo "bar"}
+            result    (-> (jws/encode candidate rsa-privkey {:alg :rs256})
+                          (either/from-either)
+                          (jws/decode rsa-pubkey {:alg :rs256}))]
+        (is (= (either/from-either result) candidate))))
 
     (testing "Using :ps512 digital signature"
-      (let [candidate1  {:foo "bar"}
-            signed1     (jws/sign candidate1 rsa-privkey {:alg :ps512})
-            unsigned1   (jws/unsign signed1 rsa-pubkey {:alg :ps512})]
-        (is (= unsigned1 candidate1))))
+      (let [candidate {:foo "bar"}
+            result    (-> (jws/encode candidate rsa-privkey {:alg :ps512})
+                          (either/from-either)
+                          (jws/decode rsa-pubkey {:alg :ps512}))]
+        (is (= (either/from-either result) candidate))))
 
     (testing "Using :ec512 digital signature"
-      (let [candidate1 {:foo "bar"}
-            signed1    (jws/sign candidate1 ec-privkey {:alg :es512})
-            unsigned1  (jws/unsign signed1 ec-pubkey {:alg :es512})]
-        (is (= unsigned1 candidate1))))
+      (let [candidate {:foo "bar"}
+            result    (-> (jws/encode candidate ec-privkey {:alg :es512})
+                          (either/from-either)
+                          (jws/decode ec-pubkey {:alg :es512}))]
+        (is (= (either/from-either result) candidate))))
 ))
 
