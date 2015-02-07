@@ -180,7 +180,7 @@
   and if some error is happens in process of decoding
   and verification, it will be reported in an
   either/left instance."
-  [input pkey & [{:keys [maxage] :as opts}]]
+  [input pkey & [{:keys [max-age] :as opts}]]
   {:pre [(string? input)]}
   (let [[header claims signature] (str/split input #"\." 3)
         candidate (str/join "." [header claims])
@@ -200,7 +200,7 @@
           (and (:nbf claims) (> now (:nbf claims)))
           (either/left (format "Token is older than :nbf (%s)" (:nbf claims)))
 
-          (and (:iat claims) (number? maxage) (< (- now (:iat claims)) maxage))
+          (and (:iat claims) (number? max-age) (< (- now (:iat claims)) max-age))
           (either/left (format "Token is older than :iat (%s)" (:iat claims)))
 
           :else

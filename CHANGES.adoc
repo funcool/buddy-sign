@@ -8,8 +8,8 @@ Date: unreleased
   plain value, return a monadic either. That allows granular error reporting
   instead something like nil that not very useful. The previous sign/unsign
   are conserved for backward compatibility but maybe in future will be removed.
-
--
+- Rename parameter `maxage` to `max-age` on jws implementation. This change
+  introduces a little backward incompatibility.
 
 == Version 0.3.0
 
