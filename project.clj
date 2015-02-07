@@ -9,6 +9,6 @@
                  [cats "0.2.0"]
                  [clj-time "0.9.0"]
                  [cheshire "5.4.0"]]
-  :source-paths ["src/clojure"]
+  :source-paths ["src"]
   :javac-options ["-target" "1.7" "-source" "1.7" "-Xlint:-options"]
   :test-paths ["test"])
