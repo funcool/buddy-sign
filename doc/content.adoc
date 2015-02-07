@@ -1,6 +1,6 @@
 = buddy-sign - High level message signing.
 Andrey Antukh, <niwi@niwi.be>
-0.3.0
+0.4.0
 :toc: left
 :numbered:
 :source-highlighter: pygments
@@ -45,7 +45,7 @@ vector on your *_project.clj_* file:
 ._on project.clj_
 [source,clojure]
 ----
-[buddy/buddy-sign "0.3.0"]
+[buddy/buddy-sign "0.4.0"]
 ----
 
 === Gradle
@@ -54,7 +54,7 @@ If you are using gradle, this is a dependency line for gradle dsl:
 
 [source,groovy]
 ----
-compile "buddy:buddy-sign:0.3.0"
+compile "buddy:buddy-sign:0.4.0"
 ----
 
 
@@ -70,7 +70,92 @@ git clone https://github.com/funcool/buddy-sign
 ----
 
 
+
+[[jws]]
+== Json Web Signature/Token
+
+[small]#New in version: 0.2#
+
+JSON Web Signature (JWS) represents content secured with digital
+signatures or Message Authentication Codes (MACs) using JavaScript
+Object Notation (JSON) as serialization format.
+
+.Supported Algorithms
+[options="header"]
+|=====================================================================================
+|Algorithm name     | Hash algorithms   | Keywords           | Priv/Pub Key?
+|Elliptic Curve DSA | sha256, sha512    | `:es256`, `:es512` | Yes
+|RSASSA PSS         | sha256, sha512    | `:ps256`, `:ps512` | Yes
+|RSASSA PKCS1 v1_5  | sha256, sha512    | `:rs256`, `:rs256` | Yes
+|HMAC               | sha256*, sha512   | `:hs256`, `:hs256` | No
+|=====================================================================================
+
+.List of rfcs related JWS/JWT/JWA:
+- http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32
+- http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-40
+- http://tools.ietf.org/html/draft-ietf-jose-json-web-signature-40
+
+
+=== Signing and unsignin data
+
+Due to the nature of the storage format, the input is restricted mainly to json objects
+in the current version.
+
+.Example sign data using JWS
+[source, clojure]
+----
+(require '[buddy.sign.jws :as jws])
+
+;; Sign data using default `:hs256` algorithm that does not
+;; requres special priv/pub key.
+(def data (jws/encode {:userid 1} "secret"))
+
+;; data will contains omething to
+;; #<Right [eyJ0eXAiOiJKV1MiLCJhbGciOiJIU...]>
+
+(jws/decode @data "secret")
+;; => {:userid 1}
+----
+
+The *encode* and *decode* methods returns a monadic either defined in
+link:https://github/funcool/cats[cats library]. This allows more granural
+error reporting when something wrong is happens in the validation process.
+
+That functions are introduced in *buddy-sign 0.4.0*. Also, the previos
+*sign* and *unsign* functions are conserved for backward compatibility
+and are still returning plain values.
+
+
+=== Using Digital Signature algorithms
+
+In order to use any of digital signature algorithms you must have a private/public key.
+If you don't have one, don't worry, it is very easy to generate it using *openssl*, see
+this <<generate-keypairs,faq entry>>.
+
+Now, having generated a key pair, you can sign your messages using one
+of supported digital signature algorithms.
+
+.Example of signing a string using _es256_ (eliptic curve dsa) algorithm.
+[source, clojure]
+----
+(require '[buddy.sign.jws :as jws])
+(require '[buddy.core.keys :as keys])
+
+;; Create keys instances
+(def ec-privkey (keys/private-key "ecprivkey.pem"))
+(def ec-pubkey (keys/public-key "ecpubkey.pem"))
+
+;; Use them like plain secret password with hmac algorithms for sign
+(def signed-data (jws/encode {:foo "bar"} ec-privkey {:alg :es256}))
+
+;; And unsign
+(def unsigned-data (jws/decode @signed-data ec-pubkey {:alg :es256}))
+----
+
+
 == Generic Message Signing
+
+WARNING: deprecated since 0.4.0 and not will be maintained.
 
 The generic singin is mainly based on django's
 link:https://docs.djangoproject.com/en/1.6/topics/signing/[Cryptographic
@@ -155,10 +240,10 @@ you can do so using the _dumps_ and _loads_ functions.
 NOTE: it uses a Clojure serialization library link:https://github.com/ptaoussanis/nippy[Nippy]
 
 
-=== Using Digital Signature algorithms
+== FAQ
 
-In order to use any of digital signature algorithms you must have a private/public key. If you
-don't have one, don't worry - it's very easy to generate it using *openssl*.
+[[generate-keypairs]]
+=== How I can generate keypairs?
 
 .Example on how to generate one Elliptic Curve DSA keypair.
 [source, bash]
@@ -182,79 +267,6 @@ openssl genrsa -aes256 -out privkey.pem 2048
 # Generate public key from previously created private key.
 openssl rsa -pubout -in privkey.pem -out pubkey.pem
 ----
-
-==== Using Digital Signature Keys for signing
-
-Now, having generated a key pair, you can sign your messages using one
-of supported digital signature algorithms.
-
-.Example of signing a string using _es256_ (eliptic curve dsa) algorithm.
-[source, clojure]
-----
-(require '[buddy.sign.generic :refer [sign unsign]])
-
-;; Import namespace for managing/reading keys
-(require '[buddy.core.keys :as keys])
-
-;; Create keys instances
-(def ec-privkey (keys/private-key "ecprivkey.pem"))
-(def ec-pubkey (keys/public-key "ecpubkey.pem"))
-
-;; Use them like plain secret password with hmac algorithms for sign
-(def signed-data (sign "mystring" ec-privkey {:alg :es256}))
-
-;; And unsign
-(def unsigned-data (unsign signed-data ec-pubkey {:alg :es256}))
-----
-
-[[jws]]
-== Json Web Signature/Token
-
-[small]#New in version: 0.2#
-
-JSON Web Signature (JWS) represents content secured with digital
-signatures or Message Authentication Codes (MACs) using JavaScript
-Object Notation (JSON) as serialization format.
-
-List of rfcs related to this feature:
-
-- http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32
-- http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-38
-- http://tools.ietf.org/html/draft-ietf-jose-json-web-signature-38
-
-
-.Supported Algorithms
-[options="header"]
-|=====================================================================================
-|Algorithm name     | Hash algorithms   | Keywords           | Priv/Pub Key?
-|Elliptic Curve DSA | sha256, sha512    | `:es256`, `:es512` | Yes
-|RSASSA PSS         | sha256, sha512    | `:ps256`, `:ps512` | Yes
-|RSASSA PKCS1 v1_5  | sha256, sha512    | `:rs256`, `:rs256` | Yes
-|HMAC               | sha256*, sha512   | `:hs256`, `:hs256` | No
-|=====================================================================================
-
-
-=== Signing and unsignin data
-
-Due to the nature of the storage format, the input is restricted mainly to json objects
-in the current version.
-
-.Example sign data using JWS
-[source, clojure]
-----
-(require '[buddy.sign.jws :as jws])
-
-;; Sign data using default `:hs256` algorithm that does not
-;; requres special priv/pub key.
-(def data (jws/sign {:userid 1} "secret"))
-
-;; data should contain string similar to:
-;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyaWQiOjF9.zjenOuIAEG-..."
-
-(jws/unsign data "secret")
-;; => {:userid 1}
-----
-
 
 == How to Contribute?
 
