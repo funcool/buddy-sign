@@ -16,7 +16,7 @@
   (:require [clojure.test :refer :all]
             [buddy.core.codecs :refer :all]
             [buddy.core.keys :refer :all]
-            [buddy.sign.generic :as gsign]
+            [buddy.sign.compact :as compact]
             [buddy.sign.jws :as jws]
             [clj-time.coerce :as jodac]
             [clj-time.core :as jodat]
@@ -25,38 +25,6 @@
   (:import java.util.Arrays))
 
 (def secret "test")
-
-(deftest buddy-sign-generic
-  (testing "Signing/Unsigning with default keys"
-    (let [signed (gsign/sign "foo" secret)]
-      (Thread/sleep 1000)
-      (is (not= (gsign/sign "foo" secret) signed))
-      (is (= (gsign/unsign signed secret) "foo"))))
-
-  (testing "Signing/Unsigning timestamped"
-    (let [signed  (gsign/sign "foo" secret)
-          result1 (gsign/unsign signed secret {:max-age 20})
-          _       (Thread/sleep 700)
-          result2 (gsign/unsign signed secret {:max-age -1})]
-      (is (= "foo" result1))
-      (is (nil? result2))))
-
-  (testing "Try sing with invalid alg"
-    (is (thrown? AssertionError (gsign/sign "foo" secret {:alg :invalid}))))
-
-  (testing "Use custom algorithm for sign/unsign"
-    (let [rsa-privkey (private-key "test/_files/privkey.3des.rsa.pem" "secret")
-          rsa-pubkey  (public-key "test/_files/pubkey.3des.rsa.pem")
-          signed      (gsign/sign "foo" rsa-privkey {:alg :rs256})]
-      (Thread/sleep 20)
-      (is (not= (gsign/sign "foo" rsa-privkey {:alg :rs256}) signed))
-      (is (= "foo" (gsign/unsign signed rsa-pubkey {:alg :rs256})))
-      (Thread/sleep 1000)
-      (is (= nil (gsign/unsign signed rsa-pubkey {:alg :rs256 :max-age 1})))))
-
-  (testing "Signing/Unsigning complex clojure data"
-    (let [signed (gsign/dumps {:foo 2 :bar 1} secret)]
-      (is (= {:foo 2 :bar 1} (gsign/loads signed secret))))))
 
 (deftest buddy-sign-jws
   (let [plainkey "secret"
@@ -142,4 +110,12 @@
                           (jws/decode ec-pubkey {:alg :es512}))]
         (is (= (either/from-either result) candidate))))
 ))
+
+(deftest buddy-sign-compact
+  (testing "Signing with compat implementation."
+    (let [data {:foo1 "bar1"}
+          signed (compact/encode data secret)]
+      (is (= (either/right data)
+             (compact/decode @signed secret)))))
+)
 
