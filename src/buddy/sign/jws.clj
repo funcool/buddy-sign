@@ -24,7 +24,6 @@
             [buddy.core.sign.rsapss :as rsapss]
             [buddy.core.sign.rsapkcs15 :as rsapkcs]
             [buddy.core.sign.ecdsa :as ecdsa]
-            [buddy.core.util :refer [maybe-let]]
             [clj-time.coerce :as jodac]
             [clj-time.core :as jodat]
             [clojure.string :as str]
