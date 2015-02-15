@@ -12,6 +12,8 @@ Date: unreleased
   introduces a little backward incompatibility.
 - Add "compact" signing implementation as replacemen of django based one.
 - Django based generic signing is removed.
+- Update buddy-core version to 0.4.0
+
 
 == Version 0.3.0
 
