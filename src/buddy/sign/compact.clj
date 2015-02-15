@@ -28,6 +28,7 @@
   transfer, is not really good candidate for auth token
   because of not good space efficiency for small messages."
   (:require [buddy.core.codecs :as codecs]
+            [buddy.core.bytes :as bytes]
             [buddy.core.keys :as keys]
             [buddy.core.mac.hmac :as hmac]
             [buddy.core.mac.poly1305 :as poly]
@@ -85,7 +86,7 @@
   (let [input (serialize data compress)
         salt (nonce/random-nonce 8)
         stamp (codecs/long->bytes (timestamp-millis))
-        signature (-> (codecs/concat-byte-arrays input salt stamp)
+        signature (-> (bytes/concat input salt stamp)
                       (calculate-signature key alg))
         result (str/join "." [(codecs/bytes->safebase64 input)
                               (codecs/bytes->safebase64 signature)
@@ -108,7 +109,7 @@
         signature (codecs/safebase64->bytes signature)
         salt (codecs/safebase64->bytes salt)
         stamp (codecs/safebase64->bytes stamp)
-        candidate (codecs/concat-byte-arrays input salt stamp)]
+        candidate (bytes/concat input salt stamp)]
     (if (verify-signature candidate signature key alg)
       (either/right (nippy/thaw input {:v1-compatibility? false}))
       (either/left "Invalid signature."))))
