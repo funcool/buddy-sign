@@ -113,3 +113,15 @@
     (if (verify-signature candidate signature key alg)
       (either/right (nippy/thaw input {:v1-compatibility? false}))
       (either/left "Invalid signature."))))
+
+(defn sign
+  "Not monadic version of encode."
+  [& args]
+  (either/from-either (apply encode args)))
+
+(defn unsign
+  "Not monadic version of decode."
+  [& args]
+  (let [result (apply decode args)]
+    (when (either/right? result)
+      (either/from-either result))))
