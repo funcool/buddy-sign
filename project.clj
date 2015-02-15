@@ -1,4 +1,4 @@
-(defproject buddy/buddy-sign "0.3.0"
+(defproject buddy/buddy-sign "0.4.0-SNAPSHOT"
   :description "Security library for Clojure"
   :url "https://github.com/funcool/buddy-sign"
   :license {:name "BSD (2-Clause)"
