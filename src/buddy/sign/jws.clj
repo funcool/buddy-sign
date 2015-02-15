@@ -215,4 +215,4 @@
   [& args]
   (let [result (apply decode args)]
     (when (either/right? result)
-      result)))
+      (either/from-either result))))
