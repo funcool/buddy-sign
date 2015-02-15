@@ -25,7 +25,7 @@
   messages.
 
   The purpose of this implementation is for secure message
-  transfer, is not really good candidate for auth token
+  transfer, it is not really good candidate for auth token
   because of not good space efficiency for small messages."
   (:require [buddy.core.codecs :as codecs]
             [buddy.core.bytes :as bytes]
