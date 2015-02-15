@@ -33,21 +33,21 @@
 
 (def ^{:doc "List of supported signing algorithms"
        :dynamic true}
-  *signers-map* {:hs256 {:signer   #(hmac/hmac %1 %2 :sha256)
+  *signers-map* {:hs256 {:signer   #(hmac/hash %1 %2 :sha256)
                          :verifier #(hmac/verify %1 %2 %3 :sha256)}
-                 :hs512 {:signer   #(hmac/hmac %1 %2 :sha512)
+                 :hs512 {:signer   #(hmac/hash %1 %2 :sha512)
                          :verifier #(hmac/verify %1 %2 %3 :sha512)}
-                 :rs256 {:signer   #(rsapkcs/rsapkcs15 %1 %2 :sha256)
+                 :rs256 {:signer   #(rsapkcs/sign %1 %2 :sha256)
                          :verifier #(rsapkcs/verify %1 %2 %3 :sha256)}
-                 :rs512 {:signer   #(rsapkcs/rsapkcs15 %1 %2 :sha512)
+                 :rs512 {:signer   #(rsapkcs/sign %1 %2 :sha512)
                          :verifier #(rsapkcs/verify %1 %2 %3 :sha512)}
-                 :ps256 {:signer   #(rsapss/rsapss %1 %2 :sha256)
+                 :ps256 {:signer   #(rsapss/sign %1 %2 :sha256)
                          :verifier #(rsapss/verify %1 %2 %3 :sha256)}
-                 :ps512 {:signer   #(rsapss/rsapss %1 %2 :sha512)
+                 :ps512 {:signer   #(rsapss/sign %1 %2 :sha512)
                          :verifier #(rsapss/verify %1 %2 %3 :sha512)}
-                 :es256 {:signer   #(ecdsa/ecdsa %1 %2 :sha256)
+                 :es256 {:signer   #(ecdsa/sign %1 %2 :sha256)
                          :verifier #(ecdsa/verify %1 %2 %3 :sha256)}
-                 :es512 {:signer   #(ecdsa/ecdsa %1 %2 :sha512)
+                 :es512 {:signer   #(ecdsa/sign %1 %2 :sha512)
                          :verifier #(ecdsa/verify %1 %2 %3 :sha512)}})
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
