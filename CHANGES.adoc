@@ -2,7 +2,7 @@
 
 == Version 0.4.0
 
-Date: unreleased
+Date: 2015-02-22
 
 - Add encode/decode functions to JWS/JWT implementation. Them instead of return
   plain value, return a monadic either. That allows granular error reporting
