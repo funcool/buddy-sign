@@ -141,5 +141,16 @@
                         (either/from-either)
                         (compact/decode ec-pubkey {:alg :es512}))]
       (is (= (either/from-either result) candidate))))
+
+  (testing "Using :hs256 with max-age"
+    (let [candidate {:foo "bar"}
+          encoded   (compact/encode candidate secret)
+          decoded1  (compact/decode @encoded secret {:max-age 1})
+          _         (Thread/sleep 2000)
+          decoded2  (compact/decode @encoded secret {:max-age 1})]
+      (is (either/right? decoded1))
+      (is (= @decoded1 candidate))
+      (is (either/left? decoded2))
+      (is (= @decoded2 "Expired data"))))
 )
 

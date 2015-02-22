@@ -36,6 +36,8 @@
             [buddy.core.sign.rsapkcs15 :as rsapkcs]
             [buddy.core.sign.ecdsa :as ecdsa]
             [buddy.core.nonce :as nonce]
+            [buddy.sign.jws :as jws]
+            [buddy.sign.util :refer [to-timestamp timestamp]]
             [clojure.string :as str]
             [taoensso.nippy :as nippy]
             [taoensso.nippy.compression :as nippycompress]
@@ -66,11 +68,6 @@
                                     :verifier #(poly/verify %1 %2 %3 :serpent)}
                  :poly1305-twofish {:signer #(poly/hash %1 %2 :twofish)
                                     :verifier #(poly/verify %1 %2 %3 :twofish)}})
-
-(defn timestamp-millis
-  "Get current timestamp in millis."
-  []
-  (System/currentTimeMillis))
 
 (defn- calculate-signature
   "Given the bunch of bytes, a private key and algorithm,
@@ -106,7 +103,7 @@
                 :or {alg :hs256 compress true}}]]
   (let [input (serialize data compress)
         salt (nonce/random-nonce 8)
-        stamp (codecs/long->bytes (timestamp-millis))
+        stamp (codecs/long->bytes (timestamp))
         signature (-> (bytes/concat input salt stamp)
                       (calculate-signature key alg))
         result (str/join "." [(codecs/bytes->safebase64 input)
@@ -123,7 +120,7 @@
   and if some error is happens in process of decoding
   and verification, it will be reported in an
   either/left instance."
-  [data key & [{:keys [alg compress]
+  [data key & [{:keys [alg compress max-age]
                 :or {alg :hs256 compress true}}]]
   (let [[input signature salt stamp] (str/split data #"\." 4)
         input (codecs/safebase64->bytes input)
@@ -131,9 +128,14 @@
         salt (codecs/safebase64->bytes salt)
         stamp (codecs/safebase64->bytes stamp)
         candidate (bytes/concat input salt stamp)]
-    (if (verify-signature candidate signature key alg)
-      (either/right (nippy/thaw input {:v1-compatibility? false}))
-      (either/left "Invalid signature."))))
+    (if (false? (verify-signature candidate signature key alg))
+      (either/left "Invalid signature.")
+      (let [now (timestamp)
+            stamp (codecs/bytes->long stamp)]
+        (if (and (number? max-age)
+                 (> (- now stamp) max-age))
+          (either/left "Expired data")
+          (either/right (nippy/thaw input {:v1-compatibility? false})))))))
 
 (defn sign
   "Not monadic version of encode."
