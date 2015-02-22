@@ -32,6 +32,9 @@
             [buddy.core.keys :as keys]
             [buddy.core.mac.hmac :as hmac]
             [buddy.core.mac.poly1305 :as poly]
+            [buddy.core.sign.rsapss :as rsapss]
+            [buddy.core.sign.rsapkcs15 :as rsapkcs]
+            [buddy.core.sign.ecdsa :as ecdsa]
             [buddy.core.nonce :as nonce]
             [clojure.string :as str]
             [taoensso.nippy :as nippy]
@@ -44,7 +47,25 @@
   *signers-map* {:hs256 {:signer   #(hmac/hash %1 %2 :sha256)
                          :verifier #(hmac/verify %1 %2 %3 :sha256)}
                  :hs512 {:signer   #(hmac/hash %1 %2 :sha512)
-                         :verifier #(hmac/verify %1 %2 %3 :sha512)}})
+                         :verifier #(hmac/verify %1 %2 %3 :sha512)}
+                 :rs256 {:signer   #(rsapkcs/sign %1 %2 :sha256)
+                         :verifier #(rsapkcs/verify %1 %2 %3 :sha256)}
+                 :rs512 {:signer   #(rsapkcs/sign %1 %2 :sha512)
+                         :verifier #(rsapkcs/verify %1 %2 %3 :sha512)}
+                 :ps256 {:signer   #(rsapss/sign %1 %2 :sha256)
+                         :verifier #(rsapss/verify %1 %2 %3 :sha256)}
+                 :ps512 {:signer   #(rsapss/sign %1 %2 :sha512)
+                         :verifier #(rsapss/verify %1 %2 %3 :sha512)}
+                 :es256 {:signer   #(ecdsa/sign %1 %2 :sha256)
+                         :verifier #(ecdsa/verify %1 %2 %3 :sha256)}
+                 :es512 {:signer   #(ecdsa/sign %1 %2 :sha512)
+                         :verifier #(ecdsa/verify %1 %2 %3 :sha512)}
+                 :poly1305-aes {:signer #(poly/hash %1 %2 :aes)
+                                :verifier #(poly/verify %1 %2 %3 :aes)}
+                 :poly1305-serpent {:signer #(poly/hash %1 %2 :serpent)
+                                    :verifier #(poly/verify %1 %2 %3 :serpent)}
+                 :poly1305-twofish {:signer #(poly/hash %1 %2 :twofish)
+                                    :verifier #(poly/verify %1 %2 %3 :twofish)}})
 
 (defn timestamp-millis
   "Get current timestamp in millis."
