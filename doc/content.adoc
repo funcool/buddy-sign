@@ -173,7 +173,7 @@ for auth token because of not good space efficiency for small messages.
 | Elliptic Curve DSA | sha256, sha512    | `:es256`, `:es512` | Yes
 | RSASSA PSS         | sha256, sha512    | `:ps256`, `:ps512` | Yes
 | RSASSA PKCS1 v1_5  | sha256, sha512    | `:rs256`, `:rs256` | Yes
-| Poly1305           | aes, twofish, serpent | `:poly1305-aes`, `:poly1305-serpent, `:poly1305-twofish` | No
+| Poly1305           | aes, twofish, serpent | `:poly1305-aes`, `:poly1305-serpent`, `:poly1305-twofish` | No
 | HMAC               | sha256*, sha512   | `:hs256`, `:hs256` | No
 |=====================================================================================
 
@@ -284,6 +284,7 @@ situation:
 
 - Open new issue with the new feature proposal.
 - If it is accepted, follow the same steps as "bugfix".
+
 
 === License
 
