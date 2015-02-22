@@ -24,8 +24,7 @@
             [buddy.core.sign.rsapss :as rsapss]
             [buddy.core.sign.rsapkcs15 :as rsapkcs]
             [buddy.core.sign.ecdsa :as ecdsa]
-            [clj-time.coerce :as jodac]
-            [clj-time.core :as jodat]
+            [buddy.sign.util :refer [to-timestamp timestamp] :as util]
             [clojure.string :as str]
             [cheshire.core :as json]
             [cats.monad.either :as either])
@@ -51,25 +50,6 @@
                          :verifier #(ecdsa/verify %1 %2 %3 :sha512)}})
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Utils protocols related to time checking
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defprotocol ITimestamp
-  "Default protocol for convert any tipe to
-  unix timestamp with default implementation for
-  java.util.Date"
-  (to-timestamp [obj] "Covert to timestamp"))
-
-(extend-protocol ITimestamp
-  java.util.Date
-  (to-timestamp [obj]
-    (quot (jodac/to-long obj) 1000))
-
-  org.joda.time.DateTime
-  (to-timestamp [obj]
-    (quot (jodac/to-long obj) 1000)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation details
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -77,13 +57,13 @@
   "Normalize date related claims and return transformed object."
   [data]
   (into {} (map (fn [[key val]]
-                  (if (satisfies? ITimestamp val)
+                  (if (satisfies? util/ITimestamp val)
                     [key (to-timestamp val)]
                     [key val])) data)))
 
 (defn- normalize-nil-claims
   "Given a raw headers, try normalize it removing any
-  key with null values and convert Dates to timestamps."
+  key with null values."
   [data]
   (into {} (remove (comp nil? second) data)))
 
@@ -191,7 +171,7 @@
         result (verifier candidate signature pkey)]
     (if (false? result)
       (either/left "Invalid token.")
-      (let [now (to-timestamp (jodat/now))]
+      (let [now (timestamp)]
         (cond
           (and (:exp claims) (> now (:exp claims)))
           (either/left (format "Token is older than :exp (%s)" (:exp claims)))
@@ -200,7 +180,7 @@
           (either/left (format "Token is older than :nbf (%s)" (:nbf claims)))
 
           (and (:iat claims) (number? max-age) (< (- now (:iat claims)) max-age))
-          (either/left (format "Token is older than :iat (%s)" (:iat claims)))
+          (either/left (format "Token is older than max-age (%s)" max-age))
 
           :else
           (either/right claims))))))

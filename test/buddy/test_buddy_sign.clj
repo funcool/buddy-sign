@@ -18,8 +18,7 @@
             [buddy.core.keys :refer :all]
             [buddy.sign.compact :as compact]
             [buddy.sign.jws :as jws]
-            [clj-time.coerce :as jodac]
-            [clj-time.core :as jodat]
+            [buddy.sign.util :as util]
             [clojure.java.io :as io]
             [cats.monad.either :as either])
   (:import java.util.Arrays))
@@ -48,7 +47,7 @@
 
   (testing "Unsigning jws with exp"
     (let [candidate {:foo "bar"}
-          now       (jws/to-timestamp (jodat/now))
+          now       (util/timestamp)
           exp       (+ now 2)
           signed    (-> (jws/encode candidate secret {:exp exp})
                         (either/from-either))]
@@ -63,7 +62,7 @@
 
   (testing "Unsigning jws with nbf"
     (let [candidate {:foo "bar"}
-          now       (jws/to-timestamp (jodat/now))
+          now       (util/timestamp)
           nbf       (+ now 2)
           signed    (-> (jws/encode candidate secret {:nbf nbf})
                         (either/from-either))]
