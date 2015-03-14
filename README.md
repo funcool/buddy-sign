@@ -5,5 +5,7 @@
 
 *buddy-sign* module is dedicated to provide a high level message signing.
 
+[![Clojars Project](http://clojars.org/buddy/buddy-sign/latest-version.svg)](http://clojars.org/buddy/buddy-sign)
+
 See the [documentation](https://funcool.github.io/buddy-sign/latest/) for more detailed
 information.
