@@ -179,7 +179,7 @@
           (and (:nbf claims) (> now (:nbf claims)))
           (either/left (format "Token is older than :nbf (%s)" (:nbf claims)))
 
-          (and (:iat claims) (number? max-age) (< (- now (:iat claims)) max-age))
+          (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
           (either/left (format "Token is older than max-age (%s)" max-age))
 
           :else
