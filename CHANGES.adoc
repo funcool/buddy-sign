@@ -1,5 +1,10 @@
 = Changelog
 
+== Version 0.4.2
+
+- Bug fix related to :iat param validating on jws. (thanks to @tvanhens)
+
+
 == Version 0.4.1
 
 Date: 2015-03-14
