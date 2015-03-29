@@ -2,6 +2,8 @@
 
 == Version 0.4.2
 
+Date: 2015-03-29
+
 - Bug fix related to :iat param validating on jws. (thanks to @tvanhens)
 
 
