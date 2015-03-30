@@ -1,5 +1,19 @@
 = Changelog
 
+== Version 0.5.0
+
+Date: unreleased
+
+- Breaking change: now encode and decode functions returns instances of success or failure of exception
+  monad instead of instances of either monad.
+- Breaking change: now sign/unsign methods raises exceptions instead of simply return nil. This allows
+  libraries and applications that does not works with monads workis like a usual, using jvm
+  exceptions and know the specific error instead of useless nil.
+- Add basic support for JWE.
+  Implemented key algorithms: DIR.
+  Implemented content encryption algorithms: A128CBC-HS256, A192CBC-HS384, A256CBC-HS512.
+
+
 == Version 0.4.2
 
 Date: 2015-03-29
