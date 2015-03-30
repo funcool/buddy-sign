@@ -1,4 +1,4 @@
-(defproject buddy/buddy-sign "0.4.2"
+(defproject buddy/buddy-sign "0.5.0-SNAPSHOT"
   :description "High level message signing"
   :url "https://github.com/funcool/buddy-sign"
   :license {:name "BSD (2-Clause)"
