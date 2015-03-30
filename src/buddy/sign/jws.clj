@@ -24,10 +24,12 @@
             [buddy.core.sign.rsapss :as rsapss]
             [buddy.core.sign.rsapkcs15 :as rsapkcs]
             [buddy.core.sign.ecdsa :as ecdsa]
-            [buddy.sign.util :refer [to-timestamp timestamp] :as util]
+            [buddy.sign.util :as util]
             [clojure.string :as str]
             [cheshire.core :as json]
-            [cats.monad.either :as either])
+            [cats.monad.exception :as exc]
+            [slingshot.slingshot :refer [throw+]])
+
   (:import clojure.lang.Keyword))
 
 (def ^{:doc "List of supported signing algorithms"
@@ -58,7 +60,7 @@
   [data]
   (into {} (map (fn [[key val]]
                   (if (satisfies? util/ITimestamp val)
-                    [key (to-timestamp val)]
+                    [key (util/to-timestamp val)]
                     [key val])) data)))
 
 (defn normalize-nil-claims
@@ -88,11 +90,15 @@
 
 (defn parse-header
   "Parse jws header."
-  [^String headerdata]
-  (-> headerdata
-      (codecs/safebase64->bytes)
-      (codecs/bytes->str)
-      (json/parse-string true)))
+  [^String header]
+  (let [header (codecs/safebase64->str header)
+        {:keys [alg] :as header} (json/parse-string header true)]
+    (when (nil? alg)
+      (throw+ {:type :validation
+               :cause :header
+               :message "Missing `alg` key in header."}))
+    (merge {:alg (keyword (str/lower-case alg))}
+           (dissoc header :alg))))
 
 (defn parse-claims
   "Parse jws claims"
@@ -102,40 +108,96 @@
       (codecs/bytes->str)
       (json/parse-string true)))
 
-(defn parse-algorithm
-  "Parse algorithm name and return a
-  internal keyword representation of it."
-  [header]
-  (let [algname (:alg header)]
-    (keyword (.toLowerCase algname))))
+(defmulti calculate-signature :alg)
+(defmulti verify-signature :alg)
 
-(defn get-verifier-for-algorithm
-  "Get verifier function for algorithm name."
-  [^Keyword alg]
-  (when (contains? *signers-map* alg)
-    (get-in *signers-map* [alg :verifier])))
-
-(defn get-signer-for-algorithm
-  "Get signer function for algorithm name."
-  [^Keyword alg]
-  (when (contains? *signers-map* alg)
-    (get-in *signers-map* [alg :signer])))
-
-(defn safe-encode
-  "Properly encode string into
-  safe url base64 encoding."
-  [^String input]
-  (-> input
-      (codecs/str->bytes)
+(defmethod calculate-signature :hs256
+  [{:keys [key alg header claims]}]
+  (-> (str/join "." [header claims])
+      (hmac/hash key :sha256)
       (codecs/bytes->safebase64)))
 
-(defn calculate-signature
-  "Make a jws signature."
-  [pkey alg header claims]
-  (let [candidate (str/join "." [header claims])
-        signer    (get-signer-for-algorithm alg)]
-    (-> (signer candidate pkey)
-        (codecs/bytes->safebase64))))
+(defmethod calculate-signature :hs512
+  [{:keys [key alg header claims]}]
+  (-> (str/join "." [header claims])
+      (hmac/hash key :sha512)
+      (codecs/bytes->safebase64)))
+
+(defmethod calculate-signature :rs256
+  [{:keys [key alg header claims]}]
+  (-> (str/join "." [header claims])
+      (rsapkcs/sign key :sha256)
+      (codecs/bytes->safebase64)))
+
+(defmethod calculate-signature :rs512
+  [{:keys [key alg header claims]}]
+  (-> (str/join "." [header claims])
+      (rsapkcs/sign key :sha512)
+      (codecs/bytes->safebase64)))
+
+(defmethod calculate-signature :ps256
+  [{:keys [key alg header claims]}]
+  (-> (str/join "." [header claims])
+      (rsapss/sign key :sha256)
+      (codecs/bytes->safebase64)))
+
+(defmethod calculate-signature :ps512
+  [{:keys [key alg header claims]}]
+  (-> (str/join "." [header claims])
+      (rsapss/sign key :sha512)
+      (codecs/bytes->safebase64)))
+
+(defmethod calculate-signature :es256
+  [{:keys [key alg header claims]}]
+  (-> (str/join "." [header claims])
+      (ecdsa/sign key :sha256)
+      (codecs/bytes->safebase64)))
+
+(defmethod calculate-signature :es512
+  [{:keys [key alg header claims]}]
+  (-> (str/join "." [header claims])
+      (ecdsa/sign key :sha512)
+      (codecs/bytes->safebase64)))
+
+(defmethod verify-signature :hs256
+  [{:keys [alg signature key header claims]}]
+  (-> (str/join "." [header claims])
+      (hmac/verify signature key :sha256)))
+
+(defmethod verify-signature :hs512
+  [{:keys [alg signature key header claims]}]
+  (-> (str/join "." [header claims])
+      (hmac/verify signature key :sha512)))
+
+(defmethod verify-signature :rs256
+  [{:keys [alg signature key header claims]}]
+  (-> (str/join "." [header claims])
+      (rsapkcs/verify signature key :sha256)))
+
+(defmethod verify-signature :rs512
+  [{:keys [alg signature key header claims]}]
+  (-> (str/join "." [header claims])
+      (rsapkcs/verify signature key :sha512)))
+
+(defmethod verify-signature :ps256
+  [{:keys [alg signature key header claims]}]
+  (-> (str/join "." [header claims])
+      (rsapss/verify signature key :sha256)))
+
+(defmethod verify-signature :ps512
+  [{:keys [alg signature key header claims]}]
+  (-> (str/join "." [header claims])
+      (rsapss/verify signature key :sha512)))
+
+(defmethod verify-signature :es256
+  [{:keys [alg signature key header claims]}]
+  (-> (str/join "." [header claims])
+      (ecdsa/verify signature key :sha256)))
+
+(defmethod verify-signature :es512
+  [{:keys [alg signature key header claims]}]
+  (-> (str/join "." [header claims])
+      (ecdsa/verify signature key :sha512)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
@@ -146,10 +208,14 @@
   json web token/signature."
   [claims pkey & [{:keys [alg exp nbf iat headers] :or {alg :hs256 headers {}}}]]
   {:pre [(map? claims)]}
-  (let [header (encode-header alg headers)
-        claims (encode-claims claims exp nbf iat)
-        signature (calculate-signature pkey alg header claims)]
-    (either/right (str/join "." [header claims signature]))))
+  (exc/try-on
+   (let [header (encode-header alg headers)
+         claims (encode-claims claims exp nbf iat)
+         signature (calculate-signature {:key pkey
+                                         :alg alg
+                                         :header header
+                                         :claims claims})]
+     (str/join "." [header claims signature]))))
 
 (defn decode
   "Given a signed message, verify it and return
@@ -160,39 +226,39 @@
   and verification, it will be reported in an
   either/left instance."
   [input pkey & [{:keys [max-age] :as opts}]]
-  {:pre [(string? input)]}
-  (let [[header claims signature] (str/split input #"\." 3)
-        candidate (str/join "." [header claims])
-        header (parse-header header)
-        claims (parse-claims claims)
-        algorithm (parse-algorithm header)
-        signature (codecs/safebase64->bytes signature)
-        verifier (get-verifier-for-algorithm algorithm)
-        result (verifier candidate signature pkey)]
-    (if (false? result)
-      (either/left "Invalid token.")
-      (let [now (timestamp)]
-        (cond
-          (and (:exp claims) (> now (:exp claims)))
-          (either/left (format "Token is older than :exp (%s)" (:exp claims)))
+  (exc/try-on
+   (let [[header claims signature] (str/split input #"\." 3)
+         {:keys [alg]} (parse-header header)
+         signature (codecs/safebase64->bytes signature)]
+     (when-not (verify-signature {:key pkey :signature signature
+                                  :alg alg :header header :claims claims})
+       (throw+ {:type :validation :cause :auth :message "Message seems corrupt or manipulated."}))
+     (let [claims (parse-claims claims)
+           now (util/timestamp)]
+       (cond
+         (and (:exp claims) (> now (:exp claims)))
+         (throw+ {:type :validation
+                  :cause :exp
+                  :message (format "Token is older than :exp (%s)" (:exp claims))})
 
-          (and (:nbf claims) (> now (:nbf claims)))
-          (either/left (format "Token is older than :nbf (%s)" (:nbf claims)))
+         (and (:nbf claims) (> now (:nbf claims)))
+         (throw+ {:type :validation
+                  :cause :nbf
+                  :message (format "Token is older than :nbf (%s)" (:nbf claims))})
 
-          (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
-          (either/left (format "Token is older than max-age (%s)" max-age))
+         (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
+         (throw+ {:type :validation
+                  :cause :nbf
+                  :message (format "Token is older than max-age (%s)" max-age)})
 
-          :else
-          (either/right claims))))))
+         :else claims)))))
 
 (defn sign
   "Not monadic version of encode."
   [& args]
-  (either/from-either (apply encode args)))
+  (deref (apply encode args)))
 
 (defn unsign
   "Not monadic version of decode."
   [& args]
-  (let [result (apply decode args)]
-    (when (either/right? result)
-      (either/from-either result))))
+  (deref (apply decode args)))
