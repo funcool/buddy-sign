@@ -1,4 +1,4 @@
-;; Copyright (c) 2014 Andrey Antukh <niwi@niwi.be>
+;; Copyright (c) 2014-2015 Andrey Antukh <niwi@niwi.be>
 ;;
 ;; Licensed under the Apache License, Version 2.0 (the "License")
 ;; you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@
 ;; Implementation details
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- normalize-date-claims
+(defn normalize-date-claims
   "Normalize date related claims and return transformed object."
   [data]
   (into {} (map (fn [[key val]]
@@ -61,13 +61,13 @@
                     [key (to-timestamp val)]
                     [key val])) data)))
 
-(defn- normalize-nil-claims
+(defn normalize-nil-claims
   "Given a raw headers, try normalize it removing any
   key with null values."
   [data]
   (into {} (remove (comp nil? second) data)))
 
-(defn- encode-header
+(defn encode-header
   "Encode jws header"
   [alg extra]
   (let [algorithm (.toUpperCase (name alg))]
@@ -76,7 +76,7 @@
         (codecs/str->bytes)
         (codecs/bytes->safebase64))))
 
-(defn- encode-claims
+(defn encode-claims
   "Encode jws claims."
   [input exp nbf iat]
   (-> (normalize-nil-claims {:exp exp :nbf nbf :iat iat})
@@ -86,7 +86,7 @@
       (codecs/str->bytes)
       (codecs/bytes->safebase64)))
 
-(defn- parse-header
+(defn parse-header
   "Parse jws header."
   [^String headerdata]
   (-> headerdata
@@ -94,7 +94,7 @@
       (codecs/bytes->str)
       (json/parse-string true)))
 
-(defn- parse-claims
+(defn parse-claims
   "Parse jws claims"
   [^String claimsdata]
   (-> claimsdata
@@ -102,26 +102,26 @@
       (codecs/bytes->str)
       (json/parse-string true)))
 
-(defn- parse-algorithm
+(defn parse-algorithm
   "Parse algorithm name and return a
   internal keyword representation of it."
   [header]
   (let [algname (:alg header)]
     (keyword (.toLowerCase algname))))
 
-(defn- get-verifier-for-algorithm
+(defn get-verifier-for-algorithm
   "Get verifier function for algorithm name."
   [^Keyword alg]
   (when (contains? *signers-map* alg)
     (get-in *signers-map* [alg :verifier])))
 
-(defn- get-signer-for-algorithm
+(defn get-signer-for-algorithm
   "Get signer function for algorithm name."
   [^Keyword alg]
   (when (contains? *signers-map* alg)
     (get-in *signers-map* [alg :signer])))
 
-(defn- safe-encode
+(defn safe-encode
   "Properly encode string into
   safe url base64 encoding."
   [^String input]
@@ -129,7 +129,7 @@
       (codecs/str->bytes)
       (codecs/bytes->safebase64)))
 
-(defn- calculate-signature
+(defn calculate-signature
   "Make a jws signature."
   [pkey alg header claims]
   (let [candidate (str/join "." [header claims])
