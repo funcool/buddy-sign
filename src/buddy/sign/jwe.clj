@@ -165,7 +165,7 @@
         (codecs/str->bytes))))
 
 (defn- parse-header
-  [header]
+  [^String header]
   (let [header (codecs/safebase64->bytes header)
         header (codecs/bytes->str header)
         {:keys [alg enc zip] :as header} (json/parse-string header true)]
@@ -188,16 +188,6 @@
         buffer (ByteBuffer/allocate 8)]
     (.putLong buffer length)
     (.array buffer)))
-
-;; +-------------------------------+-------------+-------------+-------+
-;; |           algorithm           | ENC_KEY_LEN | MAC_KEY_LEN | T_LEN |
-;; +-------------------------------+-------------+-------------+-------+
-;; | AEAD_AES_128_CBC_HMAC_SHA_256 |      16     |      16     |   16  |
-;; |                               |             |             |       |
-;; | AEAD_AES_192_CBC_HMAC_SHA_384 |      24     |      24     |   24  |
-;; |                               |             |             |       |
-;; | AEAD_AES_256_CBC_HMAC_SHA_512 |      32     |      32     |   32  |
-;; +-------------------------------+-------------+-------------+-------+
 
 (defn extract-encryption-key
   [secret algorithm]
@@ -285,7 +275,7 @@
         encryptionkey (extract-encryption-key secret algorithm)
         authkey (extract-authentication-key secret algorithm)]
     (when-not (verify-authtag authtag (assoc params :authkey authkey :algorithm :sha256))
-      (throw+ {:type :validation :cause :authtag :message "Message seems corrupted or manipulated."}))
+      (throw+ {:type :validation :cause :authtag :message "Message seems corrupt or manipulated."}))
     (decrypt cipher ciphertext encryptionkey iv)))
 
 (defmethod aead-decrypt :a192cbc-hs384
@@ -296,7 +286,7 @@
         encryptionkey (extract-encryption-key secret algorithm)
         authkey (extract-authentication-key secret algorithm)]
     (when-not (verify-authtag authtag (assoc params :authkey authkey :algorithm :sha384))
-      (throw+ {:type :validation :cause :authtag :message "Message seems corrupted or manipulated."}))
+      (throw+ {:type :validation :cause :authtag :message "Message seems corrupt or manipulated."}))
     (decrypt cipher ciphertext encryptionkey iv)))
 
 (defmethod aead-decrypt :a256cbc-hs512
@@ -307,7 +297,7 @@
         encryptionkey (extract-encryption-key secret algorithm)
         authkey (extract-authentication-key secret algorithm)]
     (when-not (verify-authtag authtag (assoc params :authkey authkey :algorithm :sha512))
-      (throw+ {:type :validation :cause :authtag :message "Message seems corrupted or manipulated."}))
+      (throw+ {:type :validation :cause :authtag :message "Message seems corrupt or manipulated."}))
     (decrypt cipher ciphertext encryptionkey iv)))
 
 (defn- generate-plaintext
