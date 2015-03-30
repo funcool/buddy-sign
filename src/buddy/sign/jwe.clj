@@ -390,7 +390,7 @@
 
          (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
          (throw+ {:type :validation
-                  :cause :nbf
+                  :cause :max-age
                   :message (format "Token is older than max-age (%s)" max-age)})
 
          :else claims)))))
