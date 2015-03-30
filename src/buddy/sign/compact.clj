@@ -37,11 +37,12 @@
             [buddy.core.sign.ecdsa :as ecdsa]
             [buddy.core.nonce :as nonce]
             [buddy.sign.jws :as jws]
-            [buddy.sign.util :refer [to-timestamp timestamp]]
+            [buddy.sign.util :as util]
             [clojure.string :as str]
             [taoensso.nippy :as nippy]
             [taoensso.nippy.compression :as nippycompress]
-            [cats.monad.either :as either])
+            [cats.monad.exception :as exc]
+            [slingshot.slingshot :refer [throw+]])
   (:import clojure.lang.Keyword))
 
 (def ^{:doc "List of supported signing algorithms"
@@ -101,16 +102,16 @@
   compact sigining method."
   [data key & [{:keys [alg compress]
                 :or {alg :hs256 compress true}}]]
-  (let [input (serialize data compress)
-        salt (nonce/random-nonce 8)
-        stamp (codecs/long->bytes (timestamp))
-        signature (-> (bytes/concat input salt stamp)
-                      (calculate-signature key alg))
-        result (str/join "." [(codecs/bytes->safebase64 input)
-                              (codecs/bytes->safebase64 signature)
-                              (codecs/bytes->safebase64 salt)
-                              (codecs/bytes->safebase64 stamp)])]
-    (either/right result)))
+  (exc/try-on
+   (let [input (serialize data compress)
+         salt (nonce/random-nonce 8)
+         stamp (codecs/long->bytes (util/timestamp))
+         signature (-> (bytes/concat input salt stamp)
+                       (calculate-signature key alg))]
+     (str/join "." [(codecs/bytes->safebase64 input)
+                    (codecs/bytes->safebase64 signature)
+                    (codecs/bytes->safebase64 salt)
+                    (codecs/bytes->safebase64 stamp)]))))
 
 (defn decode
   "Given a signed message, verify it and return
@@ -122,29 +123,29 @@
   either/left instance."
   [data key & [{:keys [alg compress max-age]
                 :or {alg :hs256 compress true}}]]
-  (let [[input signature salt stamp] (str/split data #"\." 4)
-        input (codecs/safebase64->bytes input)
-        signature (codecs/safebase64->bytes signature)
-        salt (codecs/safebase64->bytes salt)
-        stamp (codecs/safebase64->bytes stamp)
-        candidate (bytes/concat input salt stamp)]
-    (if (false? (verify-signature candidate signature key alg))
-      (either/left "Invalid signature.")
-      (let [now (timestamp)
-            stamp (codecs/bytes->long stamp)]
-        (if (and (number? max-age)
-                 (> (- now stamp) max-age))
-          (either/left "Expired data")
-          (either/right (nippy/thaw input {:v1-compatibility? false})))))))
+  (exc/try-on
+   (let [[input signature salt stamp] (str/split data #"\." 4)
+         input (codecs/safebase64->bytes input)
+         signature (codecs/safebase64->bytes signature)
+         salt (codecs/safebase64->bytes salt)
+         stamp (codecs/safebase64->bytes stamp)
+         candidate (bytes/concat input salt stamp)]
+     (when-not (verify-signature candidate signature key alg)
+       (throw+ {:type :validation :cause :auth :message "Message seems corrupt or manipulated."}))
+
+     (let [now (util/timestamp)
+           stamp (codecs/bytes->long stamp)]
+       (when (and (number? max-age) (> (- now stamp) max-age))
+         (throw+ {:type :validation :cause :max-age
+                  :message (format "Token is older than max-age (%s)" max-age)}))
+       (nippy/thaw input {:v1-compatibility? false})))))
 
 (defn sign
   "Not monadic version of encode."
   [& args]
-  (either/from-either (apply encode args)))
+  (deref (apply encode args)))
 
 (defn unsign
   "Not monadic version of decode."
   [& args]
-  (let [result (apply decode args)]
-    (when (either/right? result)
-      (either/from-either result))))
+  (deref (apply decode args)))
