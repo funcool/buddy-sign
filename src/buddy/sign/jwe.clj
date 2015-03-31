@@ -372,9 +372,10 @@
 
 (defn- generate-plaintext
   [claims zip exp nbf iat]
-  (let [data (-> (jws/normalize-nil-claims {:exp exp :nbf nbf :iat iat})
-                 (jws/normalize-date-claims)
-                 (merge claims)
+  (let [additionalclaims (-> (jws/normalize-nil-claims {:exp exp :nbf nbf :iat iat})
+                             (jws/normalize-date-claims))
+        data (-> (jws/normalize-date-claims claims)
+                 (merge additionalclaims)
                  (json/generate-string)
                  (codecs/str->bytes))]
     (condp = zip

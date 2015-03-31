@@ -81,12 +81,13 @@
 (defn encode-claims
   "Encode jws claims."
   [input exp nbf iat]
-  (-> (normalize-nil-claims {:exp exp :nbf nbf :iat iat})
-      (normalize-date-claims)
-      (merge input)
-      (json/generate-string)
-      (codecs/str->bytes)
-      (codecs/bytes->safebase64)))
+  (let [additionalclaims (-> (normalize-nil-claims {:exp exp :nbf nbf :iat iat})
+                             (normalize-date-claims))]
+    (-> (normalize-date-claims input)
+        (merge additionalclaims)
+        (json/generate-string)
+        (codecs/str->bytes)
+        (codecs/bytes->safebase64))))
 
 (defn parse-header
   "Parse jws header."
