@@ -232,7 +232,7 @@
 (defn extract-encryption-key
   [secret algorithm]
   {:pre [(bytes/bytes? secret)]}
-  (condp = algorithm
+  (case algorithm
     :a128cbc-hs256 (bytes/slice secret 16 32)
     :a192cbc-hs384 (bytes/slice secret 24 48)
     :a256cbc-hs512 (bytes/slice secret 32 64)))
@@ -240,7 +240,7 @@
 (defn extract-authentication-key
   [secret algorithm]
   {:pre [(bytes/bytes? secret)]}
-  (condp = algorithm
+  (case algorithm
     :a128cbc-hs256 (bytes/slice secret 0 16)
     :a192cbc-hs384 (bytes/slice secret 0 24)
     :a256cbc-hs512 (bytes/slice secret 0 32)))
