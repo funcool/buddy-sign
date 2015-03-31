@@ -166,11 +166,10 @@
 
 (defn- parse-header
   [^String header]
-  (let [header (codecs/safebase64->bytes header)
-        header (codecs/bytes->str header)
+  (let [header (codecs/safebase64->str header)
         {:keys [alg enc zip] :as header} (json/parse-string header true)]
     (when (or (nil? alg) (nil? enc))
-      (throw (IllegalArgumentException. "header must contain alg and enc keys.")))
+      (throw+ {:type :parse :cause :header :message "Missing `alg` or `enc` key in header."}))
     (merge {:alg (keyword (str/lower-case alg))
             :enc (keyword (str/lower-case enc))}
            (when zip
