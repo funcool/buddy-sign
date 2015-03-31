@@ -9,7 +9,7 @@ Andrey Antukh, <niwi@niwi.be>
 == Introduction
 
 Buddy *sign* module is dedicated to provide a high level abstraction
-for web ready message signing.
+for web ready message signing and encryption.
 
 It can be used for several purposes:
 
@@ -44,8 +44,9 @@ vector on your *_project.clj_* file:
 ._on project.clj_
 [source,clojure]
 ----
-[buddy/buddy-sign "0.4.2"]
+[buddy/buddy-sign "0.5.0-SNAPSHOT"]
 ----
+
 
 === Gradle
 
@@ -53,7 +54,7 @@ If you are using gradle, this is a dependency line for gradle dsl:
 
 [source,groovy]
 ----
-compile "buddy:buddy-sign:0.4.2"
+compile "buddy:buddy-sign:0.5.0-SNAPSHOT"
 ----
 
 
@@ -68,18 +69,43 @@ You can clone the public repository with this command:
 git clone https://github.com/funcool/buddy-sign
 ----
 
+== Json Web Token
+
+JSON Web Token (JWT) is a compact claims representation format intended for space constrained
+environments such as HTTP Authorization headers and URI query parameters.  JWTs encode claims
+to be transmitted as a JavaScript Object Notation (JSON) object that is used as the payload of
+a JSON Web Signature (JWS) structure or as the plaintext of a JSON Web Encryption (JWE) structure,
+enabling the claims to be digitally signed or MACed and/or encrypted.
+
+=== How to use it?
+
+_buddy-sign_ does not offers special api for Json Web Token because it is a subset of Json Web
+Signature (JWS) and Json Web Encryption (JSE) specifications. If you want use one or other see the
+corresponding documentation in below sections.
+
+=== Involved RFC's
+
+* http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32
+* http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-40
+* http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption-40
+* http://tools.ietf.org/html/draft-ietf-jose-json-web-signature-40
+* http://tools.ietf.org/html/draft-mcgrew-aead-aes-cbc-hmac-sha2-05
 
 
 [[jws]]
-== Json Web Signature/Token
+== Json Web Signature
 
 [small]#New in version: 0.2#
 
-JSON Web Signature (JWS) represents content secured with digital
-signatures or Message Authentication Codes (MACs) using JavaScript
+JSON Web Signature (JWS) is a signing part of Json Web Token (JWT) specification and represents a
+content secured with digital signatures or Message Authentication Codes (MACs) using JavaScript
 Object Notation (JSON) as serialization format.
 
-.Supported Algorithms
+
+=== Supported algorithms
+
+Here a summary of supported algorithms for JWS:
+
 [options="header"]
 |=====================================================================================
 |Algorithm name     | Hash algorithms   | Keywords           | Priv/Pub Key?
@@ -89,43 +115,108 @@ Object Notation (JSON) as serialization format.
 |HMAC               | sha256*, sha512   | `:hs256`, `:hs256` | No
 |=====================================================================================
 
-.List of rfcs related JWS/JWT/JWA:
-- http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32
-- http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-40
-- http://tools.ietf.org/html/draft-ietf-jose-json-web-signature-40
 
+=== Signing data
 
-=== Signing and unsignin data
+Let start with signing data. For it we will use the `encode` function from `buddy.sign.jws` namespace
+and the `hs256` algorithm for signining.
 
-Due to the nature of the storage format, the input is restricted mainly to json objects
-in the current version.
-
-.Example sign data using JWS
 [source, clojure]
 ----
 (require '[buddy.sign.jws :as jws])
 
-;; Sign data using default `:hs256` algorithm that does not
-;; requres special priv/pub key.
-(def data (jws/encode {:userid 1} "secret"))
+(jws/encode {:userid 1} "secret")
+;; => #<Success [eyJ0eXAiOiJKV1MiLCJhbGciOiJIU...]>
+----
 
-;; data will contains omething to
-;; #<Right [eyJ0eXAiOiJKV1MiLCJhbGciOiJIU...]>
+The `encode` function may return an instance of `Success` type or instance of `Failure` of
+_Exception_ monad defined in cats library. Do not worry if you do not know or do not want to know
+about monads, you can treat that return value like a dereferenciable wrapper.
 
-(jws/decode @data "secret")
+Example on how you can deref a success instance:
+
+[source, clojure]
+----
+@(jws/encode {:userid 1} "secret")
+;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
+----
+
+Additionally, _buddy-sign_ exposes the `sign` function that do the deref operation for you:
+
+[source, clojure]
+----
+(jws/sign {:userid 1} "secret")
+;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
+----
+
+Due to the nature of the storage format, the input is restricted mainly to json objects in the current
+version.
+
+
+=== Unsigning data
+
+It's time to unsing data. For it we will use the `decode` function from `buddy.sign.jws` namespace. In
+this case we do not need pass any algorithm because it automatically detected.
+
+[source, clojure]
+----
+(jws/decode data "secret")
+;; => #<Success [{:userid 1}]>
+----
+
+Additionally, _buddy-sign_ exposes the `unsign` function that do the deref operation for you:
+
+[source, clojure]
+----
+(jws/unsign data "secret")
 ;; => {:userid 1}
 ----
 
-The *encode* and *decode* methods returns a monadic either defined in
-link:https://github/funcool/cats[cats library]. This allows more granural
-error reporting when something wrong is happens in the validation process.
 
-That functions are introduced in *buddy-sign 0.4.0*. Also, the previos
-*sign* and *unsign* functions are conserved for backward compatibility
-and are still returning plain values.
+=== Claims validation
+
+_buddy-sign_ json web signature implementation also includes validation of a concrete subset
+of claims related to the age of the signed data: *exp* (expiration time), *nbf* (not before).
+
+The validation is performed on decoding the token. If `:exp` claim is found and posterior to
+the current date time (UTC) an validation exception will be raised or a failure instance will
+be returned, depending on that api you are using direct or monadic.
+
+Let see an example using direct api:
+
+[source, clojure]
+----
+(require '[clj-time.core :as time])
+
+;; Define claims with `:exp` key
+(def claims
+  {:user 1 :exp (time/plus (time/now) (time/seconds 5))})
+
+;; Serialize and sign a token with previously defined claims
+(def token (jws/sign claims "key"))
+
+;; wait 5 seconds and try unsign it
+
+(jws/unsign token "key")
+;; => ExceptionInfo throw+: {:type :validation, :cause :exp, :message "Token is older than :exp (1427836475)"}  buddy.sign.jws/decode/func--4120--auto----4374 (jws.clj:167)
+----
+
+The best way to capture this type of exceptions is using
+link:https://github.com/scgilardi/slingshot[slingshot] library:
+
+[source, clojure]
+----
+(require '[slingshot.slingshot :refer [try+]])
+
+(try+
+  (jws/unsign token "key")
+  (catch [:type :validation] e
+    (println "Error: " (:message e))))
+;; => Will print in console: "Error: Token is older than :exp (1427836475)"
+----
 
 
-=== Using Digital Signature algorithms
+=== Digital signature algorithms
 
 In order to use any of digital signature algorithms you must have a private/public key.
 If you don't have one, don't worry, it is very easy to generate it using *openssl*, see
@@ -137,7 +228,6 @@ of supported digital signature algorithms.
 .Example of signing a string using _es256_ (eliptic curve dsa) algorithm.
 [source, clojure]
 ----
-(require '[buddy.sign.jws :as jws])
 (require '[buddy.core.keys :as keys])
 
 ;; Create keys instances
@@ -145,11 +235,59 @@ of supported digital signature algorithms.
 (def ec-pubkey (keys/public-key "ecpubkey.pem"))
 
 ;; Use them like plain secret password with hmac algorithms for sign
-(def signed-data (jws/encode {:foo "bar"} ec-privkey {:alg :es256}))
+(def signed-data (jws/sign {:foo "bar"} ec-privkey {:alg :es256}))
 
 ;; And unsign
-(def unsigned-data (jws/decode @signed-data ec-pubkey {:alg :es256}))
+(def unsigned-data (jws/unsign signed-data ec-pubkey {:alg :es256}))
 ----
+
+
+== Json Web Encryption
+
+[small]#New in version: 0.5#
+
+JSON Web Encryption (JWE) is a encryption part of Json Web Token (JWT) specification and represents
+a encrypted content using JavaScript Object Notation (JSON) based data structures.
+
+
+=== Supported algorithms
+
+The Json Web Encryption in difference to JWS uses two types of algoritms: key encryption algorithms
+and content encryption algorithms.
+
+The *key encryption algorithms* are responsible of encrypt the key that will be used for encrypt the
+content. At this moment, only the *dir* key encryption algorithm is supported. The *dir* algoritms
+indicates that the shared secret key will be used as is, for content encryption.
+
+The *conentent encryption algoritms* are responsible of encrypt the content, and _buddy-sign_ supports
+all algorithms specified in JWE specification:
+
+[options="header", cols="1,1,1,1"]
+|===================================================================================
+| Algorithm name | Real algorithm name       | Keyword       | Shared Key Size
+| A128CBC-HS256  | AES_128_CBC_HMAC_SHA_256  | `:a128-hs256` | 32 bytes
+| A192CBC-HS384  | AES_192_CBC_HMAC_SHA_384  | `:a192-hs384` | 48 bytes
+| A256CBC-HS512  | AES_256_CBC_HMAC_SHA_512  | `:a256-hs512` | 64 bytes
+| A128GCM        | AES GCM using 128 bit key | `:a128gcm`    | 16 bytes
+| A192GCM        | AES GCM using 192 bit key | `:a192gcm`    | 24 bytes
+| A256GCM        | AES GCM using 256 bit key | `:a256gcm`    | 32 bytes
+|===================================================================================
+
+
+=== Encrypting data
+
+TODO
+
+
+=== Decrypting Data
+
+TODO
+
+
+=== Claims validation
+
+TODO
+
 
 == Compact message signing
 
