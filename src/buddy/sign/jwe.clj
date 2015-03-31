@@ -32,8 +32,9 @@
             [cheshire.core :as json]
             [cats.core :as m]
             [cats.monad.exception :as exc]
-            [slingshot.slingshot :refer [throw+]])
+            [slingshot.slingshot :refer [throw+ try+]])
   (:import clojure.lang.Keyword
+           org.bouncycastle.crypto.InvalidCipherTextException
            java.nio.ByteBuffer
            java.io.ByteArrayInputStream
            java.io.ByteArrayOutputStream
@@ -108,7 +109,7 @@
                   (- inputsize cursormax)
                   (conj result buffer))))))))
 
-(defn- encrypt
+(defn- encrypt-cbc
   [cipher input key iv]
   (let [blocksize (crypto/get-block-size cipher)
         blocks (split-by-blocksize input blocksize)]
@@ -123,7 +124,7 @@
                          (conj acc eblock))))
                    [] blocks))))
 
-(defn- decrypt
+(defn- decrypt-cbc
   [cipher input key iv]
   (let [blocksize (crypto/get-block-size cipher)
         blocks (split-by-blocksize input blocksize false)]
@@ -226,7 +227,7 @@
   (let [cipher (crypto/block-cipher :aes :cbc)
         encryptionkey (extract-encryption-key secret algorithm)
         authkey (extract-authentication-key secret algorithm)
-        ciphertext (encrypt cipher plaintext encryptionkey iv)
+        ciphertext (encrypt-cbc cipher plaintext encryptionkey iv)
         tag (generate-authtag {:algorithm :sha256
                                :ciphertext ciphertext
                                :authkey authkey
@@ -241,7 +242,7 @@
   (let [cipher (crypto/block-cipher :aes :cbc)
         encryptionkey (extract-encryption-key secret algorithm)
         authkey (extract-authentication-key secret algorithm)
-        ciphertext (encrypt cipher plaintext encryptionkey iv)
+        ciphertext (encrypt-cbc cipher plaintext encryptionkey iv)
         tag (generate-authtag {:algorithm :sha384
                                :ciphertext ciphertext
                                :authkey authkey
@@ -256,7 +257,7 @@
   (let [cipher (crypto/block-cipher :aes :cbc)
         encryptionkey (extract-encryption-key secret algorithm)
         authkey (extract-authentication-key secret algorithm)
-        ciphertext (encrypt cipher plaintext encryptionkey iv)
+        ciphertext (encrypt-cbc cipher plaintext encryptionkey iv)
         tag (generate-authtag {:algorithm :sha512
                                :ciphertext ciphertext
                                :authkey authkey
@@ -275,7 +276,7 @@
         authkey (extract-authentication-key secret algorithm)]
     (when-not (verify-authtag authtag (assoc params :authkey authkey :algorithm :sha256))
       (throw+ {:type :validation :cause :authtag :message "Message seems corrupt or manipulated."}))
-    (decrypt cipher ciphertext encryptionkey iv)))
+    (decrypt-cbc cipher ciphertext encryptionkey iv)))
 
 (defmethod aead-decrypt :a192cbc-hs384
   [{:keys [algorithm authtag ciphertext secret iv] :as params}]
@@ -286,7 +287,7 @@
         authkey (extract-authentication-key secret algorithm)]
     (when-not (verify-authtag authtag (assoc params :authkey authkey :algorithm :sha384))
       (throw+ {:type :validation :cause :authtag :message "Message seems corrupt or manipulated."}))
-    (decrypt cipher ciphertext encryptionkey iv)))
+    (decrypt-cbc cipher ciphertext encryptionkey iv)))
 
 (defmethod aead-decrypt :a256cbc-hs512
   [{:keys [algorithm authtag ciphertext secret iv] :as params}]
@@ -297,7 +298,7 @@
         authkey (extract-authentication-key secret algorithm)]
     (when-not (verify-authtag authtag (assoc params :authkey authkey :algorithm :sha512))
       (throw+ {:type :validation :cause :authtag :message "Message seems corrupt or manipulated."}))
-    (decrypt cipher ciphertext encryptionkey iv)))
+    (decrypt-cbc cipher ciphertext encryptionkey iv)))
 
 (defn- generate-plaintext
   [claims zip exp nbf iat]
