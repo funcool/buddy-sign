@@ -389,13 +389,6 @@
     (-> (codecs/bytes->str data)
         (json/parse-string true))))
 
-(defn- get-cipher
-  [algorithm]
-  (condp = algorithm
-    :a128cbc-hs256 (crypto/block-cipher :aes :cbc)
-    :a192cbc-hs384 (crypto/block-cipher :aes :cbc)
-    :a256cbc-hs512 (crypto/block-cipher :aes :cbc)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -409,8 +402,7 @@
                   :as options}]]
   {:pre [(map? claims)]}
   (exc/try-on
-   (let [cipher (get-cipher enc)
-         scek (generate-cek {:key key :alg alg})
+   (let [scek (generate-cek {:key key :alg alg})
          ecek (encrypt-cek {:cek scek :alg alg})
          iv (generate-iv {:enc enc})
          header (generate-header {:alg alg :enc enc :zip zip})
@@ -432,7 +424,6 @@
   (exc/try-on
    (let [[header ecek iv ciphertext authtag] (str/split input #"\." 5)
          {:keys [alg enc zip] :or {zip ::none}} (parse-header header)
-         cipher (get-cipher enc)
          ecek (codecs/safebase64->bytes ecek)
          scek (generate-cek {:key key :alg alg})
          iv (codecs/safebase64->bytes iv)
