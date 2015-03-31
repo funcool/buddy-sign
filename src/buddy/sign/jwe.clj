@@ -457,12 +457,12 @@
 
          :else claims)))))
 
-(defn sign
+(defn encrypt
   "Not monadic version of encode."
   [& args]
   (deref (apply encode args)))
 
-(defn unsign
+(defn decrypt
   "Not monadic version of decode."
   [& args]
   (deref (apply decode args)))

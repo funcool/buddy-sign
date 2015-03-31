@@ -96,7 +96,7 @@
       (is (= unsigned (assoc candidate :exp exp)))
       (Thread/sleep 3000)
       (try+
-        (jwe/unsign signed secret)
+        (jwe/decrypt signed secret)
         (catch [:type :validation] {:keys [cause]}
           (is (= cause :exp))))))
 
@@ -109,7 +109,7 @@
       (is (= unsigned (assoc candidate :nbf nbf)))
       (Thread/sleep 3000)
       (try+
-        (jwe/unsign signed secret)
+        (jwe/decrypt signed secret)
         (catch [:type :validation] {:keys [cause]}
           (is (= cause :nbf))))))
 )
@@ -121,15 +121,15 @@
       (is (= result' data))))
 
   (testing "Wrong key"
-    (is (thrown? AssertionError (jwe/sign data key16 {:enc :a128cbc-hs256})))
-    (is (thrown? AssertionError (jwe/sign data key48 {:enc :a128cbc-hs256}))))
+    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a128cbc-hs256})))
+    (is (thrown? AssertionError (jwe/encrypt data key48 {:enc :a128cbc-hs256}))))
 
   (testing "Wrong data"
     (let [token (str "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.."
                      "zkV7_0---NDlvQYfpNDfqw.hECYr8zURDvz9hdjz6s-O0HNF2"
                      "MhgHgXjnQN6KuUcgE.eXYr6ybqAYcQkkkuGNcNKA")]
       (try+
-        (jwe/unsign token key32 {:enc :a128cbc-hs256})
+        (jwe/decrypt token key32 {:enc :a128cbc-hs256})
         (catch [:type :validation] {:keys [cause]}
           (is (= cause :authtag))))))
 )
@@ -141,16 +141,16 @@
       (is (= result' data))))
 
   (testing "Wrong key"
-    (is (thrown? AssertionError (jwe/sign data key16 {:enc :a192cbc-hs384})))
-    (is (thrown? AssertionError (jwe/sign data key32 {:enc :a192cbc-hs384})))
-    (is (thrown? AssertionError (jwe/sign data key64 {:enc :a192cbc-hs384}))))
+    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a192cbc-hs384})))
+    (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a192cbc-hs384})))
+    (is (thrown? AssertionError (jwe/encrypt data key64 {:enc :a192cbc-hs384}))))
 
   (testing "Wrong data"
     (let [token (str "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.."
                      "zkV7_0---NDlvQYfpNDfqw.hECYr8zURDvz9hdjz6s-O0HNF2"
                      "MhgHgXjnQN6KuUcgE.eXYr6ybqAYcQkkkuGNcNKA")]
       (try+
-        (jwe/unsign token key32)
+        (jwe/decrypt token key32)
         (catch [:type :validation] {:keys [cause]}
           (is (= cause :authtag))))))
 )
@@ -162,15 +162,15 @@
       (is (= result' data))))
 
   (testing "Wrong key"
-    (is (thrown? AssertionError (jwe/sign data key16 {:enc :a256cbc-hs512})))
-    (is (thrown? AssertionError (jwe/sign data key32 {:enc :a256cbc-hs512}))))
+    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a256cbc-hs512})))
+    (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a256cbc-hs512}))))
 
   (testing "Wrong data"
     (let [token (str "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.."
                      "zkV7_0---NDlvQYfpNDfqw.hECYr8zURDvz9hdjz6s-O0HNF2"
                      "MhgHgXjnQN6KuUcgE.eXYr6ybqAYcQkkkuGNcNKA")]
       (try+
-        (jwe/unsign token key32 {:enc :a256cbc-hs512})
+        (jwe/decrypt token key32 {:enc :a256cbc-hs512})
         (catch [:type :validation] {:keys [cause]}
           (is (= cause :authtag))))))
 )
@@ -182,8 +182,8 @@
       (is (= result' data))))
 
   (testing "Wrong key"
-    (is (thrown? AssertionError (jwe/sign data key32 {:enc :a128gcm})))
-    (is (thrown? AssertionError (jwe/sign data key48 {:enc :a128gcm}))))
+    (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a128gcm})))
+    (is (thrown? AssertionError (jwe/encrypt data key48 {:enc :a128gcm}))))
 )
 
 (deftest jwe-alg-dir-enc-a192gcm
@@ -193,8 +193,8 @@
       (is (= result' data))))
 
   (testing "Wrong key"
-    (is (thrown? AssertionError (jwe/sign data key16 {:enc :a192gcm})))
-    (is (thrown? AssertionError (jwe/sign data key32 {:enc :a192gcm}))))
+    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a192gcm})))
+    (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a192gcm}))))
 )
 
 (deftest jwe-alg-dir-enc-a256gcm
@@ -204,6 +204,6 @@
       (is (= result' data))))
 
   (testing "Wrong key"
-    (is (thrown? AssertionError (jwe/sign data key16 {:enc :a256gcm})))
-    (is (thrown? AssertionError (jwe/sign data key48 {:enc :a256gcm}))))
+    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a256gcm})))
+    (is (thrown? AssertionError (jwe/encrypt data key48 {:enc :a256gcm}))))
 )
