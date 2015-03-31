@@ -94,9 +94,7 @@
   (let [header (codecs/safebase64->str header)
         {:keys [alg] :as header} (json/parse-string header true)]
     (when (nil? alg)
-      (throw+ {:type :validation
-               :cause :header
-               :message "Missing `alg` key in header."}))
+      (throw+ {:type :parse :cause :header :message "Missing `alg` key in header."}))
     (merge {:alg (keyword (str/lower-case alg))}
            (dissoc header :alg))))
 
