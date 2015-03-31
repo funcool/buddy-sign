@@ -106,96 +106,24 @@
       (codecs/bytes->str)
       (json/parse-string true)))
 
-(defmulti calculate-signature :alg)
-(defmulti verify-signature :alg)
-
-(defmethod calculate-signature :hs256
+(defn- calculate-signature
+  "Given the bunch of bytes, a private key and algorithm,
+  return a calculated signature as byte array."
   [{:keys [key alg header claims]}]
-  (-> (str/join "." [header claims])
-      (hmac/hash key :sha256)
-      (codecs/bytes->safebase64)))
+  (let [signer (get-in *signers-map* [alg :signer])
+        authdata (str/join "." [header claims])]
+    (-> (signer authdata key)
+        (codecs/bytes->safebase64))))
 
-(defmethod calculate-signature :hs512
-  [{:keys [key alg header claims]}]
-  (-> (str/join "." [header claims])
-      (hmac/hash key :sha512)
-      (codecs/bytes->safebase64)))
-
-(defmethod calculate-signature :rs256
-  [{:keys [key alg header claims]}]
-  (-> (str/join "." [header claims])
-      (rsapkcs/sign key :sha256)
-      (codecs/bytes->safebase64)))
-
-(defmethod calculate-signature :rs512
-  [{:keys [key alg header claims]}]
-  (-> (str/join "." [header claims])
-      (rsapkcs/sign key :sha512)
-      (codecs/bytes->safebase64)))
-
-(defmethod calculate-signature :ps256
-  [{:keys [key alg header claims]}]
-  (-> (str/join "." [header claims])
-      (rsapss/sign key :sha256)
-      (codecs/bytes->safebase64)))
-
-(defmethod calculate-signature :ps512
-  [{:keys [key alg header claims]}]
-  (-> (str/join "." [header claims])
-      (rsapss/sign key :sha512)
-      (codecs/bytes->safebase64)))
-
-(defmethod calculate-signature :es256
-  [{:keys [key alg header claims]}]
-  (-> (str/join "." [header claims])
-      (ecdsa/sign key :sha256)
-      (codecs/bytes->safebase64)))
-
-(defmethod calculate-signature :es512
-  [{:keys [key alg header claims]}]
-  (-> (str/join "." [header claims])
-      (ecdsa/sign key :sha512)
-      (codecs/bytes->safebase64)))
-
-(defmethod verify-signature :hs256
+(defn- verify-signature
+  "Given a bunch of bytes, a previously generated
+  signature, the private key and algorithm, return
+  signature matches or not."
+  ;; [^bytes input ^bytes signature ^bytes key ^Keyword alg]
   [{:keys [alg signature key header claims]}]
-  (-> (str/join "." [header claims])
-      (hmac/verify signature key :sha256)))
-
-(defmethod verify-signature :hs512
-  [{:keys [alg signature key header claims]}]
-  (-> (str/join "." [header claims])
-      (hmac/verify signature key :sha512)))
-
-(defmethod verify-signature :rs256
-  [{:keys [alg signature key header claims]}]
-  (-> (str/join "." [header claims])
-      (rsapkcs/verify signature key :sha256)))
-
-(defmethod verify-signature :rs512
-  [{:keys [alg signature key header claims]}]
-  (-> (str/join "." [header claims])
-      (rsapkcs/verify signature key :sha512)))
-
-(defmethod verify-signature :ps256
-  [{:keys [alg signature key header claims]}]
-  (-> (str/join "." [header claims])
-      (rsapss/verify signature key :sha256)))
-
-(defmethod verify-signature :ps512
-  [{:keys [alg signature key header claims]}]
-  (-> (str/join "." [header claims])
-      (rsapss/verify signature key :sha512)))
-
-(defmethod verify-signature :es256
-  [{:keys [alg signature key header claims]}]
-  (-> (str/join "." [header claims])
-      (ecdsa/verify signature key :sha256)))
-
-(defmethod verify-signature :es512
-  [{:keys [alg signature key header claims]}]
-  (-> (str/join "." [header claims])
-      (ecdsa/verify signature key :sha512)))
+  (let [verifier (get-in *signers-map* [alg :verifier])
+        authdata (str/join "." [header claims])]
+   (verifier authdata signature key)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
