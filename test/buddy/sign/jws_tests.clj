@@ -40,9 +40,9 @@
       (is (= unsigned (assoc candidate :exp exp)))
       (Thread/sleep 3000)
       (try+
-       (jws/unsign signed secret)
-       (catch [:type :validation] {:keys [cause]}
-         (is (= cause :exp))))))
+        (jws/unsign signed secret)
+        (catch [:type :validation] {:keys [cause]}
+          (is (= cause :exp))))))
 
   (testing "Unsigning jws with nbf"
     (let [candidate {:foo "bar"}
@@ -53,9 +53,9 @@
       (is (= unsigned (assoc candidate :nbf nbf)))
       (Thread/sleep 3000)
       (try+
-       (jws/unsign signed secret)
-       (catch [:type :validation] {:keys [cause]}
-         (is (= cause :nbf))))))
+        (jws/unsign signed secret)
+        (catch [:type :validation] {:keys [cause]}
+          (is (= cause :nbf))))))
 )
 
 (deftest jws-rs256-sign-unsign

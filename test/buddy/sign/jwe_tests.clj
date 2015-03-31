@@ -97,9 +97,9 @@
       (is (= unsigned (assoc candidate :exp exp)))
       (Thread/sleep 3000)
       (try+
-       (jwe/unsign signed secret)
-       (catch [:type :validation] {:keys [cause]}
-         (is (= cause :exp))))))
+        (jwe/unsign signed secret)
+        (catch [:type :validation] {:keys [cause]}
+          (is (= cause :exp))))))
 
   (testing "Unsigning jws with nbf"
     (let [candidate {:foo "bar"}
@@ -110,9 +110,9 @@
       (is (= unsigned (assoc candidate :nbf nbf)))
       (Thread/sleep 3000)
       (try+
-       (jwe/unsign signed secret)
-       (catch [:type :validation] {:keys [cause]}
-         (is (= cause :nbf))))))
+        (jwe/unsign signed secret)
+        (catch [:type :validation] {:keys [cause]}
+          (is (= cause :nbf))))))
 )
 
 (deftest jwe-alg-dir-enc-a128-hs256
@@ -130,9 +130,9 @@
                      "zkV7_0---NDlvQYfpNDfqw.hECYr8zURDvz9hdjz6s-O0HNF2"
                      "MhgHgXjnQN6KuUcgE.eXYr6ybqAYcQkkkuGNcNKA")]
       (try+
-       (jwe/unsign token key32 {:enc :a128cbc-hs256})
-       (catch [:type :validation] {:keys [cause]}
-         (is (= cause :authtag))))))
+        (jwe/unsign token key32 {:enc :a128cbc-hs256})
+        (catch [:type :validation] {:keys [cause]}
+          (is (= cause :authtag))))))
 )
 
 (deftest jwe-alg-dir-enc-a192-hs384
@@ -151,9 +151,9 @@
                      "zkV7_0---NDlvQYfpNDfqw.hECYr8zURDvz9hdjz6s-O0HNF2"
                      "MhgHgXjnQN6KuUcgE.eXYr6ybqAYcQkkkuGNcNKA")]
       (try+
-       (jwe/unsign token key32 {:enc :a192cbc-hs384})
-       (catch [:type :validation] {:keys [cause]}
-         (is (= cause :authtag))))))
+        (jwe/unsign token key32 {:enc :a192cbc-hs384})
+        (catch [:type :validation] {:keys [cause]}
+          (is (= cause :authtag))))))
 )
 
 (deftest jwe-alg-dir-enc-a256-hs512
@@ -171,8 +171,8 @@
                      "zkV7_0---NDlvQYfpNDfqw.hECYr8zURDvz9hdjz6s-O0HNF2"
                      "MhgHgXjnQN6KuUcgE.eXYr6ybqAYcQkkkuGNcNKA")]
       (try+
-       (jwe/unsign token key32 {:enc :a256cbc-hs512})
-       (catch [:type :validation] {:keys [cause]}
-         (is (= cause :authtag))))))
+        (jwe/unsign token key32 {:enc :a256cbc-hs512})
+        (catch [:type :validation] {:keys [cause]}
+          (is (= cause :authtag))))))
 )
 

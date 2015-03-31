@@ -70,7 +70,7 @@
       (is (= @unsigned1 candidate))
       (is (exc/failure? unsigned2))
       (try+
-       (deref unsigned2)
-       (catch [:type :validation] {:keys [cause]}
-         (is (= cause :max-age))))))
+        (deref unsigned2)
+        (catch [:type :validation] {:keys [cause]}
+          (is (= cause :max-age))))))
 )
