@@ -137,6 +137,43 @@
                        (conj acc block)))
                    [] blocks))))
 
+(defn- encrypt-gcm
+  [input key iv aad]
+  (let [cipher (crypto/block-cipher :aes :gcm)]
+    (crypto/initialize! cipher {:iv iv :key key :tagsize 128 :op :encrypt :aad aad})
+    (let [outputlength (crypto/get-output-size cipher (count input))
+          output (byte-array outputlength)
+          offset (crypto/process-block! cipher input 0 output 0)]
+      (try+
+        (crypto/calculate-authtag! cipher output offset)
+        (catch InvalidCipherTextException e
+          (let [message (str "Couldn't generate gcm authentication tag: " (.getMessage e))]
+            (throw+ {:type :encryption :cause :authtag :message message} e))))
+      (let [ciphertextlength (- outputlength 16)
+            ciphertext (byte-array ciphertextlength)
+            authtag (byte-array 16)]
+        (System/arraycopy output 0 ciphertext 0 ciphertextlength)
+        (System/arraycopy output ciphertextlength, authtag 0 16)
+        [ciphertext authtag]))))
+
+(defn- decrypt-gcm
+  [ciphertext authtag key iv aad]
+  (let [cipher (crypto/block-cipher :aes :gcm)
+        inputlength (+ (count ciphertext) (count authtag))
+        input (byte-array inputlength)]
+    (crypto/initialize! cipher {:iv iv :key key :tagsize 128 :op :decrypt :aad aad})
+    (System/arraycopy ciphertext 0 input 0 (count ciphertext))
+    (System/arraycopy authtag 0 input (count ciphertext) (count authtag))
+    (let [outputlength (crypto/get-output-size cipher inputlength)
+          output (byte-array outputlength)
+          offset (crypto/process-block! cipher input 0 output 0)]
+      (try+
+        (crypto/calculate-authtag! cipher output offset)
+        (catch InvalidCipherTextException e
+          (let [message (str "Couldn't validate gcm authentication tag: " (.getMessage e))]
+            (throw+ {:type :encryption :cause :authtag :message message} e))))
+      output)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation details
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -181,6 +218,9 @@
 (defmethod generate-iv :a128cbc-hs256 [_] (nonce/random-bytes 16))
 (defmethod generate-iv :a192cbc-hs384 [_] (nonce/random-bytes 16))
 (defmethod generate-iv :a256cbc-hs512 [_] (nonce/random-bytes 16))
+(defmethod generate-iv :a128gcm [_] (nonce/random-bytes 12))
+(defmethod generate-iv :a192gcm [_] (nonce/random-bytes 12))
+(defmethod generate-iv :a256gcm [_] (nonce/random-bytes 12))
 
 (defn calculate-aad-length
   [aad]
@@ -265,6 +305,21 @@
                                :iv iv})]
     [ciphertext tag]))
 
+(defmethod aead-encrypt :a128gcm
+  [{:keys [algorithm plaintext secret iv aad] :as params}]
+  {:pre [(keylength? secret 16) (ivlength? iv 12)]}
+  (encrypt-gcm plaintext secret iv aad))
+
+(defmethod aead-encrypt :a192gcm
+  [{:keys [algorithm plaintext secret iv aad] :as params}]
+  {:pre [(keylength? secret 24) (ivlength? iv 12)]}
+  (encrypt-gcm plaintext secret iv aad))
+
+(defmethod aead-encrypt :a256gcm
+  [{:keys [algorithm plaintext secret iv aad] :as params}]
+  {:pre [(keylength? secret 32) (ivlength? iv 12)]}
+  (encrypt-gcm plaintext secret iv aad))
+
 (defmulti aead-decrypt :algorithm)
 
 (defmethod aead-decrypt :a128cbc-hs256
@@ -299,6 +354,21 @@
     (when-not (verify-authtag authtag (assoc params :authkey authkey :algorithm :sha512))
       (throw+ {:type :validation :cause :authtag :message "Message seems corrupt or manipulated."}))
     (decrypt-cbc cipher ciphertext encryptionkey iv)))
+
+(defmethod aead-decrypt :a128gcm
+  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
+  {:pre [(keylength? secret 16) (ivlength? iv 12)]}
+  (decrypt-gcm ciphertext authtag secret iv aad))
+
+(defmethod aead-decrypt :a192gcm
+  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
+  {:pre [(keylength? secret 24) (ivlength? iv 12)]}
+  (decrypt-gcm ciphertext authtag secret iv aad))
+
+(defmethod aead-decrypt :a256gcm
+  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
+  {:pre [(keylength? secret 32) (ivlength? iv 12)]}
+  (decrypt-gcm ciphertext authtag secret iv aad))
 
 (defn- generate-plaintext
   [claims zip exp nbf iat]

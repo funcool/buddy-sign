@@ -81,11 +81,10 @@
 
 (def data {:userid 1 :scope "auth"})
 (def key16 (nonce/random-bytes 16))
+(def key24 (nonce/random-bytes 24))
 (def key32 (nonce/random-bytes 32))
 (def key48 (nonce/random-bytes 48))
 (def key64 (nonce/random-bytes 64))
-(def iv16 (nonce/random-bytes 16))
-(def iv32 (nonce/random-bytes 32))
 
 (deftest jwe-time-claims-validation
   (testing ":exp claim validation"
@@ -118,7 +117,7 @@
 (deftest jwe-alg-dir-enc-a128-hs256
   (testing "Encrypt and decrypt"
     (let [result @(jwe/encode data key32 {:enc :a128cbc-hs256})
-          result' @(jwe/decode result key32 {:enc :a128cbc-hs256})]
+          result' @(jwe/decode result key32)]
       (is (= result' data))))
 
   (testing "Wrong key"
@@ -138,7 +137,7 @@
 (deftest jwe-alg-dir-enc-a192-hs384
   (testing "Encrypt and decrypt"
     (let [result @(jwe/encode data key48 {:enc :a192cbc-hs384})
-          result' @(jwe/decode result key48 {:enc :a192cbc-hs384})]
+          result' @(jwe/decode result key48)]
       (is (= result' data))))
 
   (testing "Wrong key"
@@ -151,7 +150,7 @@
                      "zkV7_0---NDlvQYfpNDfqw.hECYr8zURDvz9hdjz6s-O0HNF2"
                      "MhgHgXjnQN6KuUcgE.eXYr6ybqAYcQkkkuGNcNKA")]
       (try+
-        (jwe/unsign token key32 {:enc :a192cbc-hs384})
+        (jwe/unsign token key32)
         (catch [:type :validation] {:keys [cause]}
           (is (= cause :authtag))))))
 )
@@ -159,7 +158,7 @@
 (deftest jwe-alg-dir-enc-a256-hs512
   (testing "Encrypt and decrypt"
     (let [result @(jwe/encode data key64 {:enc :a256cbc-hs512})
-          result' @(jwe/decode result key64 {:enc :a256cbc-hs512})]
+          result' @(jwe/decode result key64)]
       (is (= result' data))))
 
   (testing "Wrong key"
@@ -176,3 +175,35 @@
           (is (= cause :authtag))))))
 )
 
+(deftest jwe-alg-dir-enc-a128gcm
+  (testing "Encrypt and decrypt"
+    (let [result @(jwe/encode data key16 {:enc :a128gcm})
+          result' @(jwe/decode result key16)]
+      (is (= result' data))))
+
+  (testing "Wrong key"
+    (is (thrown? AssertionError (jwe/sign data key32 {:enc :a128gcm})))
+    (is (thrown? AssertionError (jwe/sign data key48 {:enc :a128gcm}))))
+)
+
+(deftest jwe-alg-dir-enc-a192gcm
+  (testing "Encrypt and decrypt"
+    (let [result @(jwe/encode data key24 {:enc :a192gcm})
+          result' @(jwe/decode result key24)]
+      (is (= result' data))))
+
+  (testing "Wrong key"
+    (is (thrown? AssertionError (jwe/sign data key16 {:enc :a192gcm})))
+    (is (thrown? AssertionError (jwe/sign data key32 {:enc :a192gcm}))))
+)
+
+(deftest jwe-alg-dir-enc-a256gcm
+  (testing "Encrypt and decrypt"
+    (let [result @(jwe/encode data key32 {:enc :a256gcm})
+          result' @(jwe/decode result key32)]
+      (is (= result' data))))
+
+  (testing "Wrong key"
+    (is (thrown? AssertionError (jwe/sign data key16 {:enc :a256gcm})))
+    (is (thrown? AssertionError (jwe/sign data key48 {:enc :a256gcm}))))
+)
