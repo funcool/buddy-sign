@@ -130,62 +130,57 @@
 ;; Public Api
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn encode
+(defn sign
   "Sign arbitrary length string/byte array using
   json web token/signature."
   [claims pkey & [{:keys [alg exp nbf iat headers] :or {alg :hs256 headers {}}}]]
   {:pre [(map? claims)]}
-  (exc/try-on
-   (let [header (encode-header alg headers)
-         claims (encode-claims claims exp nbf iat)
-         signature (calculate-signature {:key pkey
-                                         :alg alg
-                                         :header header
-                                         :claims claims})]
-     (str/join "." [header claims signature]))))
+  (let [header (encode-header alg headers)
+        claims (encode-claims claims exp nbf iat)
+        signature (calculate-signature {:key pkey
+                                        :alg alg
+                                        :header header
+                                        :claims claims})]
+    (str/join "." [header claims signature])))
+
+(defn unsign
+  "Given a signed message, verify it and return
+  the decoded claims."
+  [input pkey & [{:keys [max-age] :as opts}]]
+  (let [[header claims signature] (str/split input #"\." 3)
+        {:keys [alg]} (parse-header header)
+        signature (codecs/safebase64->bytes signature)]
+    (when-not (verify-signature {:key pkey :signature signature
+                                 :alg alg :header header :claims claims})
+      (throw+ {:type :validation :cause :auth :message "Message seems corrupt or manipulated."}))
+    (let [claims (parse-claims claims)
+          now (util/timestamp)]
+      (cond
+        (and (:exp claims) (> now (:exp claims)))
+        (throw+ {:type :validation
+                 :cause :exp
+                 :message (format "Token is older than :exp (%s)" (:exp claims))})
+
+        (and (:nbf claims) (> now (:nbf claims)))
+        (throw+ {:type :validation
+                 :cause :nbf
+                 :message (format "Token is older than :nbf (%s)" (:nbf claims))})
+
+        (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
+        (throw+ {:type :validation
+                 :cause :max-age
+                 :message (format "Token is older than max-age (%s)" max-age)})
+
+        :else claims))))
+
+(defn encode
+  "Sign arbitrary length string/byte array using
+  json web token/signature."
+  [& args]
+  (exc/try-on (apply sign args)))
 
 (defn decode
   "Given a signed message, verify it and return
-  the decoded claims.
-
-  This function returns a monadic either instance,
-  and if some error is happens in process of decoding
-  and verification, it will be reported in an
-  either/left instance."
-  [input pkey & [{:keys [max-age] :as opts}]]
-  (exc/try-on
-   (let [[header claims signature] (str/split input #"\." 3)
-         {:keys [alg]} (parse-header header)
-         signature (codecs/safebase64->bytes signature)]
-     (when-not (verify-signature {:key pkey :signature signature
-                                  :alg alg :header header :claims claims})
-       (throw+ {:type :validation :cause :auth :message "Message seems corrupt or manipulated."}))
-     (let [claims (parse-claims claims)
-           now (util/timestamp)]
-       (cond
-         (and (:exp claims) (> now (:exp claims)))
-         (throw+ {:type :validation
-                  :cause :exp
-                  :message (format "Token is older than :exp (%s)" (:exp claims))})
-
-         (and (:nbf claims) (> now (:nbf claims)))
-         (throw+ {:type :validation
-                  :cause :nbf
-                  :message (format "Token is older than :nbf (%s)" (:nbf claims))})
-
-         (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
-         (throw+ {:type :validation
-                  :cause :max-age
-                  :message (format "Token is older than max-age (%s)" max-age)})
-
-         :else claims)))))
-
-(defn sign
-  "Not monadic version of encode."
+  the decoded claims."
   [& args]
-  (deref (apply encode args)))
-
-(defn unsign
-  "Not monadic version of decode."
-  [& args]
-  (deref (apply decode args)))
+  (exc/try-on (apply unsign args)))
