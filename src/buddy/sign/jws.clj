@@ -175,12 +175,14 @@
 
 (defn encode
   "Sign arbitrary length string/byte array using
-  json web token/signature."
+  json web token/signature and return data wrapped
+  in a Success instance of the Exception monad."
   [& args]
   (exc/try-on (apply sign args)))
 
 (defn decode
   "Given a signed message, verify it and return
-  the decoded claims."
+  the decoded claims wrapped in a Success instance
+  of the Exception monad."
   [& args]
   (exc/try-on (apply unsign args)))
