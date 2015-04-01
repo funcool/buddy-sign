@@ -17,6 +17,7 @@
 ;; - http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-40
 ;; - http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption-40
 ;; - http://tools.ietf.org/html/draft-mcgrew-aead-aes-cbc-hmac-sha2-05
+;; - http://tools.ietf.org/html/rfc3394 (AES Key Wrap Algorithm)
 
 (ns buddy.sign.jwe
   "Json Web Encryption."
