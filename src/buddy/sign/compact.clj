@@ -97,55 +97,51 @@
     :else
     (nippy/freeze data)))
 
-(defn encode
+(defn sign
   "Sign arbitrary length string/byte array using
   compact sigining method."
   [data key & [{:keys [alg compress]
                 :or {alg :hs256 compress true}}]]
-  (exc/try-on
-   (let [input (serialize data compress)
-         salt (nonce/random-nonce 8)
-         stamp (codecs/long->bytes (util/timestamp))
-         signature (-> (bytes/concat input salt stamp)
-                       (calculate-signature key alg))]
-     (str/join "." [(codecs/bytes->safebase64 input)
-                    (codecs/bytes->safebase64 signature)
-                    (codecs/bytes->safebase64 salt)
-                    (codecs/bytes->safebase64 stamp)]))))
+  (let [input (serialize data compress)
+        salt (nonce/random-nonce 8)
+        stamp (codecs/long->bytes (util/timestamp))
+        signature (-> (bytes/concat input salt stamp)
+                      (calculate-signature key alg))]
+    (str/join "." [(codecs/bytes->safebase64 input)
+                   (codecs/bytes->safebase64 signature)
+                   (codecs/bytes->safebase64 salt)
+                   (codecs/bytes->safebase64 stamp)])))
+
+(defn unsign
+  "Given a signed message, verify it and return
+  the decoded data."
+  [data key & [{:keys [alg compress max-age]
+                :or {alg :hs256 compress true}}]]
+  (let [[input signature salt stamp] (str/split data #"\." 4)
+        input (codecs/safebase64->bytes input)
+        signature (codecs/safebase64->bytes signature)
+        salt (codecs/safebase64->bytes salt)
+        stamp (codecs/safebase64->bytes stamp)
+        candidate (bytes/concat input salt stamp)]
+    (when-not (verify-signature candidate signature key alg)
+      (throw+ {:type :validation :cause :auth :message "Message seems corrupt or manipulated."}))
+    (let [now (util/timestamp)
+          stamp (codecs/bytes->long stamp)]
+      (when (and (number? max-age) (> (- now stamp) max-age))
+        (throw+ {:type :validation :cause :max-age
+                 :message (format "Token is older than %s" max-age)}))
+      (nippy/thaw input {:v1-compatibility? false}))))
+
+(defn encode
+  "Sign arbitrary length string/byte array using
+  compact sigining method and return date wrapped in
+  a Success instance of the Exception monad."
+  [& args]
+  (exc/try-on (apply sign args)))
 
 (defn decode
   "Given a signed message, verify it and return
-  the decoded data.
-
-  This function returns a monadic either instance,
-  and if some error is happens in process of decoding
-  and verification, it will be reported in an
-  either/left instance."
-  [data key & [{:keys [alg compress max-age]
-                :or {alg :hs256 compress true}}]]
-  (exc/try-on
-   (let [[input signature salt stamp] (str/split data #"\." 4)
-         input (codecs/safebase64->bytes input)
-         signature (codecs/safebase64->bytes signature)
-         salt (codecs/safebase64->bytes salt)
-         stamp (codecs/safebase64->bytes stamp)
-         candidate (bytes/concat input salt stamp)]
-     (when-not (verify-signature candidate signature key alg)
-       (throw+ {:type :validation :cause :auth :message "Message seems corrupt or manipulated."}))
-
-     (let [now (util/timestamp)
-           stamp (codecs/bytes->long stamp)]
-       (when (and (number? max-age) (> (- now stamp) max-age))
-         (throw+ {:type :validation :cause :max-age
-                  :message (format "Token is older than max-age (%s)" max-age)}))
-       (nippy/thaw input {:v1-compatibility? false})))))
-
-(defn sign
-  "Not monadic version of encode."
+  the decoded data wrapped in a Success instance
+  of the Exception monad."
   [& args]
-  (deref (apply encode args)))
-
-(defn unsign
-  "Not monadic version of decode."
-  [& args]
-  (deref (apply decode args)))
+  (exc/try-on (apply unsign args)))
