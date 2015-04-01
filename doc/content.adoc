@@ -118,53 +118,29 @@ Here a summary of supported algorithms for JWS:
 
 === Signing data
 
-Let start with signing data. For it we will use the `encode` function from `buddy.sign.jws` namespace
-and the `hs256` algorithm for signining.
+Let start with signing data. For it we will use the `sign` function from `buddy.sign.jws` namespace:
+and the `hs256` algorithm for signining:
 
 [source, clojure]
 ----
 (require '[buddy.sign.jws :as jws])
 
-(jws/encode {:userid 1} "secret")
-;; => #<Success [eyJ0eXAiOiJKV1MiLCJhbGciOiJIU...]>
-----
-
-The `encode` function may return an instance of `Success` type or instance of `Failure` of
-_Exception_ monad defined in cats library. Do not worry if you do not know or do not want to know
-about monads, you can treat that return value like a dereferenciable wrapper.
-
-Example on how you can deref a success instance:
-
-[source, clojure]
-----
-@(jws/encode {:userid 1} "secret")
-;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
-----
-
-Additionally, _buddy-sign_ exposes the `sign` function that do the deref operation for you:
-
-[source, clojure]
-----
 (jws/sign {:userid 1} "secret")
 ;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
 ----
 
-Due to the nature of the storage format, the input is restricted mainly to json objects in the current
-version.
+The `sign` function return a encoded and signed token as plain `String` instance or an exception in
+case of something goes wrong. As you can observe, no algorithm is passed as parameter.
+In this situations the default one will be used, and in this case is `:hs256`.
+
+NOTE: Due to the nature of the storage format, the input is restricted mainly to json objects in the current version.
 
 
 === Unsigning data
 
-It's time to unsing data. For it we will use the `decode` function from `buddy.sign.jws` namespace. In
-this case we do not need pass any algorithm because it automatically detected.
-
-[source, clojure]
-----
-(jws/decode data "secret")
-;; => #<Success [{:userid 1}]>
-----
-
-Additionally, _buddy-sign_ exposes the `unsign` function that do the deref operation for you:
+It's time to unsing data. That process consists on verify the signature of incoming data and return the
+plain data (without signature). For it we will use the `unsign` function from `buddy.sign.jws`
+namespace:
 
 [source, clojure]
 ----
@@ -172,13 +148,15 @@ Additionally, _buddy-sign_ exposes the `unsign` function that do the deref opera
 ;; => {:userid 1}
 ----
 
+You do not need specify the algorithm explicitly, it is automatically detected.
+
 
 === Claims validation
 
 _buddy-sign_ json web signature implementation also includes validation of a concrete subset
 of claims related to the age of the signed data: *exp* (expiration time), *nbf* (not before).
 
-The validation is performed on decoding the token. If `:exp` claim is found and posterior to
+The validation is performed on decoding the token. If `:exp` claim is found and is posterior to
 the current date time (UTC) an validation exception will be raised or a failure instance will
 be returned, depending on that api you are using direct or monadic.
 
@@ -242,6 +220,29 @@ of supported digital signature algorithms.
 ----
 
 
+=== Monadic api
+
+If you are using monadic composition with cats library you're in luck, because _buddy-sign_ also
+offers monadic api. You can use it with `encode` and `decode` functions, that return the _Exception_
+monad types: the `Success` instances when everything goes ok, and the `Failure` instances when
+something goes wrong.
+
+[source, clojure]
+----
+(jws/encode {:userid 1} "secret")
+;; => #<Success [eyJ0eXAiOiJKV1MiLCJhbGciOiJIU...]>
+----
+
+The _Exception_ monad instances, for convenience implements the clojure `IDeref` interface that
+makes they play well with `@something` syntax for extract value from them:
+
+[source, clojure]
+----
+@(jws/encode {:userid 1} "secret")
+;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
+----
+
+
 == Json Web Encryption
 
 [small]#New in version: 0.5#
@@ -276,17 +277,89 @@ all algorithms specified in JWE specification:
 
 === Encrypting data
 
-TODO
+Let start with encrypting data. For it we will use the `encrypt` function from the
+`buddy.sign.jwe` namespace:
+
+[source, clojure]
+----
+(require '[buddy.sign.jwe :as jwe])
+(require '[buddy.core.hash :as hash])
+
+;; Hash your secret key with sha256 for
+;; create a byte array of 32 bytes because
+;; is a requirement for default content
+;; encryption algorithm
+
+(def secret (hash/sha256 "mysecret"))
+
+;; Encrypt it using the previously
+;; hashed key
+
+(jwe/encrypt {:userid 1} secret {:enc :a128-hs256})
+;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
+----
+
+The `encrypt` function, like `sign` from *JWS*, returns a plain string with encrypted and encoded
+content using a provided algorithm and shared secret key.
 
 
 === Decrypting Data
 
-TODO
+The decrypt is a inverse process, that takes encrypted data and the shared key, and returns the
+plain data. For it, _buddy-sign_ exposes the `decrypt` function. Let see how you can use it:
+
+[source, clojure]
+----
+(jwe/decrypt incoming-data secret)
+;; => {:userid 1}
+----
+
+You do not need specify the encryption algorithm explicitly, it is automatically detected, because the
+incoming token will come with content encryption algorithm stored in its header part.
 
 
 === Claims validation
 
-TODO
+
+_buddy-sign_ json web encryption, like *jws*, also implements validation of a concrete subset
+of claims related to the age of the signed data: *exp* (expiration time), *nbf* (not before).
+
+The validation is performed on decoding the token. If `:exp` claim is found and is posterior to
+the current date time (UTC) an validation exception will be raised or a failure instance will
+be returned, depending on that api you are using direct or monadic.
+
+Let see an example using direct api:
+
+[source, clojure]
+----
+(require '[clj-time.core :as time])
+
+;; Define claims with `:exp` key
+(def claims
+  {:user 1 :exp (time/plus (time/now) (time/seconds 5))})
+
+;; Serialize and sign a token with previously defined claims
+(def token (jwe/encrypt claims secret))
+
+;; wait 5 seconds and try unsign it
+
+(jwe/decrypt token secret)
+;; => ExceptionInfo throw+: {:type :validation, :cause :exp, :message "Token is older than :exp (1427836475)"}  buddy.sign.jws/decode/func--4120--auto----4374 (jws.clj:167)
+----
+
+The best way to capture this type of exceptions is using
+link:https://github.com/scgilardi/slingshot[slingshot] library:
+
+[source, clojure]
+----
+(require '[slingshot.slingshot :refer [try+]])
+
+(try+
+  (jwe/encrypt token secret)
+  (catch [:type :validation] e
+    (println "Error: " (:message e))))
+;; => Will print in console: "Error: Token is older than :exp (1427836475)"
+----
 
 
 == Compact message signing
@@ -322,6 +395,7 @@ Only HMAC and Poly1305 based algorithms support plain text secret keys, If you w
 Digital Signature instead of hmac then you must have a key pair (public and private).
 ====
 
+
 === Signing and unsigning data
 
 With difference with jwt/jws, this implementation is not limited to hash-map like objects,
@@ -336,21 +410,14 @@ Let see an example:
 
 ;; Sign data using default `:hs256` algorithm that does not
 ;; requres special priv/pub key.
-(def data (cm/encode {:userid 1} "secret"))
+(def data (cm/sign {:userid 1} "secret"))
 
 ;; data will contains omething to
-;; #<Right [auJ0eXAiOiJKV1MiLCJhbGciOiJIU...]>
+;; "auJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
 
-(cm/decode @data "secret")
+(cm/unsign data "secret")
 ;; => {:userid 1}
 ----
-
-The *encode* and *decode* methods returns a monadic either defined in
-link:https://github/funcool/cats[cats library]. This allows more granural
-error reporting when something wrong is happens in the validation process.
-
-Also, the *sign* and *unsign* functions are available, and they are analogous
-to *encode*/*decode* but are still returning plain values instead a containers.
 
 
 Then, you also will be able validate the signed message based in its age:
@@ -358,7 +425,7 @@ Then, you also will be able validate the signed message based in its age:
 [source,clojure]
 ----
 (cm/decode @data "secret" {:max-age (* 15 60)})
-;; => #<Left [Expired data]>
+;; => ExceptionInfo throw+: {:type :validation, :cause :exp, :message "Token is older than 1427836475"}  buddy.sign.compact/decode/func--4120--auto----4374 (compact.clj:167)
 ----
 
 
