@@ -182,7 +182,7 @@ Let see an example using direct api:
 ;; wait 5 seconds and try unsign it
 
 (jws/unsign token "key")
-;; => ExceptionInfo throw+: {:type :validation, :cause :exp, :message "Token is older than :exp (1427836475)"}  buddy.sign.jws/decode/func--4120--auto----4374 (jws.clj:167)
+;; => ExceptionInfo throw+: {:type :validation, :cause :exp, :message "Token is older than :exp (1427836475)"}
 ----
 
 The best way to capture this type of exceptions is using
@@ -350,7 +350,7 @@ Let see an example using direct api:
 ;; wait 5 seconds and try unsign it
 
 (jwe/decrypt token secret)
-;; => ExceptionInfo throw+: {:type :validation, :cause :exp, :message "Token is older than :exp (1427836475)"}  buddy.sign.jws/decode/func--4120--auto----4374 (jws.clj:167)
+;; => ExceptionInfo throw+: {:type :validation, :cause :exp, :message "Token is older than :exp (1427836475)"}
 ----
 
 The best way to capture this type of exceptions is using
@@ -405,11 +405,8 @@ Digital Signature instead of hmac then you must have a key pair (public and priv
 === Signing and unsigning data
 
 With difference with jwt/jws, this implementation is not limited to hash-map like objects,
-and you can sign any clojure valid type.
+and you can sign any clojure valid type. Let see an example:
 
-Let see an example:
-
-.Example signing arbitrary data using compact signing.
 [source,clojure]
 ----
 (require '[buddy.sign.compact :as cm])
@@ -425,13 +422,12 @@ Let see an example:
 ;; => {:userid 1}
 ----
 
-
 Then, you also will be able validate the signed message based in its age:
 
 [source,clojure]
 ----
-(cm/decode @data "secret" {:max-age (* 15 60)})
-;; => ExceptionInfo throw+: {:type :validation, :cause :exp, :message "Token is older than 1427836475"}  buddy.sign.compact/decode/func--4120--auto----4374 (compact.clj:167)
+(cm/unsign data "secret" {:max-age (* 15 60)})
+;; => ExceptionInfo throw+: {:type :validation, :cause :exp, :message "Token is older than 1427836475"}
 ----
 
 
