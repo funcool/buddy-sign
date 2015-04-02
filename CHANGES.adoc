@@ -18,6 +18,7 @@ Date: unreleased
   matching it with user provided value has security flaws:
   https://auth0.com/blog/2015/03/31/critical-vulnerabilities-in-json-web-token-libraries/
 
+
 == Version 0.4.2
 
 Date: 2015-03-29
