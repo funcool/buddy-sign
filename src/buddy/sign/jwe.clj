@@ -332,25 +332,39 @@
   {:pre [(keylength? secret 32) (ivlength? iv 12)]}
   (decrypt-gcm ciphertext authtag secret iv aad))
 
-(defn- generate-plaintext
-  [claims zip exp nbf iat]
-  (let [additionalclaims (-> (jws/normalize-nil-claims {:exp exp :nbf nbf :iat iat})
-                             (jws/normalize-date-claims))
+(defn- encode-claims
+  [claims zip opts]
+  (let [additional (-> (select-keys opts [:exp :nbf :iat :iss :aud])
+                       (jws/normalize-nil-claims)
+                       (jws/normalize-date-claims))
         data (-> (jws/normalize-date-claims claims)
-                 (merge additionalclaims)
+                 (merge additional)
                  (json/generate-string)
                  (codecs/str->bytes))]
-    (condp = zip
-      ::none data
-      :def (deflate/compress data))))
+    (if zip
+      (deflate/compress data)
+      data)))
 
-(defn- parse-plaintext
-  [^bytes data zip]
-  (let [data (condp = zip
-               ::none data
-               :def (deflate/uncompress data))]
-    (-> (codecs/bytes->str data)
-        (json/parse-string true))))
+(defn- parse-claims
+  [^bytes claimsdata zip {:keys [max-age iss aud]}]
+  (let [claims (-> (if zip (deflate/uncompress claimsdata) claimsdata)
+                   (codecs/bytes->str)
+                   (json/parse-string true))
+        now (util/timestamp)]
+    (when (and iss (not= iss (:iss claims)))
+      (throw+ {:type :validation :cause :iss :message (str "Issuer does not match " iss)}))
+    (when (and aud (not= aud (:aud claims)))
+      (throw+ {:type :validation :cause :aud :message (str "Audience does not match " aud)}))
+    (when (and (:exp claims) (> now (:exp claims)))
+      (throw+ {:type :validation :cause :exp
+               :message (format "Token is older than :exp (%s)" (:exp claims))}))
+    (when (and (:nbf claims) (> now (:nbf claims)))
+      (throw+ {:type :validation :cause :nbf
+               :message (format "Token is older than :nbf (%s)" (:nbf claims))}))
+    (when (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
+      (throw+ {:type :validation :cause :max-age
+               :message (format "Token is older than max-age (%s)" max-age)}))
+    claims))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
