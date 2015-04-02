@@ -21,57 +21,28 @@
 
 (ns buddy.sign.jwe
   "Json Web Encryption."
-  (:require [buddy.core.codecs :as codecs]
+  (:require [clojure.string :as str]
+            [clojure.core.match :refer [match]]
+            [cats.monad.exception :as exc]
+            [cheshire.core :as json]
+            [slingshot.slingshot :refer [throw+ try+]]
+            [buddy.core.codecs :as codecs]
             [buddy.core.bytes :as bytes]
             [buddy.core.nonce :as nonce]
             [buddy.core.crypto :as crypto]
             [buddy.core.mac.hmac :as hmac]
             [buddy.core.padding :as padding]
+            [buddy.core.keys :as keys]
+            [buddy.util.deflate :as deflate]
             [buddy.sign.jws :as jws]
-            [buddy.sign.util :as util]
-            [clojure.string :as str]
-            [cheshire.core :as json]
-            [cats.core :as m]
-            [cats.monad.exception :as exc]
-            [slingshot.slingshot :refer [throw+ try+]])
+            [buddy.sign.jwe.cek :as cek]
+            [buddy.sign.util :as util])
   (:import clojure.lang.Keyword
            org.bouncycastle.crypto.InvalidCipherTextException
-           java.nio.ByteBuffer
-           java.io.ByteArrayInputStream
-           java.io.ByteArrayOutputStream
-           java.util.zip.Deflater
-           java.util.zip.DeflaterOutputStream
-           java.util.zip.InflaterInputStream
-           java.util.zip.Inflater))
+           java.nio.ByteBuffer))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Compression primitives
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn compress-bytes
-  [^bytes input]
-  (let [out (ByteArrayOutputStream.)
-        def (Deflater. Deflater/DEFLATED true)
-        dout (DeflaterOutputStream. out def)]
-    (.write dout input)
-    (.close dout)
-    (.toByteArray out)))
-
-(defn uncompress-bytes
-  [^bytes input]
-  (let [input (ByteArrayInputStream. bytes)
-        inflater (Inflater. true)
-        infout (InflaterInputStream. input inflater)
-        output (ByteArrayOutputStream.)
-        buffer (byte-array 1024)]
-    (loop []
-      (let [readed (.read infout buffer)]
-        (when (pos? readed)
-          (.write output buffer 0 readed)
-          (recur))))
-    (.close infout)
-    (.close output)
-    (.toByteArray output)))
+(def keylength? #(= (count %1) %2))
+(def ivlength? #(= (count %1) %2))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Crypto primitives/helpers.
@@ -178,19 +149,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation details
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(def keylength? #(= (count %1) %2))
-(def ivlength? #(= (count %1) %2))
-
-(defmulti generate-cek :alg)
-(defmethod generate-cek :dir
-  [{:keys [key]}]
-  (codecs/->byte-array key))
-
-(defmulti encrypt-cek :alg)
-(defmethod encrypt-cek :dir
-  [{:keys [alg cek]}]
-  (byte-array 0))
 
 (defn generate-header
   [{:keys [alg enc zip]}]
@@ -403,8 +361,8 @@
                        enc :a128cbc-hs256}
                   :as options}]]
   {:pre [(map? claims)]}
-  (let [scek (generate-cek {:key key :alg alg})
-        ecek (encrypt-cek {:cek scek :alg alg})
+  (let [scek (cek/generate {:key key :alg alg :enc enc})
+        ecek (cek/encrypt {:key key :cek scek :alg alg :enc enc})
         iv (generate-iv {:enc enc})
         header (generate-header {:alg alg :enc enc :zip zip})
         plaintext (generate-plaintext claims zip exp nbf iat)
@@ -425,7 +383,7 @@
   (let [[header ecek iv ciphertext authtag] (str/split input #"\." 5)
         {:keys [alg enc zip] :or {zip ::none}} (parse-header header)
         ecek (codecs/safebase64->bytes ecek)
-        scek (generate-cek {:key key :alg alg})
+        scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
         iv (codecs/safebase64->bytes iv)
         header (codecs/safebase64->bytes header)
         ciphertext (codecs/safebase64->bytes ciphertext)

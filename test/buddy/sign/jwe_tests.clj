@@ -207,3 +207,36 @@
     (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a256gcm})))
     (is (thrown? AssertionError (jwe/encrypt data key48 {:enc :a256gcm}))))
 )
+
+(def encs [:a128gcm :a192gcm :a256gcm :a128cbc-hs256 :a192cbc-hs384 :a256cbc-hs512])
+
+(deftest jwe-alg-aes128kw-matrix
+  (testing "Encrypt and decrypt."
+    (doseq [enc encs]
+      (let [result @(jwe/encode data key16 {:enc enc :alg :a128kw})
+            result' @(jwe/decode result key16)]
+        (is (= result' data)))))
+
+  (testing "Wrong key length for algorithm"
+    (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a128gcm :alg :a128kw})))))
+
+(deftest jwe-alg-aes192kw-matrix
+  (testing "Encrypt and decrypt."
+    (doseq [enc encs]
+      (let [result @(jwe/encode data key24 {:enc enc :alg :a192kw})
+            result' @(jwe/decode result key24)]
+        (is (= result' data)))))
+
+  (testing "Wrong key length for algorithm"
+    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a128gcm :alg :a192kw})))))
+
+
+(deftest jwe-alg-aes256kw-matrix
+  (testing "Encrypt and decrypt."
+    (doseq [enc encs]
+      (let [result @(jwe/encode data key32 {:enc enc :alg :a256kw})
+            result' @(jwe/decode result key32)]
+        (is (= result' data)))))
+
+  (testing "Wrong key length for algorithm"
+    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a128gcm :alg :a256kw})))))
