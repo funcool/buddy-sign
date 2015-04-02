@@ -83,11 +83,13 @@ to be transmitted as a JavaScript Object Notation (JSON) object that is used as 
 a JSON Web Signature (JWS) structure or as the plaintext of a JSON Web Encryption (JWE) structure,
 enabling the claims to be digitally signed or MACed and/or encrypted.
 
+
 === How to use it?
 
 _buddy-sign_ does not offers special api for Json Web Token because it is a subset of Json Web
 Signature (JWS) and Json Web Encryption (JSE) specifications. If you want use one or other see the
 corresponding documentation in below sections.
+
 
 === Involved RFC's
 
@@ -96,6 +98,7 @@ corresponding documentation in below sections.
 * http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption-40
 * http://tools.ietf.org/html/draft-ietf-jose-json-web-signature-40
 * http://tools.ietf.org/html/draft-mcgrew-aead-aes-cbc-hmac-sha2-05
+* http://tools.ietf.org/html/rfc3394
 
 
 [[jws]]
@@ -263,21 +266,35 @@ The Json Web Encryption in difference to JWS uses two types of algoritms: key en
 and content encryption algorithms.
 
 The *key encryption algorithms* are responsible of encrypt the key that will be used for encrypt the
-content. At this moment, only the *dir* key encryption algorithm is supported. The *dir* algoritms
-indicates that the shared secret key will be used as is, for content encryption.
+content. This is a table that exposes the currently supported _Key Encryption Algorithms_ (specified
+in JWA RFC):
 
-The *conentent encryption algoritms* are responsible of encrypt the content, and _buddy-sign_ supports
-all algorithms specified in JWE specification:
+.Supported Key Encryption Algorithms
+[options="header", cols="1,2,1,1"]
+|===================================================================================
+| Algorithm name | Decription | Keyword       | Shared Key Size
+| DIR            | Direct use of a shared symmetric key | `:dir` | (depends on content
+encryption algorithm)
+| A128KW         | AES128 Key Wrap | `:a128kw`    | 16 bytes
+| A192KW         | AES192 Key Wrap | `:a192kw`    | 24 bytes
+| A256KW         | AES256 Key Wrap | `:a256kw`    | 32 bytes
+|===================================================================================
 
+
+The *conentent encryption algoritms* are responsible of encrypt the content. This is a table
+that exposes the currently supported _Content Encryption Algorithms_ (all specified
+in the JWA RFC):
+
+.Supported Content Encryption Algorithms
 [options="header", cols="1,1,1,1"]
 |===================================================================================
-| Algorithm name | Real algorithm name       | Keyword       | Shared Key Size
-| A128CBC-HS256  | AES_128_CBC_HMAC_SHA_256  | `:a128-hs256` | 32 bytes
-| A192CBC-HS384  | AES_192_CBC_HMAC_SHA_384  | `:a192-hs384` | 48 bytes
-| A256CBC-HS512  | AES_256_CBC_HMAC_SHA_512  | `:a256-hs512` | 64 bytes
-| A128GCM        | AES GCM using 128 bit key | `:a128gcm`    | 16 bytes
-| A192GCM        | AES GCM using 192 bit key | `:a192gcm`    | 24 bytes
-| A256GCM        | AES GCM using 256 bit key | `:a256gcm`    | 32 bytes
+| Algorithm name | Description | Keyword | Shared Key Size
+| A128CBC-HS256  | AES128 with CBC mode and HMAC-SHA256  | `:a128-hs256` | 32 bytes
+| A192CBC-HS384  | AES192 with CBC mode and HMAC-SHA384  | `:a192-hs384` | 48 bytes
+| A256CBC-HS512  | AES256 with CBC mode and HMAC-SHA512  | `:a256-hs512` | 64 bytes
+| A128GCM        | AES128 with GCM mode | `:a128gcm`    | 16 bytes
+| A192GCM        | AES192 with GCM mode | `:a192gcm`    | 24 bytes
+| A256GCM        | AES256 with GCM mode | `:a256gcm`    | 32 bytes
 |===================================================================================
 
 
@@ -301,7 +318,7 @@ Let start with encrypting data. For it we will use the `encrypt` function from t
 ;; Encrypt it using the previously
 ;; hashed key
 
-(jwe/encrypt {:userid 1} secret {:enc :a128-hs256})
+(jwe/encrypt {:userid 1} secret {:alg :dir :enc :a128-hs256})
 ;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
 ----
 
@@ -325,7 +342,6 @@ incoming token will come with content encryption algorithm stored in its header 
 
 
 === Claims validation
-
 
 _buddy-sign_ json web encryption, like *jws*, also implements validation of a concrete subset
 of claims related to the age of the signed data: *exp* (expiration time), *nbf* (not before).
