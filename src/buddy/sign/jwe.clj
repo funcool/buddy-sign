@@ -339,13 +339,13 @@
                  (codecs/str->bytes))]
     (condp = zip
       ::none data
-      :def (compress-bytes data))))
+      :def (deflate/compress data))))
 
 (defn- parse-plaintext
   [^bytes data zip]
   (let [data (condp = zip
                ::none data
-               :def (uncompress-bytes data))]
+               :def (deflate/uncompress data))]
     (-> (codecs/bytes->str data)
         (json/parse-string true))))
 
