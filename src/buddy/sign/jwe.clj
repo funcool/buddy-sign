@@ -150,15 +150,14 @@
 ;; Implementation details
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn generate-header
-  [{:keys [alg enc zip]}]
-  (let [data (merge {:alg (condp = alg
-                            :dir "dir"
-                            (str/upper-case (name alg)))
-                     :enc (str/upper-case (name enc))}
-                    (when (not= zip ::none)
-                      {:zip (str/upper-case (name enc))}))]
-    (-> (json/generate-string data)
+(defn- encode-header
+  [{:keys [alg typ enc zip]}]
+  (let [alg (if (= alg :dir) "dir" (str/upper-case (name alg)))
+        typ (.toUpperCase (name typ))
+        enc (.toUpperCase (name enc))
+        header (merge {:alg alg :typ typ :enc enc}
+                      (when zip {:zip "DEF"}))]
+    (-> (json/generate-string header)
         (codecs/str->bytes))))
 
 (defn- parse-header
