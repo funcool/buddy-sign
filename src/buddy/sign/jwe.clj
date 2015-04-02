@@ -161,16 +161,20 @@
         (codecs/str->bytes))))
 
 (defn- parse-header
-  [^String header]
-  (let [header (codecs/safebase64->str header)
-        {:keys [alg enc zip] :as header} (json/parse-string header true)]
-    (when (or (nil? alg) (nil? enc))
-      (throw+ {:type :parse :cause :header :message "Missing `alg` or `enc` key in header."}))
-    (merge {:alg (keyword (str/lower-case alg))
-            :enc (keyword (str/lower-case enc))}
-           (when zip
-             {:zip (keyword (str/lower-case zip))})
-           (dissoc header :alg :enc :zip))))
+  [^String headerdata {:keys [alg enc] :or {alg :dir enc :a128cbc-hs256}}]
+  (when (nil? alg)
+    (throw+ {:type :validation :cause :header :message "Missing `alg` parameter."}))
+  (when (nil? enc)
+    (throw+ {:type :validation :cause :header :message "Missing `enc` parameter."}))
+  (let [header (-> (codecs/safebase64->str headerdata)
+                   (json/parse-string true))]
+    (when (not= alg (keyword (str/lower-case (:alg header))))
+      (throw+ {:type :validation :cause :header
+               :message "The `alg` param mismatch with header value."}))
+    (when (not= enc (keyword (str/lower-case (:enc header))))
+      (throw+ {:type :validation :cause :header
+               :message "The `enc` param mismatch with header value."}))
+    (merge {:alg alg :enc enc} (dissoc header :alg :enc))))
 
 (defmulti generate-iv :enc)
 (defmethod generate-iv :a128cbc-hs256 [_] (nonce/random-bytes 16))
