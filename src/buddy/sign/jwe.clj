@@ -373,18 +373,17 @@
 (defn encrypt
   "Encrypt then sign arbitrary length string/byte array using
   json web encryption."
-  [claims key & [{:keys [alg enc exp nbf iat zip]
-                  :or {alg :dir zip ::none
-                       enc :a128cbc-hs256}
-                  :as options}]]
+  [claims key & [{:keys [alg enc exp nbf iat zip typ]
+                  :or {alg :dir enc :a128cbc-hs256 zip false typ :jws}
+                  :as opts}]]
   {:pre [(map? claims)]}
   (let [scek (cek/generate {:key key :alg alg :enc enc})
         ecek (cek/encrypt {:key key :cek scek :alg alg :enc enc})
         iv (generate-iv {:enc enc})
-        header (generate-header {:alg alg :enc enc :zip zip})
-        plaintext (generate-plaintext claims zip exp nbf iat)
+        header (encode-header {:alg alg :enc enc :zip zip :typ typ})
+        claims (encode-claims claims zip opts)
         [ciphertext authtag] (aead-encrypt {:algorithm enc
-                                            :plaintext plaintext
+                                            :plaintext claims
                                             :secret scek
                                             :aad header
                                             :iv iv})]
@@ -396,40 +395,23 @@
 
 (defn decrypt
   "Decrypt the jwe compliant message and return its claims."
-  [input key & [{:keys [max-age]}]]
-  (let [[header ecek iv ciphertext authtag] (str/split input #"\." 5)
-        {:keys [alg enc zip] :or {zip ::none}} (parse-header header)
-        ecek (codecs/safebase64->bytes ecek)
-        scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
-        iv (codecs/safebase64->bytes iv)
-        header (codecs/safebase64->bytes header)
-        ciphertext (codecs/safebase64->bytes ciphertext)
-        authtag (codecs/safebase64->bytes authtag)
-        plaintext (aead-decrypt {:ciphertext ciphertext
-                                 :authtag authtag
-                                 :algorithm enc
-                                 :aad header
-                                 :secret scek
-                                 :iv iv})]
-    (let [now (util/timestamp)
-          claims (parse-plaintext plaintext zip)]
-      (cond
-        (and (:exp claims) (> now (:exp claims)))
-        (throw+ {:type :validation
-                 :cause :exp
-                 :message (format "Token is older than :exp (%s)" (:exp claims))})
-
-        (and (:nbf claims) (> now (:nbf claims)))
-        (throw+ {:type :validation
-                 :cause :nbf
-                 :message (format "Token is older than :nbf (%s)" (:nbf claims))})
-
-        (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
-        (throw+ {:type :validation
-                 :cause :max-age
-                 :message (format "Token is older than max-age (%s)" max-age)})
-
-        :else claims))))
+  ([input key] (decrypt input key {}))
+  ([input key {:keys [zip] :as opts} ]
+   (let [[header ecek iv ciphertext authtag] (str/split input #"\." 5)
+         {:keys [alg enc]} (parse-header header opts)
+         ecek (codecs/safebase64->bytes ecek)
+         scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
+         iv (codecs/safebase64->bytes iv)
+         header (codecs/safebase64->bytes header)
+         ciphertext (codecs/safebase64->bytes ciphertext)
+         authtag (codecs/safebase64->bytes authtag)
+         claims (aead-decrypt {:ciphertext ciphertext
+                               :authtag authtag
+                               :algorithm enc
+                               :aad header
+                               :secret scek
+                               :iv iv})]
+     (parse-claims claims zip opts))))
 
 (defn encode
   "Encrypt then sign arbitrary length string/byte array using
