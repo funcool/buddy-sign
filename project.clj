@@ -5,7 +5,7 @@
             :url "http://opensource.org/licenses/BSD-2-Clause"}
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [com.taoensso/nippy "2.8.0"]
-                 [buddy/buddy-core "0.5.0-SNAPSHOT"]
+                 [buddy/buddy-core "0.5.0"]
                  [slingshot "0.12.2"]
                  [cats "0.4.0"]
                  [clj-time "0.9.0"]
