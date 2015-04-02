@@ -51,8 +51,9 @@
                  :es512 {:signer   #(ecdsa/sign %1 %2 :sha512)
                          :verifier #(ecdsa/verify %1 %2 %3 :sha512)}})
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Implementation details
+;; Helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn normalize-date-claims
@@ -69,19 +70,25 @@
   [data]
   (into {} (remove (comp nil? second) data)))
 
-(defn encode-header
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Implementation details
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- encode-header
   "Encode jws header"
-  [alg extra]
-  (let [algorithm (.toUpperCase (name alg))]
-    (-> (merge {:alg algorithm :typ "JWS"} extra)
+  [alg typ]
+  (let [algorithm (.toUpperCase (name alg))
+        type (.toUpperCase (name typ))]
+    (-> {:alg algorithm :typ type}
         (json/generate-string)
         (codecs/str->bytes)
         (codecs/bytes->safebase64))))
 
-(defn encode-claims
+(defn- encode-claims
   "Encode jws claims."
-  [input exp nbf iat]
-  (let [additionalclaims (-> (normalize-nil-claims {:exp exp :nbf nbf :iat iat})
+  [input opts]
+  (let [additionalclaims (-> (select-keys opts [:exp :nbf :iat :iss :aud])
+                             (normalize-nil-claims)
                              (normalize-date-claims))]
     (-> (normalize-date-claims input)
         (merge additionalclaims)
@@ -89,23 +96,40 @@
         (codecs/str->bytes)
         (codecs/bytes->safebase64))))
 
-(defn parse-header
+(defn- parse-header
   "Parse jws header."
-  [^String header]
-  (let [header (codecs/safebase64->str header)
-        {:keys [alg] :as header} (json/parse-string header true)]
-    (when (nil? alg)
-      (throw+ {:type :parse :cause :header :message "Missing `alg` key in header."}))
-    (merge {:alg (keyword (str/lower-case alg))}
-           (dissoc header :alg))))
+  [^String headerdata {:keys [alg] :or {alg :hs256}}]
+  (when (nil? alg)
+    (throw+ {:type :validation :cause :header :message "Missing `alg` parameter."}))
+  (let [header (-> (codecs/safebase64->str headerdata)
+                   (json/parse-string true))]
+    (when (not= alg (keyword (str/lower-case (:alg header))))
+      (throw+ {:type :validation :cause :header
+               :message "The `alg` param mismatch with header value."}))
+    (merge {:alg alg} (dissoc header :alg))))
 
-(defn parse-claims
+(defn- parse-claims
   "Parse jws claims"
-  [^String claimsdata]
-  (-> claimsdata
-      (codecs/safebase64->bytes)
-      (codecs/bytes->str)
-      (json/parse-string true)))
+  [^String claimsdata {:keys [max-age iss aud]}]
+  (let [claims (-> claimsdata
+                   (codecs/safebase64->bytes)
+                   (codecs/bytes->str)
+                   (json/parse-string true))
+        now (util/timestamp)]
+    (when (and iss (not= iss (:iss claims)))
+      (throw+ {:type :validation :cause :iss :message (str "Issuer does not match " iss)}))
+    (when (and aud (not= aud (:aud claims)))
+      (throw+ {:type :validation :cause :aud :message (str "Audience does not match " aud)}))
+    (when (and (:exp claims) (> now (:exp claims)))
+      (throw+ {:type :validation :cause :exp
+               :message (format "Token is older than :exp (%s)" (:exp claims))}))
+    (when (and (:nbf claims) (> now (:nbf claims)))
+      (throw+ {:type :validation :cause :nbf
+               :message (format "Token is older than :nbf (%s)" (:nbf claims))}))
+    (when (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
+      (throw+ {:type :validation :cause :max-age
+               :message (format "Token is older than max-age (%s)" max-age)}))
+    claims))
 
 (defn- calculate-signature
   "Given the bunch of bytes, a private key and algorithm,
@@ -133,10 +157,12 @@
 (defn sign
   "Sign arbitrary length string/byte array using
   json web token/signature."
-  [claims pkey & [{:keys [alg exp nbf iat headers] :or {alg :hs256 headers {}}}]]
+  ;; The exp nbf and iat keys in the options are deprecated
+  ;; and will be removed in the next version.
+  [claims pkey & [{:keys [alg typ] :or {alg :hs256 typ :jws} :as opts}]]
   {:pre [(map? claims)]}
-  (let [header (encode-header alg headers)
-        claims (encode-claims claims exp nbf iat)
+  (let [header (encode-header alg typ)
+        claims (encode-claims claims opts)
         signature (calculate-signature {:key pkey
                                         :alg alg
                                         :header header
@@ -146,32 +172,15 @@
 (defn unsign
   "Given a signed message, verify it and return
   the decoded claims."
-  [input pkey & [{:keys [max-age] :as opts}]]
-  (let [[header claims signature] (str/split input #"\." 3)
-        {:keys [alg]} (parse-header header)
-        signature (codecs/safebase64->bytes signature)]
+  ([input pkey] (unsign input pkey {}))
+  ([input pkey opts]
+   (let [[header claims signature] (str/split input #"\." 3)
+         {:keys [alg]} (parse-header header opts)
+         signature (codecs/safebase64->bytes signature)]
     (when-not (verify-signature {:key pkey :signature signature
                                  :alg alg :header header :claims claims})
       (throw+ {:type :validation :cause :auth :message "Message seems corrupt or manipulated."}))
-    (let [claims (parse-claims claims)
-          now (util/timestamp)]
-      (cond
-        (and (:exp claims) (> now (:exp claims)))
-        (throw+ {:type :validation
-                 :cause :exp
-                 :message (format "Token is older than :exp (%s)" (:exp claims))})
-
-        (and (:nbf claims) (> now (:nbf claims)))
-        (throw+ {:type :validation
-                 :cause :nbf
-                 :message (format "Token is older than :nbf (%s)" (:nbf claims))})
-
-        (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
-        (throw+ {:type :validation
-                 :cause :max-age
-                 :message (format "Token is older than max-age (%s)" max-age)})
-
-        :else claims))))
+    (parse-claims claims opts))))
 
 (defn encode
   "Sign arbitrary length string/byte array using
