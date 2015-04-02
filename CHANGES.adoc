@@ -4,15 +4,19 @@
 
 Date: unreleased
 
-- Breaking change: now encode and decode functions returns instances of success or failure of exception
-  monad instead of instances of either monad.
-- Breaking change: now sign/unsign methods raises exceptions instead of simply return nil. This allows
+- Add Jsen Web Encryption support. With key encryption algorithms:  `DIR`, `A128KW`, `A192KW`, `A256KW`,
+  `RSA1_5`, `RSA-OAEP`, `RSA-OAEP-256`. and content encryption algorithms: `A128CBC-HS256`,
+  `A192CBC-HS384`, `A256CBC-HS512`, `A128GCM`, `A192GCM`, `A256GCM`.
+- The encode and decode functions now returns instances of success or failure of exception monad
+  instead of instances of either monad (maybe breaking change).
+- The sign and unsign functions now raises exceptions instead of simply return nil. This allows
   libraries and applications that does not works with monads workis like a usual, using jvm
-  exceptions and know the specific error instead of useless nil.
-- Add basic support for JWE.
-  Implemented key algorithms: DIR.
-  Implemented content encryption algorithms: A128CBC-HS256, A192CBC-HS384, A256CBC-HS512.
-
+  exceptions and know the specific error instead of useless nil (maybe breaking change).
+- Add the ability to specify the `:typ` header value in JWS.
+- Add :iss (issuer) and :aud (audience) claims validation to JWS.
+- Add explicit alg validation in JWS (the previous behavior that only checks the header alg without
+  matching it with user provided value has security flaws:
+  https://auth0.com/blog/2015/03/31/critical-vulnerabilities-in-json-web-token-libraries/
 
 == Version 0.4.2
 
