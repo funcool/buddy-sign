@@ -14,10 +14,11 @@
 
 (ns buddy.sign.jwe.cek
   "Json Web Encryption Content Encryption Key utilities."
-  (:require [clojure.core.match :refer [match]]
-            [buddy.core.codecs :as codecs]
+  (:require [buddy.core.codecs :as codecs]
             [buddy.core.nonce :as nonce]
-            [buddy.core.keys :as keys]))
+            [buddy.core.keys :as keys])
+  (:import javax.crypto.Cipher
+           java.security.SecureRandom))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation: Content Encryption Keys
@@ -25,35 +26,114 @@
 
 (defn- validate-keylength-for-algorithm
   [key algorithn]
-  (let [keylength (count key)]
-    (case algorithn
-      :dir true
-      :a128kw (= keylength 16)
-      :a192kw (= keylength 24)
-      :a256kw (= keylength 32))))
+  (case algorithn
+    :dir true
+    :rsa-oaep true
+    :rsa-oaep-256 true
+    :rsa1_5 true
+    :a128kw (= (count key) 16)
+    :a192kw (= (count key) 24)
+    :a256kw (= (count key) 32)))
+
+(defn- encrypt-with-rsaaoep
+  [cek pubkey]
+  (let [cipher (Cipher/getInstance "RSA/ECB/OAEPWithSHA-1AndMGF1Padding" "BC")
+        sr (SecureRandom.)]
+    (.init cipher Cipher/ENCRYPT_MODE pubkey sr)
+    (.doFinal cipher cek)))
+
+(defn- decrypt-with-rsaaoep
+  [ecek privkey]
+  (let [cipher (Cipher/getInstance "RSA/ECB/OAEPWithSHA-1AndMGF1Padding" "BC")
+        sr (SecureRandom.)]
+    (.init cipher Cipher/DECRYPT_MODE privkey  sr)
+    (.doFinal cipher ecek)))
+
+(defn- encrypt-with-rsaaoep-sha256
+  [cek pubkey]
+  (let [cipher (Cipher/getInstance "RSA/ECB/OAEPWithSHA-256AndMGF1Padding" "BC")
+        sr (SecureRandom.)]
+    (.init cipher Cipher/ENCRYPT_MODE pubkey sr)
+    (.doFinal cipher cek)))
+
+(defn- decrypt-with-rsaaoep-sha256
+  [ecek privkey]
+  (let [cipher (Cipher/getInstance "RSA/ECB/OAEPWithSHA-256AndMGF1Padding" "BC")
+        sr (SecureRandom.)]
+    (.init cipher Cipher/DECRYPT_MODE privkey  sr)
+    (.doFinal cipher ecek)))
+
+(defn- encrypt-with-rsa-pkcs15
+  [cek pubkey]
+  (let [cipher (Cipher/getInstance "RSA/ECB/PKCS1Padding" "BC")
+        sr (SecureRandom.)]
+    (.init cipher Cipher/ENCRYPT_MODE pubkey sr)
+    (.doFinal cipher cek)))
+
+(defn- decrypt-with-rsa-pkcs15
+  [ecek privkey]
+  (let [cipher (Cipher/getInstance "RSA/ECB/PKCS1Padding" "BC")
+        sr (SecureRandom.)]
+    (.init cipher Cipher/DECRYPT_MODE privkey  sr)
+    (.doFinal cipher ecek)))
+
+(def ^:private
+  aeskw? #{:a128kw :a192kw :a256kw})
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Public Api
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn generate
   [{:keys [key alg enc] :as options}]
-  (match [alg enc]
-    [:dir _] (codecs/->byte-array key)
-    [(:or :a128kw :a192kw :a256kw) :a128cbc-hs256] (nonce/random-bytes 32)
-    [(:or :a128kw :a192kw :a256kw) :a192cbc-hs384] (nonce/random-bytes 48)
-    [(:or :a128kw :a192kw :a256kw) :a256cbc-hs512] (nonce/random-bytes 64)
-    [(:or :a128kw :a192kw :a256kw) :a128gcm] (nonce/random-bytes 16)
-    [(:or :a128kw :a192kw :a256kw) :a192gcm] (nonce/random-bytes 24)
-    [(:or :a128kw :a192kw :a256kw) :a256gcm] (nonce/random-bytes 32)))
+  (case alg
+    :dir (codecs/->byte-array key)
+    (case enc
+      :a128cbc-hs256 (nonce/random-bytes 32)
+      :a192cbc-hs384 (nonce/random-bytes 48)
+      :a256cbc-hs512 (nonce/random-bytes 64)
+      :a128gcm (nonce/random-bytes 16)
+      :a192gcm (nonce/random-bytes 24)
+      :a256gcm (nonce/random-bytes 32))))
 
 (defn encrypt
   [{:keys [key alg enc cek] :as options}]
   {:pre [(validate-keylength-for-algorithm key alg)]}
-  (let [secret (codecs/->byte-array key)]
-    (match [alg]
-      [:dir] (byte-array 0)
-      [(:or :a128kw :a192kw :a256kw)] (keys/wrap cek secret :aes))))
+  (cond
+    (= alg :dir)
+    (byte-array 0)
+
+    (= alg :rsa-oaep)
+    (encrypt-with-rsaaoep cek key)
+
+    (= alg :rsa-oaep-256)
+    (encrypt-with-rsaaoep-sha256 cek key)
+
+    (= alg :rsa-oaep-256)
+    (encrypt-with-rsaaoep-sha256 cek key)
+
+    (= alg :rsa1_5)
+    (encrypt-with-rsa-pkcs15 cek key)
+
+    (aeskw? alg)
+    (let [secret (codecs/->byte-array key)]
+      (keys/wrap cek secret :aes))))
 
 (defn decrypt
   [{:keys [key alg enc ecek] :as options}]
-  (let [secret (codecs/->byte-array key)]
-    (match [alg]
-      [:dir] (codecs/->byte-array key)
-      [(:or :a128kw :a192kw :a256kw)] (keys/unwrap ecek secret :aes))))
+  (cond
+    (= alg :dir)
+    (codecs/->byte-array key)
+
+    (= alg :rsa-oaep)
+    (decrypt-with-rsaaoep ecek key)
+
+    (= alg :rsa-oaep-256)
+    (decrypt-with-rsaaoep-sha256 ecek key)
+
+    (= alg :rsa1_5)
+    (decrypt-with-rsa-pkcs15 ecek key)
+
+    (aeskw? alg)
+    (let [secret (codecs/->byte-array key)]
+      (keys/unwrap ecek secret :aes))))

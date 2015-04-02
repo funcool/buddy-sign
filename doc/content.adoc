@@ -275,9 +275,12 @@ in JWA RFC):
 | Algorithm name | Decription | Keyword       | Shared Key Size
 | DIR            | Direct use of a shared symmetric key | `:dir` | (depends on content
 encryption algorithm)
-| A128KW         | AES128 Key Wrap | `:a128kw`    | 16 bytes
-| A192KW         | AES192 Key Wrap | `:a192kw`    | 24 bytes
-| A256KW         | AES256 Key Wrap | `:a256kw`    | 32 bytes
+| A128KW         | AES128 Key Wrap | `:a128kw` | 16 bytes
+| A192KW         | AES192 Key Wrap | `:a192kw` | 24 bytes
+| A256KW         | AES256 Key Wrap | `:a256kw` | 32 bytes
+| RSA1_5         | RSA PKCS1 V1_5  | `:rsa1_5` | Asymetric key pair
+| RSA-OAEP       | RSA OAEP with SHA1 | `:rsa-oaep` | Asymetric key pair
+| RSA-OAEP-256   | RSA OAEP with SHA256 | `:rsa-oaep-256` | Asymetric key pair
 |===================================================================================
 
 

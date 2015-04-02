@@ -18,6 +18,7 @@
             [buddy.core.crypto :as crypto]
             [buddy.core.bytes :as bytes]
             [buddy.core.nonce :as nonce]
+            [buddy.core.keys :as keys]
             [buddy.sign.jwe :as jwe]
             [buddy.sign.util :as util]
             [slingshot.slingshot :refer [try+]]))
@@ -85,6 +86,10 @@
 (def key32 (nonce/random-bytes 32))
 (def key48 (nonce/random-bytes 48))
 (def key64 (nonce/random-bytes 64))
+(def rsa-privkey (keys/private-key "test/_files/privkey.3des.rsa.pem" "secret"))
+(def rsa-pubkey (keys/public-key "test/_files/pubkey.3des.rsa.pem"))
+(def ec-privkey (keys/private-key "test/_files/privkey.ecdsa.pem" "secret"))
+(def ec-pubkey (keys/public-key "test/_files/pubkey.ecdsa.pem"))
 
 (deftest jwe-time-claims-validation
   (testing ":exp claim validation"
@@ -230,7 +235,6 @@
   (testing "Wrong key length for algorithm"
     (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a128gcm :alg :a192kw})))))
 
-
 (deftest jwe-alg-aes256kw-matrix
   (testing "Encrypt and decrypt."
     (doseq [enc encs]
@@ -240,3 +244,11 @@
 
   (testing "Wrong key length for algorithm"
     (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a128gcm :alg :a256kw})))))
+
+(deftest jwe-alg-rsa-matrix
+  (testing "Encrypt and decrypt."
+    (doseq [alg [:rsa-oaep :rsa-oaep-256 :rsa1_5]
+            enc encs]
+      (let [result (jwe/encrypt data rsa-pubkey {:enc enc :alg alg})
+            result' (jwe/decrypt result rsa-privkey)]
+        (is (= result' data))))))

@@ -18,11 +18,11 @@
 ;; - http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption-40
 ;; - http://tools.ietf.org/html/draft-mcgrew-aead-aes-cbc-hmac-sha2-05
 ;; - http://tools.ietf.org/html/rfc3394 (AES Key Wrap Algorithm)
+;; - http://tools.ietf.org/html/rfc3447 (RSA OAEP)
 
 (ns buddy.sign.jwe
   "Json Web Encryption."
   (:require [clojure.string :as str]
-            [clojure.core.match :refer [match]]
             [cats.monad.exception :as exc]
             [cheshire.core :as json]
             [slingshot.slingshot :refer [throw+ try+]]
