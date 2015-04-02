@@ -96,8 +96,8 @@
     (let [candidate {:foo "bar"}
           now       (util/timestamp)
           exp       (+ now 2)
-          signed    @(jwe/encode candidate secret {:exp exp})
-          unsigned  @(jwe/decode signed secret)]
+          signed    (jwe/encrypt candidate secret {:exp exp})
+          unsigned  (jwe/decrypt signed secret)]
       (is (= unsigned (assoc candidate :exp exp)))
       (Thread/sleep 3000)
       (try+
@@ -105,24 +105,44 @@
         (catch [:type :validation] {:keys [cause]}
           (is (= cause :exp))))))
 
-  (testing "Unsigning jws with nbf"
+  (testing ":nbf claim validation"
     (let [candidate {:foo "bar"}
           now       (util/timestamp)
           nbf       (+ now 2)
-          signed    @(jwe/encode candidate secret {:nbf nbf})
-          unsigned  @(jwe/decode signed secret)]
+          signed    (jwe/encrypt candidate secret {:nbf nbf})
+          unsigned  (jwe/decrypt signed secret)]
       (is (= unsigned (assoc candidate :nbf nbf)))
       (Thread/sleep 3000)
       (try+
         (jwe/decrypt signed secret)
         (catch [:type :validation] {:keys [cause]}
           (is (= cause :nbf))))))
+
+  (testing ":iss claim validation"
+    (let [candidate {:foo "bar" :iss "foo:bar"}
+          result  (jwe/encrypt candidate secret)
+          result' (jwe/decrypt result secret)]
+      (is (= result' candidate))
+      (try+
+        (jwe/decrypt result secret {:iss "bar:foo"})
+        (catch [:type :validation] {:keys [cause]}
+          (is (= cause :iss))))))
+
+  (testing ":aud claim validation"
+    (let [candidate {:foo "bar" :aud "foo:bar"}
+          result  (jwe/encrypt candidate secret)
+          result' (jwe/decrypt result secret)]
+      (is (= result' candidate))
+      (try+
+        (jwe/decrypt result secret {:aud "bar:foo"})
+        (catch [:type :validation] {:keys [cause]}
+          (is (= cause :aud))))))
 )
 
 (deftest jwe-alg-dir-enc-a128-hs256
   (testing "Encrypt and decrypt"
-    (let [result @(jwe/encode data key32 {:enc :a128cbc-hs256})
-          result' @(jwe/decode result key32)]
+    (let [result (jwe/encrypt data key32 {:enc :a128cbc-hs256})
+          result' (jwe/decrypt result key32 {:enc :a128cbc-hs256})]
       (is (= result' data))))
 
   (testing "Wrong key"
@@ -141,49 +161,31 @@
 
 (deftest jwe-alg-dir-enc-a192-hs384
   (testing "Encrypt and decrypt"
-    (let [result @(jwe/encode data key48 {:enc :a192cbc-hs384})
-          result' @(jwe/decode result key48)]
+    (let [result (jwe/encrypt data key48 {:enc :a192cbc-hs384})
+          result' (jwe/decrypt result key48 {:enc :a192cbc-hs384})]
       (is (= result' data))))
 
   (testing "Wrong key"
     (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a192cbc-hs384})))
     (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a192cbc-hs384})))
     (is (thrown? AssertionError (jwe/encrypt data key64 {:enc :a192cbc-hs384}))))
-
-  (testing "Wrong data"
-    (let [token (str "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.."
-                     "zkV7_0---NDlvQYfpNDfqw.hECYr8zURDvz9hdjz6s-O0HNF2"
-                     "MhgHgXjnQN6KuUcgE.eXYr6ybqAYcQkkkuGNcNKA")]
-      (try+
-        (jwe/decrypt token key32)
-        (catch [:type :validation] {:keys [cause]}
-          (is (= cause :authtag))))))
 )
 
 (deftest jwe-alg-dir-enc-a256-hs512
   (testing "Encrypt and decrypt"
-    (let [result @(jwe/encode data key64 {:enc :a256cbc-hs512})
-          result' @(jwe/decode result key64)]
+    (let [result (jwe/encrypt data key64 {:enc :a256cbc-hs512})
+          result' (jwe/decrypt result key64 {:enc :a256cbc-hs512})]
       (is (= result' data))))
 
   (testing "Wrong key"
     (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a256cbc-hs512})))
     (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a256cbc-hs512}))))
-
-  (testing "Wrong data"
-    (let [token (str "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.."
-                     "zkV7_0---NDlvQYfpNDfqw.hECYr8zURDvz9hdjz6s-O0HNF2"
-                     "MhgHgXjnQN6KuUcgE.eXYr6ybqAYcQkkkuGNcNKA")]
-      (try+
-        (jwe/decrypt token key32 {:enc :a256cbc-hs512})
-        (catch [:type :validation] {:keys [cause]}
-          (is (= cause :authtag))))))
 )
 
 (deftest jwe-alg-dir-enc-a128gcm
   (testing "Encrypt and decrypt"
-    (let [result @(jwe/encode data key16 {:enc :a128gcm})
-          result' @(jwe/decode result key16)]
+    (let [result (jwe/encrypt data key16 {:enc :a128gcm})
+          result' (jwe/decrypt result key16 {:enc :a128gcm})]
       (is (= result' data))))
 
   (testing "Wrong key"
@@ -193,8 +195,8 @@
 
 (deftest jwe-alg-dir-enc-a192gcm
   (testing "Encrypt and decrypt"
-    (let [result @(jwe/encode data key24 {:enc :a192gcm})
-          result' @(jwe/decode result key24)]
+    (let [result (jwe/encrypt data key24 {:enc :a192gcm})
+          result' (jwe/decrypt result key24 {:enc :a192gcm})]
       (is (= result' data))))
 
   (testing "Wrong key"
@@ -204,8 +206,8 @@
 
 (deftest jwe-alg-dir-enc-a256gcm
   (testing "Encrypt and decrypt"
-    (let [result @(jwe/encode data key32 {:enc :a256gcm})
-          result' @(jwe/decode result key32)]
+    (let [result (jwe/encrypt data key32 {:enc :a256gcm})
+          result' (jwe/decrypt result key32 {:enc :a256gcm})]
       (is (= result' data))))
 
   (testing "Wrong key"
@@ -218,8 +220,8 @@
 (deftest jwe-alg-aes128kw-matrix
   (testing "Encrypt and decrypt."
     (doseq [enc encs]
-      (let [result @(jwe/encode data key16 {:enc enc :alg :a128kw})
-            result' @(jwe/decode result key16)]
+      (let [result (jwe/encrypt data key16 {:enc enc :alg :a128kw})
+            result' (jwe/decrypt result key16 {:enc enc :alg :a128kw})]
         (is (= result' data)))))
 
   (testing "Wrong key length for algorithm"
@@ -228,8 +230,8 @@
 (deftest jwe-alg-aes192kw-matrix
   (testing "Encrypt and decrypt."
     (doseq [enc encs]
-      (let [result @(jwe/encode data key24 {:enc enc :alg :a192kw})
-            result' @(jwe/decode result key24)]
+      (let [result (jwe/encrypt data key24 {:enc enc :alg :a192kw})
+            result' (jwe/decrypt result key24 {:enc enc :alg :a192kw})]
         (is (= result' data)))))
 
   (testing "Wrong key length for algorithm"
@@ -238,8 +240,8 @@
 (deftest jwe-alg-aes256kw-matrix
   (testing "Encrypt and decrypt."
     (doseq [enc encs]
-      (let [result @(jwe/encode data key32 {:enc enc :alg :a256kw})
-            result' @(jwe/decode result key32)]
+      (let [result (jwe/encrypt data key32 {:enc enc :alg :a256kw})
+            result' (jwe/decrypt result key32 {:enc enc :alg :a256kw})]
         (is (= result' data)))))
 
   (testing "Wrong key length for algorithm"
@@ -250,5 +252,5 @@
     (doseq [alg [:rsa-oaep :rsa-oaep-256 :rsa1_5]
             enc encs]
       (let [result (jwe/encrypt data rsa-pubkey {:enc enc :alg alg})
-            result' (jwe/decrypt result rsa-privkey)]
+            result' (jwe/decrypt result rsa-privkey {:enc enc :alg alg})]
         (is (= result' data))))))
