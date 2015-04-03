@@ -2,7 +2,7 @@
 
 == Version 0.5.0
 
-Date: unreleased
+Date: 2015-04-03
 
 - Add Jsen Web Encryption support. With key encryption algorithms:  `DIR`, `A128KW`, `A192KW`, `A256KW`,
   `RSA1_5`, `RSA-OAEP`, `RSA-OAEP-256`. and content encryption algorithms: `A128CBC-HS256`,
