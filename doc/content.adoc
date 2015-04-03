@@ -162,8 +162,8 @@ You do not need specify the algorithm explicitly, it is automatically detected.
 
 === Claims validation
 
-_buddy-sign_ json web signature implementation also includes validation of a concrete subset
-of claims related to the age of the signed data: *exp* (expiration time), *nbf* (not before).
+_buddy-sign_ json web signature implements validation of a concrete subset of claims: *exp* (expiration 
+time), *nbf* (not before), *iss* (issuer) and *aud* (audience).
 
 The validation is performed on decoding the token. If `:exp` claim is found and is posterior to
 the current date time (UTC) an validation exception will be raised or a failure instance will
@@ -284,7 +284,7 @@ encryption algorithm)
 |===================================================================================
 
 
-The *conentent encryption algoritms* are responsible of encrypt the content. This is a table
+The *content encryption algoritms* are responsible of encrypt the content. This is a table
 that exposes the currently supported _Content Encryption Algorithms_ (all specified
 in the JWA RFC):
 
@@ -347,7 +347,7 @@ incoming token will come with content encryption algorithm stored in its header 
 === Claims validation
 
 _buddy-sign_ json web encryption, like *jws*, also implements validation of a concrete subset
-of claims related to the age of the signed data: *exp* (expiration time), *nbf* (not before).
+of claims: *exp* (expiration time), *nbf* (not before), *iss* (issuer) and *aud* (audience).
 
 The validation is performed on decoding the token. If `:exp` claim is found and is posterior to
 the current date time (UTC) an validation exception will be raised or a failure instance will
