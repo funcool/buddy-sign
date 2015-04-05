@@ -452,6 +452,15 @@ Then, you also will be able validate the signed message based in its age:
 
 == FAQ
 
+== When I should use JWE and when JWS?
+
+The main difference between JWS and JWE, is that JWE encrypt the claims and with some algorithms uses
+one time keys. Both provides good security, but JWE also provides privacity of the data.
+
+If you only stores the userid or something similar, JWS is recommended, bacause it has less overhead.
+But if you stores in token claims that requires privacity, JWE is a solution that should be used.
+
+
 [[generate-keypairs]]
 === How I can generate keypairs?
 
