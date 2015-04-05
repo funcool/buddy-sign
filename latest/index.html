@@ -523,16 +523,17 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_signing_and_unsigning_data">7.1. Signing and unsigning data</a></li>
 </ul>
 </li>
-<li><a href="#_faq">8. FAQ</a>
+<li><a href="#_faq">8. FAQ</a></li>
+<li><a href="#_when_i_should_use_jwe_and_when_jws">9. When I should use JWE and when JWS?</a>
 <ul class="sectlevel2">
-<li><a href="#generate-keypairs">8.1. How I can generate keypairs?</a></li>
+<li><a href="#generate-keypairs">9.1. How I can generate keypairs?</a></li>
 </ul>
 </li>
-<li><a href="#_how_to_contribute">9. How to Contribute?</a>
+<li><a href="#_how_to_contribute">10. How to Contribute?</a>
 <ul class="sectlevel2">
-<li><a href="#_philosophy">9.1. Philosophy</a></li>
-<li><a href="#_procedure">9.2. Procedure</a></li>
-<li><a href="#_license">9.3. License</a></li>
+<li><a href="#_philosophy">10.1. Philosophy</a></li>
+<li><a href="#_procedure">10.2. Procedure</a></li>
+<li><a href="#_license">10.3. License</a></li>
 </ul>
 </li>
 </ul>
@@ -1264,8 +1265,22 @@ and you can sign any clojure valid type. Let see an example:</p>
 <div class="sect1">
 <h2 id="_faq"><a class="link" href="#_faq">8. FAQ</a></h2>
 <div class="sectionbody">
+
+</div>
+</div>
+<div class="sect1">
+<h2 id="_when_i_should_use_jwe_and_when_jws"><a class="link" href="#_when_i_should_use_jwe_and_when_jws">9. When I should use JWE and when JWS?</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The main difference between JWS and JWE, is that JWE encrypt the claims and with some algorithms uses
+one time keys. Both provides good security, but JWE also provides privacity of the data.</p>
+</div>
+<div class="paragraph">
+<p>If you only stores the userid or something similar, JWS is recommended, bacause it has less overhead.
+But if you stores in token claims that requires privacity, JWE is a solution that should be used.</p>
+</div>
 <div class="sect2">
-<h3 id="generate-keypairs"><a class="link" href="#generate-keypairs">8.1. How I can generate keypairs?</a></h3>
+<h3 id="generate-keypairs"><a class="link" href="#generate-keypairs">9.1. How I can generate keypairs?</a></h3>
 <div class="listingblock">
 <div class="title">Example on how to generate one Elliptic Curve DSA keypair.</div>
 <div class="content">
@@ -1293,10 +1308,10 @@ openssl rsa -pubout -in privkey.pem -out pubkey.pem</code></pre>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_how_to_contribute"><a class="link" href="#_how_to_contribute">9. How to Contribute?</a></h2>
+<h2 id="_how_to_contribute"><a class="link" href="#_how_to_contribute">10. How to Contribute?</a></h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_philosophy"><a class="link" href="#_philosophy">9.1. Philosophy</a></h3>
+<h3 id="_philosophy"><a class="link" href="#_philosophy">10.1. Philosophy</a></h3>
 <div class="paragraph">
 <p>Five most important rules:</p>
 </div>
@@ -1324,7 +1339,7 @@ openssl rsa -pubout -in privkey.pem -out pubkey.pem</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_procedure"><a class="link" href="#_procedure">9.2. Procedure</a></h3>
+<h3 id="_procedure"><a class="link" href="#_procedure">10.2. Procedure</a></h3>
 <div class="paragraph">
 <p><strong>buddy-sign</strong> unlike Clojure and other Clojure contrib libs, does not have many
 restrictions for contributions. Just follow the following steps depending on the
@@ -1361,7 +1376,7 @@ situation:</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_license"><a class="link" href="#_license">9.3. License</a></h3>
+<h3 id="_license"><a class="link" href="#_license">10.3. License</a></h3>
 <div class="paragraph">
 <p><em>buddy-sign</em> is licensed under Apache 2.0 License. You can see the complete text
 of the license on the root of the repository on <code>LICENSE</code> file.</p>
@@ -1372,7 +1387,7 @@ of the license on the root of the repository on <code>LICENSE</code> file.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2015-04-03 12:30:33 CEST
+Last updated 2015-04-05 14:05:45 CEST
 </div>
 </div>
 </body>
