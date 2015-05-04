@@ -122,10 +122,10 @@
       (throw+ {:type :validation :cause :aud :message (str "Audience does not match " aud)}))
     (when (and (:exp claims) (> now (:exp claims)))
       (throw+ {:type :validation :cause :exp
-               :message (format "Token is older than :exp (%s)" (:exp claims))}))
+               :message (format "Token is expired (%s)" (:exp claims))}))
     (when (and (:nbf claims) (> now (:nbf claims)))
       (throw+ {:type :validation :cause :nbf
-               :message (format "Token is older than :nbf (%s)" (:nbf claims))}))
+               :message (format "Token is not yet valid (%s)" (:nbf claims))}))
     (when (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
       (throw+ {:type :validation :cause :max-age
                :message (format "Token is older than max-age (%s)" max-age)}))
