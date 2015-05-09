@@ -143,7 +143,7 @@
         (crypto/calculate-authtag! cipher output offset)
         (catch InvalidCipherTextException e
           (let [message (str "Couldn't validate gcm authentication tag: " (.getMessage e))]
-            (throw+ {:type :encryption :cause :authtag :message message} e))))
+            (throw+ {:type :validation :cause :authtag :message message} e))))
       output)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
