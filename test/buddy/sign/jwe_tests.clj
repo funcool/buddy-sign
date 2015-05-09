@@ -254,3 +254,9 @@
       (let [result (jwe/encrypt data rsa-pubkey {:enc enc :alg alg})
             result' (jwe/decrypt result rsa-privkey {:enc enc :alg alg})]
         (is (= result' data))))))
+
+(deftest wrong-data
+  (try+
+   (jwe/decrypt "xyz" secret)
+   (catch [:type :validation] {:keys [cause message]}
+     (is (= cause :signature)))))

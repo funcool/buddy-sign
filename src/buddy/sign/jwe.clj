@@ -397,21 +397,25 @@
   "Decrypt the jwe compliant message and return its claims."
   ([input key] (decrypt input key {}))
   ([input key {:keys [zip] :as opts} ]
-   (let [[header ecek iv ciphertext authtag] (str/split input #"\." 5)
-         {:keys [alg enc]} (parse-header header opts)
-         ecek (codecs/safebase64->bytes ecek)
-         scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
-         iv (codecs/safebase64->bytes iv)
-         header (codecs/safebase64->bytes header)
-         ciphertext (codecs/safebase64->bytes ciphertext)
-         authtag (codecs/safebase64->bytes authtag)
-         claims (aead-decrypt {:ciphertext ciphertext
-                               :authtag authtag
-                               :algorithm enc
-                               :aad header
-                               :secret scek
-                               :iv iv})]
-     (parse-claims claims zip opts))))
+   (try+
+    (let [[header ecek iv ciphertext authtag] (str/split input #"\." 5)
+          {:keys [alg enc]} (parse-header header opts)
+          ecek (codecs/safebase64->bytes ecek)
+          scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
+          iv (codecs/safebase64->bytes iv)
+          header (codecs/safebase64->bytes header)
+          ciphertext (codecs/safebase64->bytes ciphertext)
+          authtag (codecs/safebase64->bytes authtag)
+          claims (aead-decrypt {:ciphertext ciphertext
+                                :authtag authtag
+                                :algorithm enc
+                                :aad header
+                                :secret scek
+                                :iv iv})]
+      (parse-claims claims zip opts))
+    (catch com.fasterxml.jackson.core.JsonParseException e
+      (throw+ {:type :validation :cause :signature
+               :message "Message seems corrupt or manipulated."})))))
 
 (defn encode
   "Encrypt then sign arbitrary length string/byte array using

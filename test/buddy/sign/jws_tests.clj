@@ -122,3 +122,9 @@
       (jws/unsign result secret)
       (catch [:type :validation] {:keys [cause message]}
         (is (= cause :header))))))
+
+(deftest wrong-data
+  (try+
+   (jws/unsign "xyz" secret)
+   (catch [:type :validation] {:keys [cause message]}
+     (is (= cause :signature)))))

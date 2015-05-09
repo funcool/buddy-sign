@@ -28,8 +28,7 @@
             [clojure.string :as str]
             [cheshire.core :as json]
             [cats.monad.exception :as exc]
-            [slingshot.slingshot :refer [throw+]])
-
+            [slingshot.slingshot :refer [throw+ try+]])
   (:import clojure.lang.Keyword))
 
 (def ^{:doc "List of supported signing algorithms"
@@ -50,7 +49,6 @@
                          :verifier #(ecdsa/verify %1 %2 %3 :sha256)}
                  :es512 {:signer   #(ecdsa/sign %1 %2 :sha512)
                          :verifier #(ecdsa/verify %1 %2 %3 :sha512)}})
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
@@ -148,7 +146,7 @@
   [{:keys [alg signature key header claims]}]
   (let [verifier (get-in *signers-map* [alg :verifier])
         authdata (str/join "." [header claims])]
-   (verifier authdata signature key)))
+    (verifier authdata signature key)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
@@ -174,13 +172,19 @@
   the decoded claims."
   ([input pkey] (unsign input pkey {}))
   ([input pkey opts]
-   (let [[header claims signature] (str/split input #"\." 3)
-         {:keys [alg]} (parse-header header opts)
-         signature (codecs/safebase64->bytes signature)]
-    (when-not (verify-signature {:key pkey :signature signature
-                                 :alg alg :header header :claims claims})
-      (throw+ {:type :validation :cause :auth :message "Message seems corrupt or manipulated."}))
-    (parse-claims claims opts))))
+   (try+
+    (let [[header claims signature] (str/split input #"\." 3)
+          {:keys [alg]} (parse-header header opts)
+          signature (codecs/safebase64->bytes signature)]
+      (when-not (verify-signature {:key pkey :signature signature
+                                   :alg alg :header header :claims claims})
+        (throw+ {:type :validation :cause :signature
+                 :message "Message seems corrupt or manipulated."}))
+      (parse-claims claims opts))
+    (catch com.fasterxml.jackson.core.JsonParseException e
+      (throw+ {:type :validation :cause :signature
+               :message "Message seems corrupt or manipulated."})))))
+
 
 (defn encode
   "Sign arbitrary length string/byte array using
