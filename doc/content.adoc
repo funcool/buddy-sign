@@ -50,7 +50,7 @@ vector on your *_project.clj_* file:
 ._on project.clj_
 [source,clojure]
 ----
-[buddy/buddy-sign "0.5.0"]
+[buddy/buddy-sign "0.5.1"]
 ----
 
 
@@ -60,7 +60,7 @@ If you are using gradle, this is a dependency line for gradle dsl:
 
 [source,groovy]
 ----
-compile "buddy:buddy-sign:0.5.0"
+compile "buddy:buddy-sign:0.5.1"
 ----
 
 
@@ -74,6 +74,7 @@ You can clone the public repository with this command:
 ----
 git clone https://github.com/funcool/buddy-sign
 ----
+
 
 == Json Web Token
 

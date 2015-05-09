@@ -1,5 +1,12 @@
 = Changelog
 
+== Version 0.5.1
+
+Date: 2015-05-09
+
+- Improved error reporting when validating wrong jwe/jws tokens.
+
+
 == Version 0.5.0
 
 Date: 2015-04-03
