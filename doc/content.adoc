@@ -121,8 +121,8 @@ Here a summary of supported algorithms for JWS:
 |Algorithm name     | Hash algorithms   | Keywords           | Priv/Pub Key?
 |Elliptic Curve DSA | sha256, sha512    | `:es256`, `:es512` | Yes
 |RSASSA PSS         | sha256, sha512    | `:ps256`, `:ps512` | Yes
-|RSASSA PKCS1 v1_5  | sha256, sha512    | `:rs256`, `:rs256` | Yes
-|HMAC               | sha256*, sha512   | `:hs256`, `:hs256` | No
+|RSASSA PKCS1 v1_5  | sha256, sha512    | `:rs256`, `:rs512` | Yes
+|HMAC               | sha256*, sha512   | `:hs256`, `:hs512` | No
 |=====================================================================================
 
 
