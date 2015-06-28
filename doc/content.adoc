@@ -52,10 +52,9 @@ _buddy-sign_ is tested with these platforms:
 The simplest way to use _buddy-sign_ in a clojure project, is by including it in the dependency
 vector on your *_project.clj_* file:
 
-._on project.clj_
 [source,clojure]
 ----
-[buddy/buddy-sign "0.5.1"]
+[buddy/buddy-sign "0.6.0"]
 ----
 
 
@@ -65,19 +64,7 @@ If you are using gradle, this is a dependency line for gradle dsl:
 
 [source,groovy]
 ----
-compile "buddy:buddy-sign:0.5.1"
-----
-
-
-=== Get the Code
-
-_buddy-sign_ is open source and can be found on link:https://github.com/funcool/buddy-sign[github].
-
-You can clone the public repository with this command:
-
-[source,text]
-----
-git clone https://github.com/funcool/buddy-sign
+compile "buddy:buddy-sign:0.6.0"
 ----
 
 
@@ -458,7 +445,7 @@ Then, you also will be able validate the signed message based in its age:
 
 == FAQ
 
-== When I should use JWE and when JWS?
+=== When I should use JWE and when JWS?
 
 The main difference between JWS and JWE, is that JWE encrypt the claims and with some algorithms uses
 one time keys. Both provides good security, but JWE also provides privacity of the data.
@@ -493,7 +480,13 @@ openssl genrsa -aes256 -out privkey.pem 2048
 openssl rsa -pubout -in privkey.pem -out pubkey.pem
 ----
 
-== How to Contribute?
+== Developers Guide
+
+=== Contributing
+
+Unlike Clojure and other Clojure contributed libraries _buddy-sign_ does not have many
+restrictions for contributions. Just open an issue or pull request.
+
 
 === Philosophy
 
@@ -507,23 +500,26 @@ Five most important rules:
 
 All contributions to _buddy-sign_ should keep these important rules in mind.
 
+=== Source Code
 
-=== Procedure
+_buddy-sign_ is open source and can be found on link:https://github.com/funcool/buddy-sign[github].
 
-**buddy-sign** unlike Clojure and other Clojure contrib libs, does not have many
-restrictions for contributions. Just follow the following steps depending on the
-situation:
+You can clone the public repository with this command:
 
-**Bugfix**:
+[source,bash]
+----
+git clone https://github.com/funcool/buddy-sign
+----
 
-- Fork the GitHub repo.
-- Fix a bug/typo on a new branch.
-- Make a pull-request to master.
 
-**New feature**:
+=== Run tests
 
-- Open new issue with the new feature proposal.
-- If it is accepted, follow the same steps as "bugfix".
+For running tests just execute this:
+
+[source,bash]
+----
+lein test
+----
 
 
 === License
