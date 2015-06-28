@@ -4,37 +4,37 @@
 
 Date: 2015-06-28
 
-- Replace cryptographic primitives used in jwe implementation
+* Replace cryptographic primitives used in jwe implementation
   with buddy-core new implementation that fixes few bugs realted
   to wrong padding management.
-- Update buddy-core to 0.6.0
-- Remove direct slingshot dependency because is not transitive
+* Update buddy-core to 0.6.0
+* Remove direct slingshot dependency because is not transitive
   from the new buddy-core version.
-- Update cheshire dependency to 5.5.0
+* Update cheshire dependency to 5.5.0
 
 
 == Version 0.5.1
 
 Date: 2015-05-09
 
-- Improved error reporting when validating wrong jwe/jws tokens.
+* Improved error reporting when validating wrong jwe/jws tokens.
 
 
 == Version 0.5.0
 
 Date: 2015-04-03
 
-- Add Jsen Web Encryption support. With key encryption algorithms:  `DIR`, `A128KW`, `A192KW`, `A256KW`,
+* Add Jsen Web Encryption support. With key encryption algorithms:  `DIR`, `A128KW`, `A192KW`, `A256KW`,
   `RSA1_5`, `RSA-OAEP`, `RSA-OAEP-256`. and content encryption algorithms: `A128CBC-HS256`,
   `A192CBC-HS384`, `A256CBC-HS512`, `A128GCM`, `A192GCM`, `A256GCM`.
-- The encode and decode functions now returns instances of success or failure of exception monad
+* The encode and decode functions now returns instances of success or failure of exception monad
   instead of instances of either monad (maybe breaking change).
-- The sign and unsign functions now raises exceptions instead of simply return nil. This allows
+* The sign and unsign functions now raises exceptions instead of simply return nil. This allows
   libraries and applications that does not works with monads workis like a usual, using jvm
   exceptions and know the specific error instead of useless nil (maybe breaking change).
-- Add the ability to specify the `:typ` header value in JWS.
-- Add :iss (issuer) and :aud (audience) claims validation to JWS.
-- Add explicit alg validation in JWS (the previous behavior that only checks the header alg without
+* Add the ability to specify the `:typ` header value in JWS.
+* Add :iss (issuer) and :aud (audience) claims validation to JWS.
+* Add explicit alg validation in JWS (the previous behavior that only checks the header alg without
   matching it with user provided value has security flaws:
   https://auth0.com/blog/2015/03/31/critical-vulnerabilities-in-json-web-token-libraries/
 
@@ -43,36 +43,36 @@ Date: 2015-04-03
 
 Date: 2015-03-29
 
-- Bug fix related to :iat param validating on jws. (thanks to @tvanhens)
+* Bug fix related to :iat param validating on jws. (thanks to @tvanhens)
 
 
 == Version 0.4.1
 
 Date: 2015-03-14
 
-- Update nippy version from 2.7.1 to 2.8.0
-- Update buddy-core from 0.4.0 to 0.4.2
-- Update cats from 0.3.2 to 0.3.4
+* Update nippy version from 2.7.1 to 2.8.0
+* Update buddy-core from 0.4.0 to 0.4.2
+* Update cats from 0.3.2 to 0.3.4
 
 
 == Version 0.4.0
 
 Date: 2015-02-22
 
-- Add encode/decode functions to JWS/JWT implementation. Them instead of return
+* Add encode/decode functions to JWS/JWT implementation. Them instead of return
   plain value, return a monadic either. That allows granular error reporting
   instead something like nil that not very useful. The previous sign/unsign
   are conserved for backward compatibility but maybe in future will be removed.
-- Rename parameter `maxage` to `max-age` on jws implementation. This change
+* Rename parameter `maxage` to `max-age` on jws implementation. This change
   introduces a little backward incompatibility.
-- Add "compact" signing implementation as replacemen of django based one.
-- Django based generic signing is removed.
-- Update buddy-core version to 0.4.0
+* Add "compact" signing implementation as replacemen of django based one.
+* Django based generic signing is removed.
+* Update buddy-core version to 0.4.0
 
 
 == Version 0.3.0
 
 Date: 2014-01-18
 
-- First version splitted from monolitic buddy package.
-- No changes from original version.
+* First version splitted from monolitic buddy package.
+* No changes from original version.
