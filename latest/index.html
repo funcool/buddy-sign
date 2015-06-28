@@ -116,6 +116,7 @@
 <li><a href="#encrypting-data">Encrypting data</a></li>
 <li><a href="#decrypting-data">Decrypting Data</a></li>
 <li><a href="#claims-validation-2">Claims validation</a></li>
+<li><a href="#asymetric-encryption-schemes">Asymetric encryption schemes</a></li>
 </ul>
 </li>
 <li><a href="#compact-message-signing">Compact message signing</a>
@@ -728,6 +729,36 @@ be returned, depending on that api you are using direct or monadic.</p>
 </div>
 </div>
 </div>
+<div class="sect2">
+<h3 id="asymetric-encryption-schemes"><a class="link" href="#asymetric-encryption-schemes">Asymetric encryption schemes</a></h3>
+<div class="paragraph">
+<p>In order to use any asymetric encryption algorithm, you should have private/public
+key pair. If you don&#8217;t have one, don&#8217;t worry, it is very easy to generate it using <strong>openssl</strong>, see
+this <a href="#generate-keypairs">faq entry</a>.</p>
+</div>
+<div class="paragraph">
+<p>Then, having ready the key pair, you can strart using one of the supported key encryption
+algorithm in the JWE specification such as <code>:rsa1_5</code>, <code>:rsa-oaep</code> or <code>:rsa-oaep-256</code>.</p>
+</div>
+<div class="paragraph">
+<p>Let see an demostration example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.core.keys</span> <span class="tok-ss">:as</span> <span class="tok-nv">keys</span><span class="tok-p">])</span>
+
+<span class="tok-c1">;; Create keys instances</span>
+<span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">privkey</span> <span class="tok-p">(</span><span class="tok-nf">keys/private-key</span> <span class="tok-s">&quot;privkey.pem&quot;</span><span class="tok-p">))</span>
+<span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">pubkey</span> <span class="tok-p">(</span><span class="tok-nf">keys/public-key</span> <span class="tok-s">&quot;pubkey.pem&quot;</span><span class="tok-p">))</span>
+
+<span class="tok-c1">;; Encrypt data</span>
+<span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">encrypted-data</span> <span class="tok-p">(</span><span class="tok-nf">jwe/encrypt</span> <span class="tok-p">{</span><span class="tok-ss">:foo</span> <span class="tok-s">&quot;bar&quot;</span><span class="tok-p">}</span> <span class="tok-nv">pubkey</span> <span class="tok-p">{</span><span class="tok-ss">:alg</span> <span class="tok-ss">:rsa-oaep</span> <span class="tok-ss">:enc</span> <span class="tok-ss">:a128-hs256</span><span class="tok-p">})</span>
+
+<span class="tok-c1">;; Decrypted</span>
+<span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">decrypted-data</span> <span class="tok-p">(</span><span class="tok-nf">jwe/decrypt</span> <span class="tok-nv">encrypted-data</span> <span class="tok-nv">privkey</span> <span class="tok-p">{</span><span class="tok-ss">:alg</span> <span class="tok-ss">:rsa-oaep</span> <span class="tok-ss">:enc</span> <span class="tok-ss">:a128-hs256</span><span class="tok-p">}))</span></code></pre>
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -966,7 +997,7 @@ of the license on the root of the repository on <code>LICENSE</code> file.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2015-06-28 14:36:52 EEST
+Last updated 2015-06-28 14:55:39 EEST
 </div>
 </div>
 </body>
