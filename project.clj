@@ -1,12 +1,11 @@
-(defproject buddy/buddy-sign "0.6.0-SNAPSHOT"
+(defproject buddy/buddy-sign "0.6.0"
   :description "High level message signing for Clojure"
   :url "https://github.com/funcool/buddy-sign"
   :license {:name "Apache 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
   :dependencies [[org.clojure/clojure "1.6.0" :scope "provided"]
                  [com.taoensso/nippy "2.8.0"]
-                 [buddy/buddy-core "0.6.0-SNAPSHOT"]
-                 ;; [slingshot "0.12.2"]
+                 [buddy/buddy-core "0.6.0"]
                  [cats "0.4.0"]
                  [clj-time "0.9.0"]
                  [cheshire "5.5.0"]]
