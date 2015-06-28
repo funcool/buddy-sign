@@ -380,6 +380,33 @@ link:https://github.com/scgilardi/slingshot[slingshot] library:
 ----
 
 
+=== Asymetric encryption schemes
+
+In order to use any asymetric encryption algorithm, you should have private/public
+key pair. If you don't have one, don't worry, it is very easy to generate it using *openssl*, see
+this <<generate-keypairs,faq entry>>.
+
+Then, having ready the key pair, you can strart using one of the supported key encryption
+algorithm in the JWE specification such as `:rsa1_5`, `:rsa-oaep` or `:rsa-oaep-256`.
+
+Let see an demostration example:
+
+[source, clojure]
+----
+(require '[buddy.core.keys :as keys])
+
+;; Create keys instances
+(def privkey (keys/private-key "privkey.pem"))
+(def pubkey (keys/public-key "pubkey.pem"))
+
+;; Encrypt data
+(def encrypted-data (jwe/encrypt {:foo "bar"} pubkey {:alg :rsa-oaep :enc :a128-hs256})
+
+;; Decrypted
+(def decrypted-data (jwe/decrypt encrypted-data privkey {:alg :rsa-oaep :enc :a128-hs256}))
+----
+
+
 == Compact message signing
 
 Compact high level message signing implementation.
