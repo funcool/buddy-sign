@@ -1,5 +1,18 @@
 = Changelog
 
+== Version 0.6.0
+
+Date: 2015-06-28
+
+- Replace cryptographic primitives used in jwe implementation
+  with buddy-core new implementation that fixes few bugs realted
+  to wrong padding management.
+- Update buddy-core to 0.6.0
+- Remove direct slingshot dependency because is not transitive
+  from the new buddy-core version.
+- Update cheshire dependency to 5.5.0
+
+
 == Version 0.5.1
 
 Date: 2015-05-09
