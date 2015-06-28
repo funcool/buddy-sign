@@ -79,154 +79,6 @@
 (defmethod generate-iv :a192gcm [_] (nonce/random-bytes 12))
 (defmethod generate-iv :a256gcm [_] (nonce/random-bytes 12))
 
-(defn calculate-aad-length
-  [aad]
-  (let [length (* (count aad) 8)
-        buffer (ByteBuffer/allocate 8)]
-    (.putLong buffer length)
-    (.array buffer)))
-
-(defn extract-encryption-key
-  [secret algorithm]
-  {:pre [(bytes/bytes? secret)]}
-  (case algorithm
-    :a128cbc-hs256 (bytes/slice secret 16 32)
-    :a192cbc-hs384 (bytes/slice secret 24 48)
-    :a256cbc-hs512 (bytes/slice secret 32 64)))
-
-(defn extract-authentication-key
-  [secret algorithm]
-  {:pre [(bytes/bytes? secret)]}
-  (case algorithm
-    :a128cbc-hs256 (bytes/slice secret 0 16)
-    :a192cbc-hs384 (bytes/slice secret 0 24)
-    :a256cbc-hs512 (bytes/slice secret 0 32)))
-
-(defn- generate-authtag
-  [{:keys [algorithm ciphertext authkey iv aad]}]
-  (let [al (calculate-aad-length aad)
-        data (bytes/concat aad iv ciphertext al)
-        fulltag (hmac/hash data authkey algorithm)
-        truncatesize (quot (count fulltag) 2)]
-    (bytes/slice fulltag 0 truncatesize)))
-
-(defn- verify-authtag
-  [tag params]
-  (let [tag' (generate-authtag params)]
-    (bytes/equals? tag tag')))
-
-(defmulti aead-encrypt :algorithm)
-
-(defmethod aead-encrypt :a128cbc-hs256
-  [{:keys [algorithm plaintext secret iv aad] :as params}]
-  {:pre [(keylength? secret 32)
-         (ivlength? iv 16)]}
-  (let [cipher (crypto/block-cipher :aes :cbc)
-        encryptionkey (extract-encryption-key secret algorithm)
-        authkey (extract-authentication-key secret algorithm)
-        ciphertext (encrypt-cbc cipher plaintext encryptionkey iv)
-        tag (generate-authtag {:algorithm :sha256
-                               :ciphertext ciphertext
-                               :authkey authkey
-                               :aad aad
-                               :iv iv})]
-    [ciphertext tag]))
-
-(defmethod aead-encrypt :a192cbc-hs384
-  [{:keys [algorithm plaintext secret iv aad] :as params}]
-  {:pre [(keylength? secret 48)
-         (ivlength? iv 16)]}
-  (let [cipher (crypto/block-cipher :aes :cbc)
-        encryptionkey (extract-encryption-key secret algorithm)
-        authkey (extract-authentication-key secret algorithm)
-        ciphertext (encrypt-cbc cipher plaintext encryptionkey iv)
-        tag (generate-authtag {:algorithm :sha384
-                               :ciphertext ciphertext
-                               :authkey authkey
-                               :aad aad
-                               :iv iv})]
-    [ciphertext tag]))
-
-(defmethod aead-encrypt :a256cbc-hs512
-  [{:keys [algorithm plaintext secret iv aad] :as params}]
-  {:pre [(keylength? secret 64)
-         (ivlength? iv 16)]}
-  (let [cipher (crypto/block-cipher :aes :cbc)
-        encryptionkey (extract-encryption-key secret algorithm)
-        authkey (extract-authentication-key secret algorithm)
-        ciphertext (encrypt-cbc cipher plaintext encryptionkey iv)
-        tag (generate-authtag {:algorithm :sha512
-                               :ciphertext ciphertext
-                               :authkey authkey
-                               :aad aad
-                               :iv iv})]
-    [ciphertext tag]))
-
-(defmethod aead-encrypt :a128gcm
-  [{:keys [algorithm plaintext secret iv aad] :as params}]
-  {:pre [(keylength? secret 16) (ivlength? iv 12)]}
-  (encrypt-gcm plaintext secret iv aad))
-
-(defmethod aead-encrypt :a192gcm
-  [{:keys [algorithm plaintext secret iv aad] :as params}]
-  {:pre [(keylength? secret 24) (ivlength? iv 12)]}
-  (encrypt-gcm plaintext secret iv aad))
-
-(defmethod aead-encrypt :a256gcm
-  [{:keys [algorithm plaintext secret iv aad] :as params}]
-  {:pre [(keylength? secret 32) (ivlength? iv 12)]}
-  (encrypt-gcm plaintext secret iv aad))
-
-(defmulti aead-decrypt :algorithm)
-
-(defmethod aead-decrypt :a128cbc-hs256
-  [{:keys [algorithm authtag ciphertext secret iv] :as params}]
-  {:pre [(keylength? secret 32)
-         (ivlength? iv 16)]}
-  (let [cipher (crypto/block-cipher :aes :cbc)
-        encryptionkey (extract-encryption-key secret algorithm)
-        authkey (extract-authentication-key secret algorithm)]
-    (when-not (verify-authtag authtag (assoc params :authkey authkey :algorithm :sha256))
-      (throw+ {:type :validation :cause :authtag :message "Message seems corrupt or manipulated."}))
-    (decrypt-cbc cipher ciphertext encryptionkey iv)))
-
-(defmethod aead-decrypt :a192cbc-hs384
-  [{:keys [algorithm authtag ciphertext secret iv] :as params}]
-  {:pre [(keylength? secret 48)
-         (ivlength? iv 16)]}
-  (let [cipher (crypto/block-cipher :aes :cbc)
-        encryptionkey (extract-encryption-key secret algorithm)
-        authkey (extract-authentication-key secret algorithm)]
-    (when-not (verify-authtag authtag (assoc params :authkey authkey :algorithm :sha384))
-      (throw+ {:type :validation :cause :authtag :message "Message seems corrupt or manipulated."}))
-    (decrypt-cbc cipher ciphertext encryptionkey iv)))
-
-(defmethod aead-decrypt :a256cbc-hs512
-  [{:keys [algorithm authtag ciphertext secret iv] :as params}]
-  {:pre [(keylength? secret 64)
-         (ivlength? iv 16)]}
-  (let [cipher (crypto/block-cipher :aes :cbc)
-        encryptionkey (extract-encryption-key secret algorithm)
-        authkey (extract-authentication-key secret algorithm)]
-    (when-not (verify-authtag authtag (assoc params :authkey authkey :algorithm :sha512))
-      (throw+ {:type :validation :cause :authtag :message "Message seems corrupt or manipulated."}))
-    (decrypt-cbc cipher ciphertext encryptionkey iv)))
-
-(defmethod aead-decrypt :a128gcm
-  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
-  {:pre [(keylength? secret 16) (ivlength? iv 12)]}
-  (decrypt-gcm ciphertext authtag secret iv aad))
-
-(defmethod aead-decrypt :a192gcm
-  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
-  {:pre [(keylength? secret 24) (ivlength? iv 12)]}
-  (decrypt-gcm ciphertext authtag secret iv aad))
-
-(defmethod aead-decrypt :a256gcm
-  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
-  {:pre [(keylength? secret 32) (ivlength? iv 12)]}
-  (decrypt-gcm ciphertext authtag secret iv aad))
-
 (defn- encode-claims
   [claims zip opts]
   (let [additional (-> (select-keys opts [:exp :nbf :iat :iss :aud])
@@ -260,6 +112,111 @@
       (throw+ {:type :validation :cause :max-age
                :message (format "Token is older than max-age (%s)" max-age)}))
     claims))
+
+(defmulti aead-encrypt :algorithm)
+(defmulti aead-decrypt :algorithm)
+
+(defmethod aead-encrypt :a128cbc-hs256
+  [{:keys [algorithm plaintext secret iv aad] :as params}]
+  (let [result (crypto/encrypt* {:algorithm :aes128-cbc-hmac-sha256 :input plaintext
+                                 :key secret :iv iv :aad aad})
+        resultlen (count result)
+        ciphertext (bytes/slice result 0 (- resultlen 16))
+        tag (bytes/slice result (- resultlen 16) resultlen)]
+    [ciphertext tag]))
+
+(defmethod aead-decrypt :a128cbc-hs256
+  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
+  (crypto/decrypt* {:algorithm :aes128-cbc-hmac-sha256
+                    :input (bytes/concat ciphertext authtag)
+                    :key secret
+                    :iv iv
+                    :aad aad}))
+
+(defmethod aead-encrypt :a192cbc-hs384
+  [{:keys [algorithm plaintext secret iv aad] :as params}]
+  (let [result (crypto/encrypt* {:algorithm :aes192-cbc-hmac-sha384 :input plaintext
+                                 :key secret :iv iv :aad aad})
+        resultlen (count result)
+        ciphertext (bytes/slice result 0 (- resultlen 24))
+        tag (bytes/slice result (- resultlen 24) resultlen)]
+    [ciphertext tag]))
+
+(defmethod aead-decrypt :a192cbc-hs384
+  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
+  (crypto/decrypt* {:algorithm :aes192-cbc-hmac-sha384
+                    :input (bytes/concat ciphertext authtag)
+                    :key secret
+                    :iv iv
+                    :aad aad}))
+
+(defmethod aead-encrypt :a256cbc-hs512
+  [{:keys [algorithm plaintext secret iv aad] :as params}]
+  (let [result (crypto/encrypt* {:algorithm :aes256-cbc-hmac-sha512 :input plaintext
+                                 :key secret :iv iv :aad aad})
+        resultlen (count result)
+        ciphertext (bytes/slice result 0 (- resultlen 32))
+        tag (bytes/slice result (- resultlen 32) resultlen)]
+    [ciphertext tag]))
+
+(defmethod aead-decrypt :a256cbc-hs512
+  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
+  (crypto/decrypt* {:algorithm :aes256-cbc-hmac-sha512
+                    :input (bytes/concat ciphertext authtag)
+                    :key secret
+                    :iv iv
+                    :aad aad}))
+
+(defmethod aead-encrypt :a128gcm
+  [{:keys [algorithm plaintext secret iv aad] :as params}]
+  (let [result (crypto/encrypt* {:algorithm :aes128-gcm :input plaintext
+                                 :key secret :iv iv :aad aad})
+        resultlen (count result)
+        ciphertext (bytes/slice result 0 (- resultlen 16))
+        tag (bytes/slice result (- resultlen 16) resultlen)]
+    [ciphertext tag]))
+
+(defmethod aead-decrypt :a128gcm
+  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
+  (crypto/decrypt* {:algorithm :aes128-gcm
+                    :input (bytes/concat ciphertext authtag)
+                    :key secret
+                    :iv iv
+                    :aad aad}))
+
+(defmethod aead-encrypt :a192gcm
+  [{:keys [algorithm plaintext secret iv aad] :as params}]
+  (let [result (crypto/encrypt* {:algorithm :aes192-gcm :input plaintext
+                                 :key secret :iv iv :aad aad})
+        resultlen (count result)
+        ciphertext (bytes/slice result 0 (- resultlen 16))
+        tag (bytes/slice result (- resultlen 16) resultlen)]
+    [ciphertext tag]))
+
+(defmethod aead-decrypt :a192gcm
+  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
+  (crypto/decrypt* {:algorithm :aes192-gcm
+                    :input (bytes/concat ciphertext authtag)
+                    :key secret
+                    :iv iv
+                    :aad aad}))
+
+(defmethod aead-encrypt :a256gcm
+  [{:keys [algorithm plaintext secret iv aad] :as params}]
+  (let [result (crypto/encrypt* {:algorithm :aes256-gcm :input plaintext
+                                 :key secret :iv iv :aad aad})
+        resultlen (count result)
+        ciphertext (bytes/slice result 0 (- resultlen 16))
+        tag (bytes/slice result (- resultlen 16) resultlen)]
+    [ciphertext tag]))
+
+(defmethod aead-decrypt :a256gcm
+  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
+  (crypto/decrypt* {:algorithm :aes256-gcm
+                    :input (bytes/concat ciphertext authtag)
+                    :key secret
+                    :iv iv
+                    :aad aad}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
