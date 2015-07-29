@@ -7,7 +7,7 @@
                  [com.taoensso/nippy "2.9.0"]
                  [buddy/buddy-core "0.6.0"]
                  [funcool/cats "0.5.0"]
-                 [clj-time "0.9.0"]
+                 [clj-time "0.10.0"]
                  [cheshire "5.5.0"]]
   :source-paths ["src"]
   :javac-options ["-target" "1.7" "-source" "1.7" "-Xlint:-options"]
