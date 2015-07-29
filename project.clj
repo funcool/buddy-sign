@@ -11,4 +11,5 @@
                  [cheshire "5.5.0"]]
   :source-paths ["src"]
   :javac-options ["-target" "1.7" "-source" "1.7" "-Xlint:-options"]
-  :test-paths ["test"])
+  :test-paths ["test"]
+  :plugins [[lein-ancient "0.6.7"]])
