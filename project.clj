@@ -6,7 +6,7 @@
   :dependencies [[org.clojure/clojure "1.7.0" :scope "provided"]
                  [com.taoensso/nippy "2.9.0"]
                  [buddy/buddy-core "0.6.0"]
-                 [cats "0.4.0"]
+                 [funcool/cats "0.5.0"]
                  [clj-time "0.9.0"]
                  [cheshire "5.5.0"]]
   :source-paths ["src"]
