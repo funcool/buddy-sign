@@ -1,10 +1,11 @@
 = Changelog
 
-== Version 0.7.0
+== Version 0.6.1
 
-Date: unreleased
+Date: 2015-08-02
 
 * Set default clojure version to 1.7.0
+* Update cats version to 0.6.1
 
 
 == Version 0.6.0
