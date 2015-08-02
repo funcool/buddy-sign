@@ -1,6 +1,6 @@
 = buddy-sign - High level message signing.
 Andrey Antukh, <niwi@niwi.be>
-0.6.0
+0.6.1
 :toc: left
 :!numbered:
 :source-highlighter: pygments
@@ -54,7 +54,7 @@ vector on your *_project.clj_* file:
 
 [source,clojure]
 ----
-[buddy/buddy-sign "0.6.0"]
+[buddy/buddy-sign "0.6.1"]
 ----
 
 
@@ -64,7 +64,7 @@ If you are using gradle, this is a dependency line for gradle dsl:
 
 [source,groovy]
 ----
-compile "buddy:buddy-sign:0.6.0"
+compile "buddy:buddy-sign:0.6.1"
 ----
 
 
