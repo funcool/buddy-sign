@@ -25,7 +25,6 @@
   (:require [clojure.string :as str]
             [cats.monad.exception :as exc]
             [cheshire.core :as json]
-            [slingshot.slingshot :refer [throw+ try+]]
             [buddy.core.codecs :as codecs]
             [buddy.core.bytes :as bytes]
             [buddy.core.nonce :as nonce]
@@ -58,17 +57,19 @@
 (defn- parse-header
   [^String headerdata {:keys [alg enc] :or {alg :dir enc :a128cbc-hs256}}]
   (when (nil? alg)
-    (throw+ {:type :validation :cause :header :message "Missing `alg` parameter."}))
+    (throw (ex-info "Missing `alg` parameter."
+                    {:type :validation :cause :header})))
   (when (nil? enc)
-    (throw+ {:type :validation :cause :header :message "Missing `enc` parameter."}))
+    (throw (ex-info "Missing `enc` parameter."
+                    {:type :validation :cause :header})))
   (let [header (-> (codecs/safebase64->str headerdata)
                    (json/parse-string true))]
     (when (not= alg (keyword (str/lower-case (:alg header))))
-      (throw+ {:type :validation :cause :header
-               :message "The `alg` param mismatch with header value."}))
+      (throw (ex-info "The `alg` param mismatch with header value."
+                      {:type :validation :cause :header})))
     (when (not= enc (keyword (str/lower-case (:enc header))))
-      (throw+ {:type :validation :cause :header
-               :message "The `enc` param mismatch with header value."}))
+      (throw (ex-info "The `enc` param mismatch with header value."
+                      {:type :validation :cause :header})))
     (merge {:alg alg :enc enc} (dissoc header :alg :enc))))
 
 (defmulti generate-iv :enc)
@@ -92,6 +93,9 @@
       (deflate/compress data)
       data)))
 
+
+;; TODO: split validation from parsing
+
 (defn- parse-claims
   [^bytes claimsdata zip {:keys [max-age iss aud]}]
   (let [claims (-> (if zip (deflate/uncompress claimsdata) claimsdata)
@@ -99,18 +103,20 @@
                    (json/parse-string true))
         now (util/timestamp)]
     (when (and iss (not= iss (:iss claims)))
-      (throw+ {:type :validation :cause :iss :message (str "Issuer does not match " iss)}))
+      (throw (ex-info (str "Issuer does not match " iss)
+                      {:type :validation :cause :iss})))
     (when (and aud (not= aud (:aud claims)))
-      (throw+ {:type :validation :cause :aud :message (str "Audience does not match " aud)}))
+      (throw (ex-info (str "Audience does not match " aud)
+                      {:type :validation :cause :aud})))
     (when (and (:exp claims) (> now (:exp claims)))
-      (throw+ {:type :validation :cause :exp
-               :message (format "Token is older than :exp (%s)" (:exp claims))}))
+      (throw (ex-info (format "Token is older than :exp (%s)" (:exp claims))
+                      {:type :validation :cause :exp})))
     (when (and (:nbf claims) (> now (:nbf claims)))
-      (throw+ {:type :validation :cause :nbf
-               :message (format "Token is older than :nbf (%s)" (:nbf claims))}))
+      (throw (ex-info (format "Token is older than :nbf (%s)" (:nbf claims))
+                      {:type :validation :cause :nbf})))
     (when (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
-      (throw+ {:type :validation :cause :max-age
-               :message (format "Token is older than max-age (%s)" max-age)}))
+      (throw (ex-info (format "Token is older than max-age (%s)" max-age)
+                      {:type :validation :cause :max-age})))
     claims))
 
 (defmulti aead-encrypt :algorithm)
@@ -249,25 +255,28 @@
   "Decrypt the jwe compliant message and return its claims."
   ([input key] (decrypt input key {}))
   ([input key {:keys [zip] :as opts} ]
-   (try+
-    (let [[header ecek iv ciphertext authtag] (str/split input #"\." 5)
-          {:keys [alg enc]} (parse-header header opts)
-          ecek (codecs/safebase64->bytes ecek)
-          scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
-          iv (codecs/safebase64->bytes iv)
-          header (codecs/safebase64->bytes header)
-          ciphertext (codecs/safebase64->bytes ciphertext)
-          authtag (codecs/safebase64->bytes authtag)
-          claims (aead-decrypt {:ciphertext ciphertext
-                                :authtag authtag
-                                :algorithm enc
-                                :aad header
-                                :secret scek
-                                :iv iv})]
-      (parse-claims claims zip opts))
-    (catch com.fasterxml.jackson.core.JsonParseException e
-      (throw+ {:type :validation :cause :signature
-               :message "Message seems corrupt or manipulated."})))))
+   (try
+     (let [[header ecek iv ciphertext authtag] (str/split input #"\." 5)
+           {:keys [alg enc]} (parse-header header opts)
+           ecek (codecs/safebase64->bytes ecek)
+           scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
+           iv (codecs/safebase64->bytes iv)
+           header (codecs/safebase64->bytes header)
+           ciphertext (codecs/safebase64->bytes ciphertext)
+           authtag (codecs/safebase64->bytes authtag)
+           claims (aead-decrypt {:ciphertext ciphertext
+                                 :authtag authtag
+                                 :algorithm enc
+                                 :aad header
+                                 :secret scek
+                                 :iv iv})]
+       (parse-claims claims zip opts))
+     (catch com.fasterxml.jackson.core.JsonParseException e
+       (throw (ex-info "Message seems corrupt or manipulated."
+                       {:type :validation :cause :signature})))
+     (catch org.bouncycastle.crypto.InvalidCipherTextException e
+       (throw (ex-info "Message seems corrupt or manipulated."
+                       {:type :validation :cause :signature}))))))
 
 (defn encode
   "Encrypt then sign arbitrary length string/byte array using

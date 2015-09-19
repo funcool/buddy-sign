@@ -20,8 +20,7 @@
             [buddy.core.nonce :as nonce]
             [buddy.core.keys :as keys]
             [buddy.sign.jwe :as jwe]
-            [buddy.sign.util :as util]
-            [slingshot.slingshot :refer [try+]]))
+            [buddy.sign.util :as util]))
 
 (def secret (codecs/hex->bytes (str "000102030405060708090a0b0c0d0e0f"
                                     "101112131415161718191a1b1c1d1e1f")))
@@ -30,6 +29,7 @@
 (def key16 (nonce/random-bytes 16))
 (def key24 (nonce/random-bytes 24))
 (def key32 (nonce/random-bytes 32))
+(def key32' (nonce/random-bytes 32))
 (def key48 (nonce/random-bytes 48))
 (def key64 (nonce/random-bytes 64))
 (def rsa-privkey (keys/private-key "test/_files/privkey.3des.rsa.pem" "secret"))
@@ -46,10 +46,12 @@
           unsigned  (jwe/decrypt signed secret)]
       (is (= unsigned (assoc candidate :exp exp)))
       (Thread/sleep 3000)
-      (try+
+      (try
         (jwe/decrypt signed secret)
-        (catch [:type :validation] {:keys [cause]}
-          (is (= cause :exp))))))
+        (throw (Exception. "unexpected"))
+        (catch clojure.lang.ExceptionInfo e
+          (let [cause (:cause (ex-data e))]
+            (is (= cause :exp)))))))
 
   (testing ":nbf claim validation"
     (let [candidate {:foo "bar"}
@@ -59,31 +61,37 @@
           unsigned  (jwe/decrypt signed secret)]
       (is (= unsigned (assoc candidate :nbf nbf)))
       (Thread/sleep 3000)
-      (try+
+      (try
         (jwe/decrypt signed secret)
-        (catch [:type :validation] {:keys [cause]}
-          (is (= cause :nbf))))))
+        (throw (Exception. "unexpected"))
+        (catch clojure.lang.ExceptionInfo e
+          (let [cause (:cause (ex-data e))]
+            (is (= cause :nbf)))))))
 
   (testing ":iss claim validation"
     (let [candidate {:foo "bar" :iss "foo:bar"}
           result  (jwe/encrypt candidate secret)
           result' (jwe/decrypt result secret)]
       (is (= result' candidate))
-      (try+
+      (try
         (jwe/decrypt result secret {:iss "bar:foo"})
-        (catch [:type :validation] {:keys [cause]}
-          (is (= cause :iss))))))
+        (throw (Exception. "unexpected"))
+        (catch clojure.lang.ExceptionInfo e
+          (let [cause (:cause (ex-data e))]
+            (is (= cause :iss)))))))
 
   (testing ":aud claim validation"
     (let [candidate {:foo "bar" :aud "foo:bar"}
           result  (jwe/encrypt candidate secret)
           result' (jwe/decrypt result secret)]
       (is (= result' candidate))
-      (try+
+      (try
         (jwe/decrypt result secret {:aud "bar:foo"})
-        (catch [:type :validation] {:keys [cause]}
-          (is (= cause :aud))))))
-)
+        (throw (Exception. "unexpected"))
+        (catch clojure.lang.ExceptionInfo e
+          (let [cause (:cause (ex-data e))]
+            (is (= cause :aud)))))))
+  )
 
 (deftest jwe-alg-dir-enc-a128-hs256
   (testing "Encrypt and decrypt"
@@ -99,11 +107,13 @@
     (let [token (str "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.."
                      "zkV7_0---NDlvQYfpNDfqw.hECYr8zURDvz9hdjz6s-O0HNF2"
                      "MhgHgXjnQN6KuUcgE.eXYr6ybqAYcQkkkuGNcNKA")]
-      (try+
+      (try
         (jwe/decrypt token key32 {:enc :a128cbc-hs256})
-        (catch [:type :validation] {:keys [cause]}
-          (is (= cause :authtag))))))
-)
+        (throw (Exception. "unexpected"))
+        (catch clojure.lang.ExceptionInfo e
+          (let [cause (:cause (ex-data e))]
+            (is (= cause :authtag)))))))
+  )
 
 (deftest jwe-alg-dir-enc-a192-hs384
   (testing "Encrypt and decrypt"
@@ -115,7 +125,7 @@
     (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a192cbc-hs384})))
     (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a192cbc-hs384})))
     (is (thrown? AssertionError (jwe/encrypt data key64 {:enc :a192cbc-hs384}))))
-)
+  )
 
 (deftest jwe-alg-dir-enc-a256-hs512
   (testing "Encrypt and decrypt"
@@ -126,7 +136,7 @@
   (testing "Wrong key"
     (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a256cbc-hs512})))
     (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a256cbc-hs512}))))
-)
+  )
 
 (deftest jwe-alg-dir-enc-a128gcm
   (testing "Encrypt and decrypt"
@@ -137,7 +147,7 @@
   (testing "Wrong key"
     (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a128gcm})))
     (is (thrown? AssertionError (jwe/encrypt data key48 {:enc :a128gcm}))))
-)
+  )
 
 (deftest jwe-alg-dir-enc-a192gcm
   (testing "Encrypt and decrypt"
@@ -148,7 +158,7 @@
   (testing "Wrong key"
     (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a192gcm})))
     (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a192gcm}))))
-)
+  )
 
 (deftest jwe-alg-dir-enc-a256gcm
   (testing "Encrypt and decrypt"
@@ -159,7 +169,7 @@
   (testing "Wrong key"
     (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a256gcm})))
     (is (thrown? AssertionError (jwe/encrypt data key48 {:enc :a256gcm}))))
-)
+  )
 
 (def encs [:a128gcm :a192gcm :a256gcm :a128cbc-hs256 :a192cbc-hs384 :a256cbc-hs512])
 
@@ -202,7 +212,19 @@
         (is (= result' data))))))
 
 (deftest wrong-data
-  (try+
-   (jwe/decrypt "xyz" secret)
-   (catch [:type :validation] {:keys [cause message]}
-     (is (= cause :signature)))))
+  (try
+    (jwe/decrypt "xyz" secret)
+    (throw (Exception. "unexpected"))
+    (catch clojure.lang.ExceptionInfo e
+      (let [cause (:cause (ex-data e))]
+        (is (= cause :signature))))))
+
+
+(deftest wrong-key
+  (let [data (jwe/encrypt {:data "foobar"} key32 {:enc :a256gcm :alg :a256kw})]
+    (try
+      (jwe/decrypt data key32' {:enc :a256gcm :alg :a256kw})
+      (throw (Exception. "unexpected"))
+      (catch clojure.lang.ExceptionInfo e
+        (let [cause (:cause (ex-data e))]
+          (is (= cause :signature)))))))

@@ -41,8 +41,7 @@
             [clojure.string :as str]
             [taoensso.nippy :as nippy]
             [taoensso.nippy.compression :as nippycompress]
-            [cats.monad.exception :as exc]
-            [slingshot.slingshot :refer [throw+]])
+            [cats.monad.exception :as exc])
   (:import clojure.lang.Keyword))
 
 (def ^{:doc "List of supported signing algorithms"
@@ -124,12 +123,13 @@
         stamp (codecs/safebase64->bytes stamp)
         candidate (bytes/concat input salt stamp)]
     (when-not (verify-signature candidate signature key alg)
-      (throw+ {:type :validation :cause :auth :message "Message seems corrupt or manipulated."}))
+      (throw (ex-info "Message seems corrupt or manipulated."
+                      {:type :validation :auth :message})))
     (let [now (util/timestamp)
           stamp (codecs/bytes->long stamp)]
       (when (and (number? max-age) (> (- now stamp) max-age))
-        (throw+ {:type :validation :cause :max-age
-                 :message (format "Token is older than %s" max-age)}))
+        (throw (ex-info (format "Token is older than %s" max-age)
+                        {:type :validation :cause :max-age})))
       (nippy/thaw input {:v1-compatibility? false}))))
 
 (defn encode

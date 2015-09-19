@@ -27,8 +27,7 @@
             [buddy.sign.util :as util]
             [clojure.string :as str]
             [cheshire.core :as json]
-            [cats.monad.exception :as exc]
-            [slingshot.slingshot :refer [throw+ try+]])
+            [cats.monad.exception :as exc])
   (:import clojure.lang.Keyword))
 
 (def ^{:doc "List of supported signing algorithms"
@@ -98,12 +97,13 @@
   "Parse jws header."
   [^String headerdata {:keys [alg] :or {alg :hs256}}]
   (when (nil? alg)
-    (throw+ {:type :validation :cause :header :message "Missing `alg` parameter."}))
+    (throw (ex-info "Missing `alg` parameter."
+                    {:type :validation :cause :header})))
   (let [header (-> (codecs/safebase64->str headerdata)
                    (json/parse-string true))]
     (when (not= alg (keyword (str/lower-case (:alg header))))
-      (throw+ {:type :validation :cause :header
-               :message "The `alg` param mismatch with header value."}))
+      (throw (ex-info "The `alg` param mismatch with header value."
+                      {:type :validation :cause :header})))
     (merge {:alg alg} (dissoc header :alg))))
 
 (defn- parse-claims
@@ -115,18 +115,20 @@
                    (json/parse-string true))
         now (util/timestamp)]
     (when (and iss (not= iss (:iss claims)))
-      (throw+ {:type :validation :cause :iss :message (str "Issuer does not match " iss)}))
+      (throw (ex-info (str "Issuer does not match " iss)
+                      {:type :validation :cause :iss})))
     (when (and aud (not= aud (:aud claims)))
-      (throw+ {:type :validation :cause :aud :message (str "Audience does not match " aud)}))
+      (throw (ex-info (str "Audience does not match " aud)
+                      {:type :validation :cause :aud})))
     (when (and (:exp claims) (> now (:exp claims)))
-      (throw+ {:type :validation :cause :exp
-               :message (format "Token is expired (%s)" (:exp claims))}))
+      (throw (ex-info (format "Token is expired (%s)" (:exp claims))
+                      {:type :validation :cause :exp})))
     (when (and (:nbf claims) (> now (:nbf claims)))
-      (throw+ {:type :validation :cause :nbf
-               :message (format "Token is not yet valid (%s)" (:nbf claims))}))
+      (throw (ex-info (format "Token is not yet valid (%s)" (:nbf claims))
+                      {:type :validation :cause :nbf})))
     (when (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
-      (throw+ {:type :validation :cause :max-age
-               :message (format "Token is older than max-age (%s)" max-age)}))
+      (throw (ex-info (format "Token is older than max-age (%s)" max-age)
+                      {:type :validation :cause :max-age})))
     claims))
 
 (defn- calculate-signature
@@ -172,19 +174,18 @@
   the decoded claims."
   ([input pkey] (unsign input pkey {}))
   ([input pkey opts]
-   (try+
-    (let [[header claims signature] (str/split input #"\." 3)
-          {:keys [alg]} (parse-header header opts)
-          signature (codecs/safebase64->bytes signature)]
-      (when-not (verify-signature {:key pkey :signature signature
-                                   :alg alg :header header :claims claims})
-        (throw+ {:type :validation :cause :signature
-                 :message "Message seems corrupt or manipulated."}))
-      (parse-claims claims opts))
-    (catch com.fasterxml.jackson.core.JsonParseException e
-      (throw+ {:type :validation :cause :signature
-               :message "Message seems corrupt or manipulated."})))))
-
+   (try
+     (let [[header claims signature] (str/split input #"\." 3)
+           {:keys [alg]} (parse-header header opts)
+           signature (codecs/safebase64->bytes signature)]
+       (when-not (verify-signature {:key pkey :signature signature
+                                    :alg alg :header header :claims claims})
+         (throw (ex-info "Message seems corrupt or manipulated."
+                         {:type :validation :cause :signature})))
+       (parse-claims claims opts))
+     (catch com.fasterxml.jackson.core.JsonParseException e
+       (throw (ex-info "Message seems corrupt or manipulated."
+                       {:type :validation :cause :signature}))))))
 
 (defn encode
   "Sign arbitrary length string/byte array using

@@ -22,8 +22,7 @@
             [buddy.sign.compact :as compact]
             [buddy.sign.util :as util]
             [cats.monad.either :as either]
-            [cats.monad.exception :as exc]
-            [slingshot.slingshot :refer [try+]]))
+            [cats.monad.exception :as exc]))
 
 (def secret "test")
 (def rsa-privkey (keys/private-key "test/_files/privkey.3des.rsa.pem" "secret"))
@@ -69,8 +68,9 @@
       (is (exc/success? unsigned1))
       (is (= @unsigned1 candidate))
       (is (exc/failure? unsigned2))
-      (try+
+      (try
         (deref unsigned2)
-        (catch [:type :validation] {:keys [cause]}
-          (is (= cause :max-age))))))
-)
+        (catch clojure.lang.ExceptionInfo e
+          (let [data (ex-data e)]
+            (is (= (:cause data) :max-age)))))))
+  )
