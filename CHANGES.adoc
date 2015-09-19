@@ -2,7 +2,7 @@
 
 == Version 0.7.0
 
-Date: Unreleased
+Date: 2015-09-19
 
 - Update cats to 1.0.0
 - Update clj-time to 0.11.0
