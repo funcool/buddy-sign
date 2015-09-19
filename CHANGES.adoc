@@ -1,5 +1,18 @@
 = Changelog
 
+== Version 0.7.0
+
+Date: Unreleased
+
+- Update cats to 1.0.0
+- Update clj-time to 0.11.0
+- Update nippy to 2.9.1
+- Update buddy-core to 0.7.0
+- Remove slingshot usage and start using plain
+  clojure.lang.ExceptionInfo exceptions.
+  (maybe breaking change)
+
+
 == Version 0.6.1
 
 Date: 2015-08-02
