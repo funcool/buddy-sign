@@ -49,16 +49,17 @@
     (let [candidate {:foo "bar"}
           now       (util/timestamp)
           nbf       (+ now 2)
-          signed    (jws/sign candidate secret {:nbf nbf})
-          unsigned  (jws/unsign signed secret)]
-      (is (= unsigned (assoc candidate :nbf nbf)))
-      (Thread/sleep 3000)
+          signed    (jws/sign candidate secret {:nbf nbf})]
       (try
         (jws/unsign signed secret)
         (throw (Exception. "unexpected"))
         (catch clojure.lang.ExceptionInfo e
           (let [cause (:cause (ex-data e))]
-            (is (= cause :nbf)))))))
+            (is (= cause :nbf)))))
+
+      (Thread/sleep 3000)
+      (let[unsigned  (jws/unsign signed secret)]
+        (is (= unsigned (assoc candidate :nbf nbf))))))
 
   (testing ":iss claim validation"
     (let [candidate {:foo "bar" :iss "foo:bar"}

@@ -123,7 +123,7 @@
     (when (and (:exp claims) (> now (:exp claims)))
       (throw (ex-info (format "Token is expired (%s)" (:exp claims))
                       {:type :validation :cause :exp})))
-    (when (and (:nbf claims) (> now (:nbf claims)))
+    (when (and (:nbf claims) (< now (:nbf claims)))
       (throw (ex-info (format "Token is not yet valid (%s)" (:nbf claims))
                       {:type :validation :cause :nbf})))
     (when (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
