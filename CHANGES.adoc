@@ -1,5 +1,13 @@
 = Changelog
 
+== Version 0.7.1
+
+Date: 2015-09-23
+
+- Fix broken nbf claim validation.
+  (thanks to @jonpither for report it)
+
+
 == Version 0.7.0
 
 Date: 2015-09-19
