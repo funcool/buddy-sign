@@ -289,9 +289,9 @@ in the JWA RFC):
 [options="header", cols="1,1,1,1"]
 |===================================================================================
 | Algorithm name | Description | Keyword | Shared Key Size
-| A128CBC-HS256  | AES128 with CBC mode and HMAC-SHA256  | `:a128-hs256` | 32 bytes
-| A192CBC-HS384  | AES192 with CBC mode and HMAC-SHA384  | `:a192-hs384` | 48 bytes
-| A256CBC-HS512  | AES256 with CBC mode and HMAC-SHA512  | `:a256-hs512` | 64 bytes
+| A128CBC-HS256  | AES128 with CBC mode and HMAC-SHA256  | `:a128cbc-hs256` | 32 bytes
+| A192CBC-HS384  | AES192 with CBC mode and HMAC-SHA384  | `:a192cbc-hs384` | 48 bytes
+| A256CBC-HS512  | AES256 with CBC mode and HMAC-SHA512  | `:a256cbc-hs512` | 64 bytes
 | A128GCM        | AES128 with GCM mode | `:a128gcm`    | 16 bytes
 | A192GCM        | AES192 with GCM mode | `:a192gcm`    | 24 bytes
 | A256GCM        | AES256 with GCM mode | `:a256gcm`    | 32 bytes
@@ -318,7 +318,7 @@ Let start with encrypting data. For it we will use the `encrypt` function from t
 ;; Encrypt it using the previously
 ;; hashed key
 
-(jwe/encrypt {:userid 1} secret {:alg :dir :enc :a128-hs256})
+(jwe/encrypt {:userid 1} secret {:alg :dir :enc :a128cbc-hs256})
 ;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
 ----
 
@@ -404,10 +404,10 @@ Let see an demostration example:
 (def pubkey (keys/public-key "pubkey.pem"))
 
 ;; Encrypt data
-(def encrypted-data (jwe/encrypt {:foo "bar"} pubkey {:alg :rsa-oaep :enc :a128-hs256})
+(def encrypted-data (jwe/encrypt {:foo "bar"} pubkey {:alg :rsa-oaep :enc :a128cbc-hs256})
 
 ;; Decrypted
-(def decrypted-data (jwe/decrypt encrypted-data privkey {:alg :rsa-oaep :enc :a128-hs256}))
+(def decrypted-data (jwe/decrypt encrypted-data privkey {:alg :rsa-oaep :enc :a128cbc-hs256}))
 ----
 
 
