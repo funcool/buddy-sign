@@ -30,11 +30,8 @@
   (:require [buddy.core.codecs :as codecs]
             [buddy.core.bytes :as bytes]
             [buddy.core.keys :as keys]
-            [buddy.core.mac.hmac :as hmac]
-            [buddy.core.mac.poly1305 :as poly]
-            [buddy.core.sign.rsapss :as rsapss]
-            [buddy.core.sign.rsapkcs15 :as rsapkcs]
-            [buddy.core.sign.ecdsa :as ecdsa]
+            [buddy.core.mac :as mac]
+            [buddy.core.dsa :as dsa]
             [buddy.core.nonce :as nonce]
             [buddy.sign.jws :as jws]
             [buddy.sign.util :as util]
@@ -46,28 +43,23 @@
 
 (def ^{:doc "List of supported signing algorithms"
        :dynamic true}
-  *signers-map* {:hs256 {:signer   #(hmac/hash %1 %2 :sha256)
-                         :verifier #(hmac/verify %1 %2 %3 :sha256)}
-                 :hs512 {:signer   #(hmac/hash %1 %2 :sha512)
-                         :verifier #(hmac/verify %1 %2 %3 :sha512)}
-                 :rs256 {:signer   #(rsapkcs/sign %1 %2 :sha256)
-                         :verifier #(rsapkcs/verify %1 %2 %3 :sha256)}
-                 :rs512 {:signer   #(rsapkcs/sign %1 %2 :sha512)
-                         :verifier #(rsapkcs/verify %1 %2 %3 :sha512)}
-                 :ps256 {:signer   #(rsapss/sign %1 %2 :sha256)
-                         :verifier #(rsapss/verify %1 %2 %3 :sha256)}
-                 :ps512 {:signer   #(rsapss/sign %1 %2 :sha512)
-                         :verifier #(rsapss/verify %1 %2 %3 :sha512)}
-                 :es256 {:signer   #(ecdsa/sign %1 %2 :sha256)
-                         :verifier #(ecdsa/verify %1 %2 %3 :sha256)}
-                 :es512 {:signer   #(ecdsa/sign %1 %2 :sha512)
-                         :verifier #(ecdsa/verify %1 %2 %3 :sha512)}
-                 :poly1305-aes {:signer #(poly/hash %1 %2 :aes)
-                                :verifier #(poly/verify %1 %2 %3 :aes)}
-                 :poly1305-serpent {:signer #(poly/hash %1 %2 :serpent)
-                                    :verifier #(poly/verify %1 %2 %3 :serpent)}
-                 :poly1305-twofish {:signer #(poly/hash %1 %2 :twofish)
-                                    :verifier #(poly/verify %1 %2 %3 :twofish)}})
+  *signers-map*
+  {:hs256 {:signer   #(mac/hash %1 {:alg :hmac+sha256 :key %2})
+           :verifier #(mac/verify %1 %2 {:alg :hmac+sha256 :key %3})}
+   :hs512 {:signer   #(mac/hash %1 %2 {:alg :hmac+sha512 :key %2})
+           :verifier #(mac/verify %1 %2 {:alg :hmac+sha512 :key %3})}
+   :rs256 {:signer   #(dsa/sign %1 {:alg :rsassa-pkcs15+sha256 :key %2})
+           :verifier #(dsa/verify %1 %2 {:alg :rsassa-pkcs15+sha256 :key %3})}
+   :rs512 {:signer   #(dsa/sign %1 {:alg :rsassa-pkcs15+sha512 :key %2})
+           :verifier #(dsa/verify %1 %2 {:alg :rsassa-pkcs15+sha512 :key %3})}
+   :ps256 {:signer   #(dsa/sign %1 {:alg :rsassa-pss+sha256 :key %2})
+           :verifier #(dsa/verify %1 %2 {:alg :rsassa-pss+sha256 :key %3})}
+   :ps512 {:signer   #(dsa/sign %1 {:alg :rsassa-pss+sha512 :key %2})
+           :verifier #(dsa/verify %1 %2 {:alg :rsassa-pss+sha512 :key %3})}
+   :es256 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha256 :key %2})
+           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha256 :key %3 })}
+   :es512 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha512 :key %2})
+           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha512 :key %3})}})
 
 (defn- calculate-signature
   "Given the bunch of bytes, a private key and algorithm,
