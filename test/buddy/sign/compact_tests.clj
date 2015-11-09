@@ -16,6 +16,7 @@
   (:require [clojure.test :refer :all]
             [buddy.core.codecs :as codecs]
             [buddy.core.crypto :as crypto]
+            [buddy.core.hash :as hash]
             [buddy.core.keys :as keys]
             [buddy.core.bytes :as bytes]
             [buddy.core.nonce :as nonce]
@@ -24,7 +25,7 @@
             [cats.monad.either :as either]
             [cats.monad.exception :as exc]))
 
-(def secret "test")
+(def secret (hash/sha256 "secret"))
 (def rsa-privkey (keys/private-key "test/_files/privkey.3des.rsa.pem" "secret"))
 (def rsa-pubkey (keys/public-key "test/_files/pubkey.3des.rsa.pem"))
 (def ec-privkey (keys/private-key "test/_files/privkey.ecdsa.pem" "secret"))

@@ -41,6 +41,19 @@
             [cats.monad.exception :as exc])
   (:import clojure.lang.Keyword))
 
+(defn- sign-poly
+  [input options]
+  (let [iv (or (:iv options)
+               (nonce/random-bytes 16))]
+    (-> (mac/hash input (assoc options :iv iv))
+        (bytes/concat iv))))
+
+(defn- verify-poly
+  [input signature options]
+  (let [iv (bytes/slice signature 16 (count signature))
+        signature' (bytes/slice signature 0 16)]
+    (mac/verify input signature' (assoc options :iv iv))))
+
 (def ^{:doc "List of supported signing algorithms"
        :dynamic true}
   *signers-map*
@@ -59,7 +72,13 @@
    :es256 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha256 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha256 :key %3 })}
    :es512 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha512 :key %2})
-           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha512 :key %3})}})
+           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha512 :key %3})}
+   :poly1305-aes {:signer   #(sign-poly %1 {:alg :poly1305+aes :key %2})
+                  :verifier #(verify-poly %1 %2 {:alg :poly1305+aes :key %3})}
+   :poly1305-serpent {:signer   #(sign-poly %1 {:alg :poly1305+serpent :key %2})
+                      :verifier #(verify-poly %1 %2 {:alg :poly1305+serpent :key %3})}
+   :poly1305-twofish {:signer   #(sign-poly %1 {:alg :poly1305+twofish :key %2})
+                      :verifier #(verify-poly %1 %2 {:alg :poly1305+twofish :key %3})}})
 
 (defn- calculate-signature
   "Given the bunch of bytes, a private key and algorithm,
