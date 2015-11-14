@@ -23,7 +23,6 @@
 (ns buddy.sign.jwe
   "Json Web Encryption."
   (:require [clojure.string :as str]
-            [cats.monad.exception :as exc]
             [cheshire.core :as json]
             [buddy.core.codecs :as codecs]
             [buddy.core.bytes :as bytes]
@@ -35,8 +34,7 @@
             [buddy.sign.jws :as jws]
             [buddy.sign.jwe.cek :as cek]
             [buddy.sign.util :as util])
-  (:import clojure.lang.Keyword
-           org.bouncycastle.crypto.InvalidCipherTextException
+  (:import org.bouncycastle.crypto.InvalidCipherTextException
            java.nio.ByteBuffer))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -277,15 +275,5 @@
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature}))))))
 
-(defn encode
-  "Encrypt then sign arbitrary length string/byte array using
-  json web encryption and return the encrypted data wrapped in
-  a Success type of Exception monad."
-  [& args]
-  (exc/try-on (apply encrypt args)))
-
-(defn decode
-  "Decrypt the jwe compliant message and return its claims wrapped
-  in Success type of Exception monad."
-  [& args]
-  (exc/try-on (apply decrypt args)))
+(util/defalias encode encrypt)
+(util/defalias decode decrypt)

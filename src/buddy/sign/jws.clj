@@ -24,9 +24,7 @@
             [buddy.core.dsa :as dsa]
             [buddy.sign.util :as util]
             [clojure.string :as str]
-            [cheshire.core :as json]
-            [cats.monad.exception :as exc])
-  (:import clojure.lang.Keyword))
+            [cheshire.core :as json]))
 
 (def ^{:doc "List of supported signing algorithms"
        :dynamic true}
@@ -142,7 +140,6 @@
   "Given a bunch of bytes, a previously generated
   signature, the private key and algorithm, return
   signature matches or not."
-  ;; [^bytes input ^bytes signature ^bytes key ^Keyword alg]
   [{:keys [alg signature key header claims]}]
   (let [verifier (get-in *signers-map* [alg :verifier])
         authdata (str/join "." [header claims])]
@@ -185,16 +182,5 @@
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature}))))))
 
-(defn encode
-  "Sign arbitrary length string/byte array using
-  json web token/signature and return data wrapped
-  in a Success instance of the Exception monad."
-  [& args]
-  (exc/try-on (apply sign args)))
-
-(defn decode
-  "Given a signed message, verify it and return
-  the decoded claims wrapped in a Success instance
-  of the Exception monad."
-  [& args]
-  (exc/try-on (apply unsign args)))
+(util/defalias encode sign)
+(util/defalias decode unsign)

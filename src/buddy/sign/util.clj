@@ -41,3 +41,14 @@
   []
   (let [date (time/now)]
     (to-timestamp date)))
+
+(defmacro defalias
+  [name orig]
+  `(do
+     (alter-meta!
+      (if (.hasRoot (var ~orig))
+        (def ~name (.getRawRoot (var ~orig)))
+        (def ~name))
+      #(conj (dissoc % :macro)
+             (apply dissoc (meta (var ~orig)) (remove #{:macro} (keys %)))))
+     (var ~name)))

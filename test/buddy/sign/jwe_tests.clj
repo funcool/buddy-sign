@@ -42,8 +42,8 @@
     (let [candidate {:foo "bar"}
           now       (util/timestamp)
           exp       (+ now 2)
-          signed    (jwe/encrypt candidate secret {:exp exp})
-          unsigned  (jwe/decrypt signed secret)]
+          signed    (jwe/encode candidate secret {:exp exp})
+          unsigned  (jwe/decode signed secret)]
       (is (= unsigned (assoc candidate :exp exp)))
       (Thread/sleep 3000)
       (try
