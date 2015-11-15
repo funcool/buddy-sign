@@ -2,7 +2,7 @@
 
 == Version 0.8.0
 
-Date: unreleased
+Date: 2015-11-15
 
 - Adapt to buddy-core 0.8.x changes.
 - BREAKING CHANGE: Remove cats dependency.
