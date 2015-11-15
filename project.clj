@@ -4,7 +4,7 @@
   :license {:name "Apache 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
   :dependencies [[org.clojure/clojure "1.7.0" :scope "provided"]
-                 [buddy/buddy-core "0.8.0"]
+                 [buddy/buddy-core "0.8.1"]
                  [com.taoensso/nippy "2.10.0"]
                  [funcool/cats "1.0.0"]
                  [clj-time "0.11.0"]
