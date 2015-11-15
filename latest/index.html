@@ -80,18 +80,15 @@
 <h1>buddy-sign - High level message signing.</h1>
 <div class="details">
 <span id="author" class="author">Andrey Antukh, &lt;niwi@niwi.be&gt;</span><br>
-<span id="revdate">0.7.1</span>
+<span id="revdate">0.8.0</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
-<li><a href="#introduction">Introduction</a></li>
-<li><a href="#project-maturity">Project Maturity</a></li>
-<li><a href="#install">Install</a>
+<li><a href="#introduction">Introduction</a>
 <ul class="sectlevel2">
-<li><a href="#requirements">Requirements</a></li>
-<li><a href="#leiningen">Leiningen</a></li>
-<li><a href="#gradle">Gradle</a></li>
+<li><a href="#project-maturity">Project Maturity</a></li>
+<li><a href="#install">Install</a></li>
 </ul>
 </li>
 <li><a href="#json-web-token">Json Web Token</a>
@@ -107,7 +104,6 @@
 <li><a href="#unsigning-data">Unsigning data</a></li>
 <li><a href="#claims-validation">Claims validation</a></li>
 <li><a href="#digital-signature-algorithms">Digital signature algorithms</a></li>
-<li><a href="#monadic-api">Monadic api</a></li>
 </ul>
 </li>
 <li><a href="#jwe">Json Web Encryption</a>
@@ -156,24 +152,25 @@ for web ready message signing and encryption.</p>
 <div class="ulist">
 <ul>
 <li>
-<p>You can serialize and sign or encrypt a user ID for unsubscribing of newsletters into
-URLs. This way you don&#8217;t need to generate one-time tokens and store them in the
-database.</p>
+<p>You can serialize and sign or encrypt a user ID for unsubscribing of newsletters
+into URLs. This way you don&#8217;t need to generate one-time tokens and store them
+in the database.</p>
 </li>
 <li>
 <p>Same thing with any kind of activation link for accounts and similar things.</p>
 </li>
 <li>
-<p>Signed or encrypted objects can be stored in cookies or other untrusted sources which
-means you don&#8217;t need to have sessions stored on the server, which reduces the number
-of necessary database queries.</p>
+<p>Signed or encrypted objects can be stored in cookies or other untrusted sources
+which means you don&#8217;t need to have sessions stored on the server, which reduces
+the number of necessary database queries.</p>
 </li>
 <li>
-<p>Signed information can safely do a roundtrip between server and client in general which
-makes them useful for passing server-side state to a client and then back.</p>
+<p>Signed information can safely do a roundtrip between server and client in general
+which makes them useful for passing server-side state to a client and then back.</p>
 </li>
 <li>
-<p>Safely send and receve signed or encrypted messages between components or microservices.</p>
+<p>Safely send and receve signed or encrypted messages between components or
+microservices.</p>
 </li>
 <li>
 <p>Self contained token generation for use with completely stateless token based
@@ -181,59 +178,25 @@ authentication.</p>
 </li>
 </ul>
 </div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="project-maturity"><a class="link" href="#project-maturity">Project Maturity</a></h2>
-<div class="sectionbody">
+<div class="sect2">
+<h3 id="project-maturity"><a class="link" href="#project-maturity">Project Maturity</a></h3>
 <div class="paragraph">
 <p>Since <em>buddy-sign</em> is a young project there can be some API breakage.</p>
 </div>
 </div>
-</div>
-<div class="sect1">
-<h2 id="install"><a class="link" href="#install">Install</a></h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>This section covers the <em>buddy-sign</em> library installing process and its requirements.</p>
-</div>
 <div class="sect2">
-<h3 id="requirements"><a class="link" href="#requirements">Requirements</a></h3>
+<h3 id="install"><a class="link" href="#install">Install</a></h3>
 <div class="paragraph">
-<p><em>buddy-sign</em> is tested with these platforms:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>JDK7</p>
-</li>
-<li>
-<p>JDK8</p>
-</li>
-</ul>
-</div>
-</div>
-<div class="sect2">
-<h3 id="leiningen"><a class="link" href="#leiningen">Leiningen</a></h3>
-<div class="paragraph">
-<p>The simplest way to use <em>buddy-sign</em> in a clojure project, is by including it in the dependency
-vector on your <strong><em>project.clj</em></strong> file:</p>
+<p>The simplest way to use <em>buddy-sign</em> in a clojure project, is by including it in the
+dependency vector on your <strong><em>project.clj</em></strong> file:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">[</span><span class="tok-nv">buddy/buddy-sign</span> <span class="tok-s">&quot;0.7.1&quot;</span><span class="tok-p">]</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">[</span><span class="tok-nv">funcool/buddy-sign</span> <span class="tok-s">&quot;0.8.0&quot;</span><span class="tok-p">]</span></code></pre>
 </div>
 </div>
-</div>
-<div class="sect2">
-<h3 id="gradle"><a class="link" href="#gradle">Gradle</a></h3>
 <div class="paragraph">
-<p>If you are using gradle, this is a dependency line for gradle dsl:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="pygments highlight"><code data-lang="groovy"><span class="tok-n">compile</span> <span class="tok-s2">&quot;buddy:buddy-sign:0.7.1&quot;</span></code></pre>
-</div>
+<p>And is tested under JDK7 and JDK8.</p>
 </div>
 </div>
 </div>
@@ -242,18 +205,19 @@ vector on your <strong><em>project.clj</em></strong> file:</p>
 <h2 id="json-web-token"><a class="link" href="#json-web-token">Json Web Token</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>JSON Web Token (JWT) is a compact claims representation format intended for space constrained
-environments such as HTTP Authorization headers and URI query parameters.  JWTs encode claims
-to be transmitted as a JavaScript Object Notation (JSON) object that is used as the payload of
-a JSON Web Signature (JWS) structure or as the plaintext of a JSON Web Encryption (JWE) structure,
-enabling the claims to be digitally signed or MACed and/or encrypted.</p>
+<p>JSON Web Token (JWT) is a compact claims representation format intended for space
+constrained environments such as HTTP Authorization headers and URI query
+parameters.  JWTs encode claims to be transmitted as a JavaScript Object Notation
+(JSON) object that is used as the payload of a JSON Web Signature (JWS) structure
+or as the plaintext of a JSON Web Encryption (JWE) structure, enabling the claims
+to be digitally signed or MACed and/or encrypted.</p>
 </div>
 <div class="sect2">
 <h3 id="how-to-use-it"><a class="link" href="#how-to-use-it">How to use it?</a></h3>
 <div class="paragraph">
-<p><em>buddy-sign</em> does not offers special api for Json Web Token because it is a subset of Json Web
-Signature (JWS) and Json Web Encryption (JSE) specifications. If you want use one or other see the
-corresponding documentation in below sections.</p>
+<p><em>buddy-sign</em> does not offers special api for Json Web Token because it is a subset
+of Json Web Signature (JWS) and Json Web Encryption (JSE) specifications. If you
+want use one or other see the corresponding documentation in below sections.</p>
 </div>
 </div>
 <div class="sect2">
@@ -290,9 +254,9 @@ corresponding documentation in below sections.</p>
 <p><span class="small">New in version: 0.2</span></p>
 </div>
 <div class="paragraph">
-<p>JSON Web Signature (JWS) is a signing part of Json Web Token (JWT) specification and represents a
-content secured with digital signatures or Message Authentication Codes (MACs) using JavaScript
-Object Notation (JSON) as serialization format.</p>
+<p>JSON Web Signature (JWS) is a signing part of Json Web Token (JWT) specification
+and represents a content secured with digital signatures or Message Authentication
+Codes (MACs) using JavaScript Object Notation (JSON) as serialization format.</p>
 </div>
 <div class="sect2">
 <h3 id="supported-algorithms"><a class="link" href="#supported-algorithms">Supported algorithms</a></h3>
@@ -345,8 +309,8 @@ Object Notation (JSON) as serialization format.</p>
 <div class="sect2">
 <h3 id="signing-data"><a class="link" href="#signing-data">Signing data</a></h3>
 <div class="paragraph">
-<p>Let start with signing data. For it we will use the <code>sign</code> function from <code>buddy.sign.jws</code> namespace:
-and the <code>hs256</code> algorithm for signining:</p>
+<p>Let start with signing data. For it we will use the <code>sign</code> function from
+<code>buddy.sign.jws</code> namespace, and the <code>hs256</code> algorithm for signining:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -357,9 +321,10 @@ and the <code>hs256</code> algorithm for signining:</p>
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>sign</code> function return a encoded and signed token as plain <code>String</code> instance or an exception in
-case of something goes wrong. As you can observe, no algorithm is passed as parameter.
-In this situations the default one will be used, and in this case is <code>:hs256</code>.</p>
+<p>The <code>sign</code> function return a encoded and signed token as plain <code>String</code> instance
+or an exception in case of something goes wrong. As you can observe, no algorithm
+is passed as parameter. In this situations the default one will be used, and in
+this case is <code>:hs256</code>.</p>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -368,7 +333,8 @@ In this situations the default one will be used, and in this case is <code>:hs25
 <div class="title">Note</div>
 </td>
 <td class="content">
-Due to the nature of the storage format, the input is restricted mainly to json objects in the current version.
+Due to the nature of the storage format, the input is restricted mainly to
+json objects in the current version.
 </td>
 </tr>
 </table>
@@ -377,9 +343,9 @@ Due to the nature of the storage format, the input is restricted mainly to json 
 <div class="sect2">
 <h3 id="unsigning-data"><a class="link" href="#unsigning-data">Unsigning data</a></h3>
 <div class="paragraph">
-<p>It&#8217;s time to unsing data. That process consists on verify the signature of incoming data and return the
-plain data (without signature). For it we will use the <code>unsign</code> function from <code>buddy.sign.jws</code>
-namespace:</p>
+<p>It&#8217;s time to unsing data. That process consists on verify the signature of incoming
+data and return the plain data (without signature). For it we will use the <code>unsign</code>
+function from <code>buddy.sign.jws</code> namespace:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -394,13 +360,13 @@ namespace:</p>
 <div class="sect2">
 <h3 id="claims-validation"><a class="link" href="#claims-validation">Claims validation</a></h3>
 <div class="paragraph">
-<p><em>buddy-sign</em> json web signature implements validation of a concrete subset of claims: <strong>exp</strong> (expiration
-time), <strong>nbf</strong> (not before), <strong>iss</strong> (issuer) and <strong>aud</strong> (audience).</p>
+<p><em>buddy-sign</em> json web signature implements validation of a concrete subset of
+claims: <strong>exp</strong> (expiration time), <strong>nbf</strong> (not before), <strong>iss</strong> (issuer) and <strong>aud</strong>
+(audience).</p>
 </div>
 <div class="paragraph">
-<p>The validation is performed on decoding the token. If <code>:exp</code> claim is found and is posterior to
-the current date time (UTC) an validation exception will be raised or a failure instance will
-be returned, depending on that api you are using direct or monadic.</p>
+<p>The validation is performed on decoding the token. If <code>:exp</code> claim is found and
+is posterior to the current date time (UTC) an validation exception will be raised.</p>
 </div>
 <div class="paragraph">
 <p>Let see an example using direct api:</p>
@@ -419,31 +385,16 @@ be returned, depending on that api you are using direct or monadic.</p>
 <span class="tok-c1">;; wait 5 seconds and try unsign it</span>
 
 <span class="tok-p">(</span><span class="tok-nf">jws/unsign</span> <span class="tok-nv">token</span> <span class="tok-s">&quot;key&quot;</span><span class="tok-p">)</span>
-<span class="tok-c1">;; =&gt; ExceptionInfo throw+: {:type :validation, :cause :exp, :message &quot;Token is older than :exp (1427836475)&quot;}</span></code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The best way to capture this type of exceptions is using
-<a href="https://github.com/scgilardi/slingshot">slingshot</a> library:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">slingshot.slingshot</span> <span class="tok-ss">:refer</span> <span class="tok-p">[</span><span class="tok-nv">try+</span><span class="tok-p">]])</span>
-
-<span class="tok-p">(</span><span class="tok-nf">try+</span>
-  <span class="tok-p">(</span><span class="tok-nf">jws/unsign</span> <span class="tok-nv">token</span> <span class="tok-s">&quot;key&quot;</span><span class="tok-p">)</span>
-  <span class="tok-p">(</span><span class="tok-nf">catch</span> <span class="tok-p">[</span><span class="tok-ss">:type</span> <span class="tok-ss">:validation</span><span class="tok-p">]</span> <span class="tok-nv">e</span>
-    <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-s">&quot;Error: &quot;</span> <span class="tok-p">(</span><span class="tok-ss">:message</span> <span class="tok-nv">e</span><span class="tok-p">))))</span>
-<span class="tok-c1">;; =&gt; Will print in console: &quot;Error: Token is older than :exp (1427836475)&quot;</span></code></pre>
+<span class="tok-c1">;; =&gt; ExceptionInfo &quot;Token is older than :exp (1427836475)&quot;</span></code></pre>
 </div>
 </div>
 </div>
 <div class="sect2">
 <h3 id="digital-signature-algorithms"><a class="link" href="#digital-signature-algorithms">Digital signature algorithms</a></h3>
 <div class="paragraph">
-<p>In order to use any of digital signature algorithms you must have a private/public key.
-If you don&#8217;t have one, don&#8217;t worry, it is very easy to generate it using <strong>openssl</strong>, see
-this <a href="#generate-keypairs">faq entry</a>.</p>
+<p>In order to use any of digital signature algorithms you must have a private/public
+key. If you don&#8217;t have one, don&#8217;t worry, it is very easy to generate it using
+<strong>openssl</strong>, see this <a href="#generate-keypairs">faq entry</a>.</p>
 </div>
 <div class="paragraph">
 <p>Now, having generated a key pair, you can sign your messages using one
@@ -466,31 +417,6 @@ of supported digital signature algorithms.</p>
 </div>
 </div>
 </div>
-<div class="sect2">
-<h3 id="monadic-api"><a class="link" href="#monadic-api">Monadic api</a></h3>
-<div class="paragraph">
-<p>If you are using monadic composition with cats library you&#8217;re in luck, because <em>buddy-sign</em> also
-offers monadic api. You can use it with <code>encode</code> and <code>decode</code> functions, that return the <em>Exception</em>
-monad types: the <code>Success</code> instances when everything goes ok, and the <code>Failure</code> instances when
-something goes wrong.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">jws/encode</span> <span class="tok-p">{</span><span class="tok-ss">:userid</span> <span class="tok-mi">1</span><span class="tok-p">}</span> <span class="tok-s">&quot;secret&quot;</span><span class="tok-p">)</span>
-<span class="tok-c1">;; =&gt; #&lt;Success [eyJ0eXAiOiJKV1MiLCJhbGciOiJIU...]&gt;</span></code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The <em>Exception</em> monad instances, for convenience implements the clojure <code>IDeref</code> interface that
-makes they play well with <code>@something</code> syntax for extract value from them:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-o">@</span><span class="tok-p">(</span><span class="tok-nf">jws/encode</span> <span class="tok-p">{</span><span class="tok-ss">:userid</span> <span class="tok-mi">1</span><span class="tok-p">}</span> <span class="tok-s">&quot;secret&quot;</span><span class="tok-p">)</span>
-<span class="tok-c1">;; &quot;eyJ0eXAiOiJKV1MiLCJhbGciOiJIU...&quot;</span></code></pre>
-</div>
-</div>
-</div>
 </div>
 </div>
 <div class="sect1">
@@ -500,19 +426,20 @@ makes they play well with <code>@something</code> syntax for extract value from 
 <p><span class="small">New in version: 0.5</span></p>
 </div>
 <div class="paragraph">
-<p>JSON Web Encryption (JWE) is a encryption part of Json Web Token (JWT) specification and represents
-a encrypted content using JavaScript Object Notation (JSON) based data structures.</p>
+<p>JSON Web Encryption (JWE) is a encryption part of Json Web Token (JWT)
+specification and represents a encrypted content using JavaScript Object Notation
+(JSON) based data structures.</p>
 </div>
 <div class="sect2">
 <h3 id="supported-algorithms-2"><a class="link" href="#supported-algorithms-2">Supported algorithms</a></h3>
 <div class="paragraph">
-<p>The Json Web Encryption in difference to JWS uses two types of algoritms: key encryption algorithms
-and content encryption algorithms.</p>
+<p>The Json Web Encryption in difference to JWS uses two types of algoritms: key
+encryption algorithms and content encryption algorithms.</p>
 </div>
 <div class="paragraph">
-<p>The <strong>key encryption algorithms</strong> are responsible of encrypt the key that will be used for encrypt the
-content. This is a table that exposes the currently supported <em>Key Encryption Algorithms</em> (specified
-in JWA RFC):</p>
+<p>The <strong>key encryption algorithms</strong> are responsible of encrypt the key that will be
+used for encrypt the content. This is a table that exposes the currently
+supported <em>Key Encryption Algorithms</em> (specified in JWA RFC):</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
 <caption class="title">Table 1. Supported Key Encryption Algorithms</caption>
@@ -577,9 +504,9 @@ encryption algorithm)</p></td>
 </tbody>
 </table>
 <div class="paragraph">
-<p>The <strong>content encryption algoritms</strong> are responsible of encrypt the content. This is a table
-that exposes the currently supported <em>Content Encryption Algorithms</em> (all specified
-in the JWA RFC):</p>
+<p>The <strong>content encryption algoritms</strong> are responsible of encrypt the content. This
+is a table that exposes the currently supported <em>Content Encryption Algorithms</em>
+(all specified in the JWA RFC):</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
 <caption class="title">Table 2. Supported Content Encryption Algorithms</caption>
@@ -601,19 +528,19 @@ in the JWA RFC):</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A128CBC-HS256</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AES128 with CBC mode and HMAC-SHA256</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>:a128-hs256</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>:a128cbc-hs256</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">32 bytes</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A192CBC-HS384</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AES192 with CBC mode and HMAC-SHA384</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>:a192-hs384</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>:a192cbc-hs384</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">48 bytes</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">A256CBC-HS512</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AES256 with CBC mode and HMAC-SHA512</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><code>:a256-hs512</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>:a256cbc-hs512</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">64 bytes</p></td>
 </tr>
 <tr>
@@ -658,20 +585,21 @@ in the JWA RFC):</p>
 <span class="tok-c1">;; Encrypt it using the previously</span>
 <span class="tok-c1">;; hashed key</span>
 
-<span class="tok-p">(</span><span class="tok-nf">jwe/encrypt</span> <span class="tok-p">{</span><span class="tok-ss">:userid</span> <span class="tok-mi">1</span><span class="tok-p">}</span> <span class="tok-nv">secret</span> <span class="tok-p">{</span><span class="tok-ss">:alg</span> <span class="tok-ss">:dir</span> <span class="tok-ss">:enc</span> <span class="tok-ss">:a128-hs256</span><span class="tok-p">})</span>
+<span class="tok-p">(</span><span class="tok-nf">jwe/encrypt</span> <span class="tok-p">{</span><span class="tok-ss">:userid</span> <span class="tok-mi">1</span><span class="tok-p">}</span> <span class="tok-nv">secret</span> <span class="tok-p">{</span><span class="tok-ss">:alg</span> <span class="tok-ss">:dir</span> <span class="tok-ss">:enc</span> <span class="tok-ss">:a128cbc-hs256</span><span class="tok-p">})</span>
 <span class="tok-c1">;; &quot;eyJ0eXAiOiJKV1MiLCJhbGciOiJIU...&quot;</span></code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>encrypt</code> function, like <code>sign</code> from <strong>JWS</strong>, returns a plain string with encrypted and encoded
-content using a provided algorithm and shared secret key.</p>
+<p>The <code>encrypt</code> function, like <code>sign</code> from <strong>JWS</strong>, returns a plain string with
+encrypted and encoded content using a provided algorithm and shared secret key.</p>
 </div>
 </div>
 <div class="sect2">
 <h3 id="decrypting-data"><a class="link" href="#decrypting-data">Decrypting Data</a></h3>
 <div class="paragraph">
-<p>The decrypt is a inverse process, that takes encrypted data and the shared key, and returns the
-plain data. For it, <em>buddy-sign</em> exposes the <code>decrypt</code> function. Let see how you can use it:</p>
+<p>The decrypt is a inverse process, that takes encrypted data and the shared key,
+and returns the plain data. For it, <em>buddy-sign</em> exposes the <code>decrypt</code> function.
+Let see how you can use it:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -687,13 +615,13 @@ incoming token will come with content encryption algorithm stored in its header 
 <div class="sect2">
 <h3 id="claims-validation-2"><a class="link" href="#claims-validation-2">Claims validation</a></h3>
 <div class="paragraph">
-<p><em>buddy-sign</em> json web encryption, like <strong>jws</strong>, also implements validation of a concrete subset
-of claims: <strong>exp</strong> (expiration time), <strong>nbf</strong> (not before), <strong>iss</strong> (issuer) and <strong>aud</strong> (audience).</p>
+<p><em>buddy-sign</em> json web encryption, like <strong>jws</strong>, also implements validation of a
+concrete subset of claims: <strong>exp</strong> (expiration time), <strong>nbf</strong> (not before), <strong>iss</strong>
+(issuer) and <strong>aud</strong> (audience).</p>
 </div>
 <div class="paragraph">
-<p>The validation is performed on decoding the token. If <code>:exp</code> claim is found and is posterior to
-the current date time (UTC) an validation exception will be raised or a failure instance will
-be returned, depending on that api you are using direct or monadic.</p>
+<p>The validation is performed on decoding the token. If <code>:exp</code> claim is found and
+is posterior to the current date time (UTC) an validation exception will be raised.</p>
 </div>
 <div class="paragraph">
 <p>Let see an example using direct api:</p>
@@ -712,22 +640,7 @@ be returned, depending on that api you are using direct or monadic.</p>
 <span class="tok-c1">;; wait 5 seconds and try unsign it</span>
 
 <span class="tok-p">(</span><span class="tok-nf">jwe/decrypt</span> <span class="tok-nv">token</span> <span class="tok-nv">secret</span><span class="tok-p">)</span>
-<span class="tok-c1">;; =&gt; ExceptionInfo throw+: {:type :validation, :cause :exp, :message &quot;Token is older than :exp (1427836475)&quot;}</span></code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The best way to capture this type of exceptions is using
-<a href="https://github.com/scgilardi/slingshot">slingshot</a> library:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">slingshot.slingshot</span> <span class="tok-ss">:refer</span> <span class="tok-p">[</span><span class="tok-nv">try+</span><span class="tok-p">]])</span>
-
-<span class="tok-p">(</span><span class="tok-nf">try+</span>
-  <span class="tok-p">(</span><span class="tok-nf">jwe/encrypt</span> <span class="tok-nv">token</span> <span class="tok-nv">secret</span><span class="tok-p">)</span>
-  <span class="tok-p">(</span><span class="tok-nf">catch</span> <span class="tok-p">[</span><span class="tok-ss">:type</span> <span class="tok-ss">:validation</span><span class="tok-p">]</span> <span class="tok-nv">e</span>
-    <span class="tok-p">(</span><span class="tok-nb">println </span><span class="tok-s">&quot;Error: &quot;</span> <span class="tok-p">(</span><span class="tok-ss">:message</span> <span class="tok-nv">e</span><span class="tok-p">))))</span>
-<span class="tok-c1">;; =&gt; Will print in console: &quot;Error: Token is older than :exp (1427836475)&quot;</span></code></pre>
+<span class="tok-c1">;; =&gt; ExceptionInfo &quot;Token is older than :exp (1427836475)&quot;</span></code></pre>
 </div>
 </div>
 </div>
@@ -735,12 +648,13 @@ be returned, depending on that api you are using direct or monadic.</p>
 <h3 id="asymetric-encryption-schemes"><a class="link" href="#asymetric-encryption-schemes">Asymetric encryption schemes</a></h3>
 <div class="paragraph">
 <p>In order to use any asymetric encryption algorithm, you should have private/public
-key pair. If you don&#8217;t have one, don&#8217;t worry, it is very easy to generate it using <strong>openssl</strong>, see
-this <a href="#generate-keypairs">faq entry</a>.</p>
+key pair. If you don&#8217;t have one, don&#8217;t worry, it is very easy to generate it
+using <strong>openssl</strong>, see this <a href="#generate-keypairs">faq entry</a>.</p>
 </div>
 <div class="paragraph">
-<p>Then, having ready the key pair, you can strart using one of the supported key encryption
-algorithm in the JWE specification such as <code>:rsa1_5</code>, <code>:rsa-oaep</code> or <code>:rsa-oaep-256</code>.</p>
+<p>Then, having ready the key pair, you can strart using one of the supported
+key encryption algorithm in the JWE specification such as <code>:rsa1_5</code>, <code>:rsa-oaep</code>
+or <code>:rsa-oaep-256</code>.</p>
 </div>
 <div class="paragraph">
 <p>Let see an demostration example:</p>
@@ -754,10 +668,10 @@ algorithm in the JWE specification such as <code>:rsa1_5</code>, <code>:rsa-oaep
 <span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">pubkey</span> <span class="tok-p">(</span><span class="tok-nf">keys/public-key</span> <span class="tok-s">&quot;pubkey.pem&quot;</span><span class="tok-p">))</span>
 
 <span class="tok-c1">;; Encrypt data</span>
-<span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">encrypted-data</span> <span class="tok-p">(</span><span class="tok-nf">jwe/encrypt</span> <span class="tok-p">{</span><span class="tok-ss">:foo</span> <span class="tok-s">&quot;bar&quot;</span><span class="tok-p">}</span> <span class="tok-nv">pubkey</span> <span class="tok-p">{</span><span class="tok-ss">:alg</span> <span class="tok-ss">:rsa-oaep</span> <span class="tok-ss">:enc</span> <span class="tok-ss">:a128-hs256</span><span class="tok-p">})</span>
+<span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">encrypted-data</span> <span class="tok-p">(</span><span class="tok-nf">jwe/encrypt</span> <span class="tok-p">{</span><span class="tok-ss">:foo</span> <span class="tok-s">&quot;bar&quot;</span><span class="tok-p">}</span> <span class="tok-nv">pubkey</span> <span class="tok-p">{</span><span class="tok-ss">:alg</span> <span class="tok-ss">:rsa-oaep</span> <span class="tok-ss">:enc</span> <span class="tok-ss">:a128cbc-hs256</span><span class="tok-p">})</span>
 
 <span class="tok-c1">;; Decrypted</span>
-<span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">decrypted-data</span> <span class="tok-p">(</span><span class="tok-nf">jwe/decrypt</span> <span class="tok-nv">encrypted-data</span> <span class="tok-nv">privkey</span> <span class="tok-p">{</span><span class="tok-ss">:alg</span> <span class="tok-ss">:rsa-oaep</span> <span class="tok-ss">:enc</span> <span class="tok-ss">:a128-hs256</span><span class="tok-p">}))</span></code></pre>
+<span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">decrypted-data</span> <span class="tok-p">(</span><span class="tok-nf">jwe/decrypt</span> <span class="tok-nv">encrypted-data</span> <span class="tok-nv">privkey</span> <span class="tok-p">{</span><span class="tok-ss">:alg</span> <span class="tok-ss">:rsa-oaep</span> <span class="tok-ss">:enc</span> <span class="tok-ss">:a128cbc-hs256</span><span class="tok-p">}))</span></code></pre>
 </div>
 </div>
 </div>
@@ -770,17 +684,18 @@ algorithm in the JWE specification such as <code>:rsa1_5</code>, <code>:rsa-oaep
 <p>Compact high level message signing implementation.</p>
 </div>
 <div class="paragraph">
-<p>It has high influence by django&#8217;s cryptographic library and json web signature/encryption
-but with focus on have a compact representation. It&#8217;s build on top of fantastic ptaoussanis/nippy
-serialization library.</p>
+<p>It has high influence by django&#8217;s cryptographic library and json web
+signature/encryption but with focus on have a compact representation. It&#8217;s
+build on top of fantastic ptaoussanis/nippy serialization library.</p>
 </div>
 <div class="paragraph">
-<p>This singing implementation is not very efficient with small messages, but is very space efficient
-with big messages.</p>
+<p>This singing implementation is not very efficient with small messages, but is
+very space efficient with big messages.</p>
 </div>
 <div class="paragraph">
-<p>The purpose of this implementation is for secure message transfer, it is not really good candidate
-for auth token because of not good space efficiency for small messages.</p>
+<p>The purpose of this implementation is for secure message transfer, it is not
+really good candidate for auth token because of not good space efficiency for
+small messages.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
 <caption class="title">Table 3. Supported Algorithms</caption>
@@ -842,8 +757,9 @@ for auth token because of not good space efficiency for small messages.</p>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Only HMAC and Poly1305 based algorithms support plain text secret keys, If you want to use
-Digital Signature instead of hmac then you must have a key pair (public and private).</p>
+<p>Only HMAC and Poly1305 based algorithms support plain text secret keys, If you
+want to use Digital Signature instead of hmac then you must have a key pair
+(public and private).</p>
 </div>
 </td>
 </tr>
@@ -852,8 +768,8 @@ Digital Signature instead of hmac then you must have a key pair (public and priv
 <div class="sect2">
 <h3 id="signing-and-unsigning-data"><a class="link" href="#signing-and-unsigning-data">Signing and unsigning data</a></h3>
 <div class="paragraph">
-<p>With difference with jwt/jws, this implementation is not limited to hash-map like objects,
-and you can sign any clojure valid type. Let see an example:</p>
+<p>With difference with jwt/jws, this implementation is not limited to hash-map
+like objects, and you can sign any clojure valid type. Let see an example:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -876,7 +792,7 @@ and you can sign any clojure valid type. Let see an example:</p>
 <div class="listingblock">
 <div class="content">
 <pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">cm/unsign</span> <span class="tok-nv">data</span> <span class="tok-s">&quot;secret&quot;</span> <span class="tok-p">{</span><span class="tok-ss">:max-age</span> <span class="tok-p">(</span><span class="tok-nb">* </span><span class="tok-mi">15</span> <span class="tok-mi">60</span><span class="tok-p">)})</span>
-<span class="tok-c1">;; =&gt; ExceptionInfo throw+: {:type :validation, :cause :exp, :message &quot;Token is older than 1427836475&quot;}</span></code></pre>
+<span class="tok-c1">;; =&gt; ExceptionInfo: &quot;Token is older than 1427836475&quot;</span></code></pre>
 </div>
 </div>
 </div>
@@ -888,12 +804,14 @@ and you can sign any clojure valid type. Let see an example:</p>
 <div class="sect2">
 <h3 id="when-i-should-use-jwe-and-when-jws"><a class="link" href="#when-i-should-use-jwe-and-when-jws">When I should use JWE and when JWS?</a></h3>
 <div class="paragraph">
-<p>The main difference between JWS and JWE, is that JWE encrypt the claims and with some algorithms uses
-one time keys. Both provides good security, but JWE also provides privacity of the data.</p>
+<p>The main difference between JWS and JWE, is that JWE encrypts the claims with
+an algorithm that uses a one time key. Both provides good security, but JWE also
+provides privacy of the data.</p>
 </div>
 <div class="paragraph">
-<p>If you only stores the userid or something similar, JWS is recommended, bacause it has less overhead.
-But if you stores in token claims that requires privacity, JWE is a solution that should be used.</p>
+<p>If you only stores the userid or something similar, JWS is recommended, because
+it has less overhead. But if you are storing in the token claims that require
+privacy, JWE is the solution that should be used.</p>
 </div>
 </div>
 <div class="sect2">
@@ -930,8 +848,8 @@ openssl rsa -pubout -in privkey.pem -out pubkey.pem</code></pre>
 <div class="sect2">
 <h3 id="contributing"><a class="link" href="#contributing">Contributing</a></h3>
 <div class="paragraph">
-<p>Unlike Clojure and other Clojure contributed libraries <em>buddy-sign</em> does not have many
-restrictions for contributions. Just open an issue or pull request.</p>
+<p>Unlike Clojure and other Clojure contributed libraries <em>buddy-sign</em> does not
+have many restrictions for contributions. Just open an issue or pull request.</p>
 </div>
 </div>
 <div class="sect2">
@@ -965,7 +883,8 @@ restrictions for contributions. Just open an issue or pull request.</p>
 <div class="sect2">
 <h3 id="source-code"><a class="link" href="#source-code">Source Code</a></h3>
 <div class="paragraph">
-<p><em>buddy-sign</em> is open source and can be found on <a href="https://github.com/funcool/buddy-sign">github</a>.</p>
+<p><em>buddy-sign</em> is open source and can be found on
+<a href="https://github.com/funcool/buddy-sign">github</a>.</p>
 </div>
 <div class="paragraph">
 <p>You can clone the public repository with this command:</p>
@@ -983,7 +902,7 @@ restrictions for contributions. Just open an issue or pull request.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="bash">lein <span class="tok-nb">test</span></code></pre>
+<pre class="pygments highlight"><code data-lang="bash">lein <span class="tok-nb">test</span>-all</code></pre>
 </div>
 </div>
 </div>
@@ -999,7 +918,7 @@ of the license on the root of the repository on <code>LICENSE</code> file.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2015-09-23 17:38:47 EEST
+Last updated 2015-11-15 11:44:40 EET
 </div>
 </div>
 </body>
