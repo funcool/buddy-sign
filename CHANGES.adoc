@@ -1,5 +1,16 @@
 = Changelog
 
+== Version 0.8.0
+
+Date: unreleased
+
+- Adapt to buddy-core 0.8.x changes.
+- BREAKING CHANGE: Remove cats dependency.
+  The jws/encode, jws/decode and respectivelly functions
+  in the jwe namespace are now simple alias to the main
+  api on the each ns.
+
+
 == Version 0.7.1
 
 Date: 2015-09-23
