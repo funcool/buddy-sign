@@ -1,6 +1,6 @@
 = buddy-sign - High level message signing.
 Andrey Antukh, <niwi@niwi.be>
-0.7.1
+0.8.0
 :toc: left
 :!numbered:
 :source-highlighter: pygments
@@ -18,73 +18,53 @@ for web ready message signing and encryption.
 
 It can be used for several purposes:
 
-* You can serialize and sign or encrypt a user ID for unsubscribing of newsletters into
-  URLs. This way you don't need to generate one-time tokens and store them in the
-  database.
+* You can serialize and sign or encrypt a user ID for unsubscribing of newsletters
+  into URLs. This way you don't need to generate one-time tokens and store them
+  in the database.
 * Same thing with any kind of activation link for accounts and similar things.
-* Signed or encrypted objects can be stored in cookies or other untrusted sources which
-  means you don't need to have sessions stored on the server, which reduces the number
-  of necessary database queries.
-* Signed information can safely do a roundtrip between server and client in general which
-  makes them useful for passing server-side state to a client and then back.
-* Safely send and receve signed or encrypted messages between components or microservices.
+* Signed or encrypted objects can be stored in cookies or other untrusted sources
+  which means you don't need to have sessions stored on the server, which reduces
+  the number of necessary database queries.
+* Signed information can safely do a roundtrip between server and client in general
+  which makes them useful for passing server-side state to a client and then back.
+* Safely send and receve signed or encrypted messages between components or
+  microservices.
 * Self contained token generation for use with completely stateless token based
   authentication.
 
 
-== Project Maturity
+=== Project Maturity
 
 Since _buddy-sign_ is a young project there can be some API breakage.
 
 
-== Install
+=== Install
 
-This section covers the _buddy-sign_ library installing process and its requirements.
-
-
-=== Requirements
-
-_buddy-sign_ is tested with these platforms:
-
-- JDK7
-- JDK8
-
-
-=== Leiningen
-
-The simplest way to use _buddy-sign_ in a clojure project, is by including it in the dependency
-vector on your *_project.clj_* file:
+The simplest way to use _buddy-sign_ in a clojure project, is by including it in the
+dependency vector on your *_project.clj_* file:
 
 [source,clojure]
 ----
-[buddy/buddy-sign "0.7.1"]
+[funcool/buddy-sign "0.8.0"]
 ----
 
-
-=== Gradle
-
-If you are using gradle, this is a dependency line for gradle dsl:
-
-[source,groovy]
-----
-compile "buddy:buddy-sign:0.7.1"
-----
-
+And is tested under JDK7 and JDK8.
 
 == Json Web Token
 
-JSON Web Token (JWT) is a compact claims representation format intended for space constrained
-environments such as HTTP Authorization headers and URI query parameters.  JWTs encode claims
-to be transmitted as a JavaScript Object Notation (JSON) object that is used as the payload of
-a JSON Web Signature (JWS) structure or as the plaintext of a JSON Web Encryption (JWE) structure,
-enabling the claims to be digitally signed or MACed and/or encrypted.
+JSON Web Token (JWT) is a compact claims representation format intended for space
+constrained environments such as HTTP Authorization headers and URI query
+parameters.  JWTs encode claims to be transmitted as a JavaScript Object Notation
+(JSON) object that is used as the payload of a JSON Web Signature (JWS) structure
+or as the plaintext of a JSON Web Encryption (JWE) structure, enabling the claims
+to be digitally signed or MACed and/or encrypted.
 
 
 === How to use it?
 
-_buddy-sign_ does not offers special api for Json Web Token because it is a subset of Json Web
-Signature (JWS) and Json Web Encryption (JSE) specifications. If you want use one or other see the
-corresponding documentation in below sections.
+_buddy-sign_ does not offers special api for Json Web Token because it is a subset
+of Json Web Signature (JWS) and Json Web Encryption (JSE) specifications. If you
+want use one or other see the corresponding documentation in below sections.
 
 
 === Involved RFC's
@@ -102,9 +82,9 @@ corresponding documentation in below sections.
 
 [small]#New in version: 0.2#
 
-JSON Web Signature (JWS) is a signing part of Json Web Token (JWT) specification and represents a
-content secured with digital signatures or Message Authentication Codes (MACs) using JavaScript
-Object Notation (JSON) as serialization format.
+JSON Web Signature (JWS) is a signing part of Json Web Token (JWT) specification
+and represents a content secured with digital signatures or Message Authentication
+Codes (MACs) using JavaScript Object Notation (JSON) as serialization format.
 
 
 === Supported algorithms
@@ -112,19 +92,19 @@ Object Notation (JSON) as serialization format.
 Here a summary of supported algorithms for JWS:
 
 [options="header"]
-|=====================================================================================
+|====================================================================================
 |Algorithm name     | Hash algorithms   | Keywords           | Priv/Pub Key?
 |Elliptic Curve DSA | sha256, sha512    | `:es256`, `:es512` | Yes
 |RSASSA PSS         | sha256, sha512    | `:ps256`, `:ps512` | Yes
 |RSASSA PKCS1 v1_5  | sha256, sha512    | `:rs256`, `:rs512` | Yes
 |HMAC               | sha256*, sha512   | `:hs256`, `:hs512` | No
-|=====================================================================================
+|====================================================================================
 
 
 === Signing data
 
-Let start with signing data. For it we will use the `sign` function from `buddy.sign.jws` namespace:
-and the `hs256` algorithm for signining:
+Let start with signing data. For it we will use the `sign` function from
+`buddy.sign.jws` namespace, and the `hs256` algorithm for signining:
 
 [source, clojure]
 ----
@@ -134,18 +114,20 @@ and the `hs256` algorithm for signining:
 ;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
 ----
 
-The `sign` function return a encoded and signed token as plain `String` instance or an exception in
-case of something goes wrong. As you can observe, no algorithm is passed as parameter.
-In this situations the default one will be used, and in this case is `:hs256`.
+The `sign` function return a encoded and signed token as plain `String` instance
+or an exception in case of something goes wrong. As you can observe, no algorithm
+is passed as parameter. In this situations the default one will be used, and in
+this case is `:hs256`.
 
-NOTE: Due to the nature of the storage format, the input is restricted mainly to json objects in the current version.
+NOTE: Due to the nature of the storage format, the input is restricted mainly to
+json objects in the current version.
 
 
 === Unsigning data
 
-It's time to unsing data. That process consists on verify the signature of incoming data and return the
-plain data (without signature). For it we will use the `unsign` function from `buddy.sign.jws`
-namespace:
+It's time to unsing data. That process consists on verify the signature of incoming
+data and return the plain data (without signature). For it we will use the `unsign`
+function from `buddy.sign.jws` namespace:
 
 [source, clojure]
 ----
@@ -158,12 +140,12 @@ You do not need specify the algorithm explicitly, it is automatically detected.
 
 === Claims validation
 
-_buddy-sign_ json web signature implements validation of a concrete subset of claims: *exp* (expiration
-time), *nbf* (not before), *iss* (issuer) and *aud* (audience).
+_buddy-sign_ json web signature implements validation of a concrete subset of
+claims: *exp* (expiration time), *nbf* (not before), *iss* (issuer) and *aud*
+(audience).
 
-The validation is performed on decoding the token. If `:exp` claim is found and is posterior to
-the current date time (UTC) an validation exception will be raised or a failure instance will
-be returned, depending on that api you are using direct or monadic.
+The validation is performed on decoding the token. If `:exp` claim is found and
+is posterior to the current date time (UTC) an validation exception will be raised.
 
 Let see an example using direct api:
 
@@ -181,29 +163,15 @@ Let see an example using direct api:
 ;; wait 5 seconds and try unsign it
 
 (jws/unsign token "key")
-;; => ExceptionInfo throw+: {:type :validation, :cause :exp, :message "Token is older than :exp (1427836475)"}
-----
-
-The best way to capture this type of exceptions is using
-link:https://github.com/scgilardi/slingshot[slingshot] library:
-
-[source, clojure]
-----
-(require '[slingshot.slingshot :refer [try+]])
-
-(try+
-  (jws/unsign token "key")
-  (catch [:type :validation] e
-    (println "Error: " (:message e))))
-;; => Will print in console: "Error: Token is older than :exp (1427836475)"
+;; => ExceptionInfo "Token is older than :exp (1427836475)"
 ----
 
 
 === Digital signature algorithms
 
-In order to use any of digital signature algorithms you must have a private/public key.
-If you don't have one, don't worry, it is very easy to generate it using *openssl*, see
-this <<generate-keypairs,faq entry>>.
+In order to use any of digital signature algorithms you must have a private/public
+key. If you don't have one, don't worry, it is very easy to generate it using
+*openssl*, see this <<generate-keypairs,faq entry>>.
 
 Now, having generated a key pair, you can sign your messages using one
 of supported digital signature algorithms.
@@ -225,46 +193,24 @@ of supported digital signature algorithms.
 ----
 
 
-=== Monadic api
-
-If you are using monadic composition with cats library you're in luck, because _buddy-sign_ also
-offers monadic api. You can use it with `encode` and `decode` functions, that return the _Exception_
-monad types: the `Success` instances when everything goes ok, and the `Failure` instances when
-something goes wrong.
-
-[source, clojure]
-----
-(jws/encode {:userid 1} "secret")
-;; => #<Success [eyJ0eXAiOiJKV1MiLCJhbGciOiJIU...]>
-----
-
-The _Exception_ monad instances, for convenience implements the clojure `IDeref` interface that
-makes they play well with `@something` syntax for extract value from them:
-
-[source, clojure]
-----
-@(jws/encode {:userid 1} "secret")
-;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
-----
-
-
 [[jwe]]
 == Json Web Encryption
 
 [small]#New in version: 0.5#
 
-JSON Web Encryption (JWE) is a encryption part of Json Web Token (JWT) specification and represents
-a encrypted content using JavaScript Object Notation (JSON) based data structures.
+JSON Web Encryption (JWE) is a encryption part of Json Web Token (JWT)
+specification and represents a encrypted content using JavaScript Object Notation
+(JSON) based data structures.
 
 
 === Supported algorithms
 
-The Json Web Encryption in difference to JWS uses two types of algoritms: key encryption algorithms
-and content encryption algorithms.
+The Json Web Encryption in difference to JWS uses two types of algoritms: key
+encryption algorithms and content encryption algorithms.
 
-The *key encryption algorithms* are responsible of encrypt the key that will be used for encrypt the
-content. This is a table that exposes the currently supported _Key Encryption Algorithms_ (specified
-in JWA RFC):
+The *key encryption algorithms* are responsible of encrypt the key that will be
+used for encrypt the content. This is a table that exposes the currently
+supported _Key Encryption Algorithms_ (specified in JWA RFC):
 
 .Supported Key Encryption Algorithms
 [options="header", cols="1,2,1,1"]
@@ -281,9 +227,9 @@ encryption algorithm)
 |===================================================================================
 
 
-The *content encryption algoritms* are responsible of encrypt the content. This is a table
-that exposes the currently supported _Content Encryption Algorithms_ (all specified
-in the JWA RFC):
+The *content encryption algoritms* are responsible of encrypt the content. This
+is a table that exposes the currently supported _Content Encryption Algorithms_
+(all specified in the JWA RFC):
 
 .Supported Content Encryption Algorithms
 [options="header", cols="1,1,1,1"]
@@ -322,14 +268,15 @@ Let start with encrypting data. For it we will use the `encrypt` function from t
 ;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
 ----
 
-The `encrypt` function, like `sign` from *JWS*, returns a plain string with encrypted and encoded
-content using a provided algorithm and shared secret key.
+The `encrypt` function, like `sign` from *JWS*, returns a plain string with
+encrypted and encoded content using a provided algorithm and shared secret key.
 
 
 === Decrypting Data
 
-The decrypt is a inverse process, that takes encrypted data and the shared key, and returns the
-plain data. For it, _buddy-sign_ exposes the `decrypt` function. Let see how you can use it:
+The decrypt is a inverse process, that takes encrypted data and the shared key,
+and returns the plain data. For it, _buddy-sign_ exposes the `decrypt` function.
+Let see how you can use it:
 
 [source, clojure]
 ----
@@ -343,12 +290,12 @@ incoming token will come with content encryption algorithm stored in its header 
 
 === Claims validation
 
-_buddy-sign_ json web encryption, like *jws*, also implements validation of a concrete subset
-of claims: *exp* (expiration time), *nbf* (not before), *iss* (issuer) and *aud* (audience).
+_buddy-sign_ json web encryption, like *jws*, also implements validation of a
+concrete subset of claims: *exp* (expiration time), *nbf* (not before), *iss*
+(issuer) and *aud* (audience).
 
-The validation is performed on decoding the token. If `:exp` claim is found and is posterior to
-the current date time (UTC) an validation exception will be raised or a failure instance will
-be returned, depending on that api you are using direct or monadic.
+The validation is performed on decoding the token. If `:exp` claim is found and
+is posterior to the current date time (UTC) an validation exception will be raised.
 
 Let see an example using direct api:
 
@@ -366,32 +313,19 @@ Let see an example using direct api:
 ;; wait 5 seconds and try unsign it
 
 (jwe/decrypt token secret)
-;; => ExceptionInfo throw+: {:type :validation, :cause :exp, :message "Token is older than :exp (1427836475)"}
-----
-
-The best way to capture this type of exceptions is using
-link:https://github.com/scgilardi/slingshot[slingshot] library:
-
-[source, clojure]
-----
-(require '[slingshot.slingshot :refer [try+]])
-
-(try+
-  (jwe/encrypt token secret)
-  (catch [:type :validation] e
-    (println "Error: " (:message e))))
-;; => Will print in console: "Error: Token is older than :exp (1427836475)"
+;; => ExceptionInfo "Token is older than :exp (1427836475)"
 ----
 
 
 === Asymetric encryption schemes
 
 In order to use any asymetric encryption algorithm, you should have private/public
-key pair. If you don't have one, don't worry, it is very easy to generate it using *openssl*, see
-this <<generate-keypairs,faq entry>>.
+key pair. If you don't have one, don't worry, it is very easy to generate it
+using *openssl*, see this <<generate-keypairs,faq entry>>.
 
-Then, having ready the key pair, you can strart using one of the supported key encryption
-algorithm in the JWE specification such as `:rsa1_5`, `:rsa-oaep` or `:rsa-oaep-256`.
+Then, having ready the key pair, you can strart using one of the supported
+key encryption algorithm in the JWE specification such as `:rsa1_5`, `:rsa-oaep`
+or `:rsa-oaep-256`.
 
 Let see an demostration example:
 
@@ -415,40 +349,42 @@ Let see an demostration example:
 
 Compact high level message signing implementation.
 
-It has high influence by django's cryptographic library and json web signature/encryption
-but with focus on have a compact representation. It's build on top of fantastic ptaoussanis/nippy
-serialization library.
+It has high influence by django's cryptographic library and json web
+signature/encryption but with focus on have a compact representation. It's
+build on top of fantastic ptaoussanis/nippy serialization library.
 
-This singing implementation is not very efficient with small messages, but is very space efficient
-with big messages.
+This singing implementation is not very efficient with small messages, but is
+very space efficient with big messages.
 
-The purpose of this implementation is for secure message transfer, it is not really good candidate
-for auth token because of not good space efficiency for small messages.
+The purpose of this implementation is for secure message transfer, it is not
+really good candidate for auth token because of not good space efficiency for
+small messages.
 
 .Supported Algorithms
 [options="header"]
-|=====================================================================================
+|====================================================================================
 | Algorithm name     | Hash algorithms   | Keywords           | Priv/Pub Key?
 | Elliptic Curve DSA | sha256, sha512    | `:es256`, `:es512` | Yes
 | RSASSA PSS         | sha256, sha512    | `:ps256`, `:ps512` | Yes
 | RSASSA PKCS1 v1_5  | sha256, sha512    | `:rs256`, `:rs512` | Yes
 | Poly1305           | aes, twofish, serpent | `:poly1305-aes`, `:poly1305-serpent`, `:poly1305-twofish` | No
 | HMAC               | sha256*, sha512   | `:hs256`, `:hs512` | No
-|=====================================================================================
+|====================================================================================
 
 +++*+++ indicates the default value.
 
 [NOTE]
 ====
-Only HMAC and Poly1305 based algorithms support plain text secret keys, If you want to use
-Digital Signature instead of hmac then you must have a key pair (public and private).
+Only HMAC and Poly1305 based algorithms support plain text secret keys, If you
+want to use Digital Signature instead of hmac then you must have a key pair
+(public and private).
 ====
 
 
 === Signing and unsigning data
 
-With difference with jwt/jws, this implementation is not limited to hash-map like objects,
-and you can sign any clojure valid type. Let see an example:
+With difference with jwt/jws, this implementation is not limited to hash-map
+like objects, and you can sign any clojure valid type. Let see an example:
 
 [source,clojure]
 ----
@@ -470,7 +406,7 @@ Then, you also will be able validate the signed message based in its age:
 [source,clojure]
 ----
 (cm/unsign data "secret" {:max-age (* 15 60)})
-;; => ExceptionInfo throw+: {:type :validation, :cause :exp, :message "Token is older than 1427836475"}
+;; => ExceptionInfo: "Token is older than 1427836475"
 ----
 
 
@@ -478,11 +414,13 @@ Then, you also will be able validate the signed message based in its age:
 
 === When I should use JWE and when JWS?
 
-The main difference between JWS and JWE, is that JWE encrypts the claims with an algorithm that uses
-a one time key. Both provides good security, but JWE also provides privacy of the data.
+The main difference between JWS and JWE, is that JWE encrypts the claims with
+an algorithm that uses a one time key. Both provides good security, but JWE also
+provides privacy of the data.
 
-If you only stores the userid or something similar, JWS is recommended, because it has less overhead.
-But if you are storing in the token claims that require privacy, JWE is the solution that should be used.
+If you only stores the userid or something similar, JWS is recommended, because
+it has less overhead. But if you are storing in the token claims that require
+privacy, JWE is the solution that should be used.
 
 
 [[generate-keypairs]]
@@ -515,8 +453,8 @@ openssl rsa -pubout -in privkey.pem -out pubkey.pem
 
 === Contributing
 
-Unlike Clojure and other Clojure contributed libraries _buddy-sign_ does not have many
-restrictions for contributions. Just open an issue or pull request.
+Unlike Clojure and other Clojure contributed libraries _buddy-sign_ does not
+have many restrictions for contributions. Just open an issue or pull request.
 
 
 === Philosophy
@@ -534,7 +472,8 @@ All contributions to _buddy-sign_ should keep these important rules in mind.
 
 === Source Code
 
-_buddy-sign_ is open source and can be found on link:https://github.com/funcool/buddy-sign[github].
+_buddy-sign_ is open source and can be found on
+link:https://github.com/funcool/buddy-sign[github].
 
 You can clone the public repository with this command:
 
@@ -550,7 +489,7 @@ For running tests just execute this:
 
 [source,bash]
 ----
-lein test
+lein test-all
 ----
 
 
