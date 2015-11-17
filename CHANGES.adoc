@@ -1,5 +1,13 @@
 = Changelog
 
+== Version 0.8.1
+
+Date: 2015-11-17
+
+- Properly remove cats dependency.
+- Fix wrong arguments on jws and compact sign methods.
+
+
 == Version 0.8.0
 
 Date: 2015-11-15
