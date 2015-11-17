@@ -30,7 +30,7 @@
        :dynamic true}
   *signers-map* {:hs256 {:signer   #(mac/hash %1 {:alg :hmac+sha256 :key %2})
                          :verifier #(mac/verify %1 %2 {:alg :hmac+sha256 :key %3})}
-                 :hs512 {:signer   #(mac/hash %1 %2 {:alg :hmac+sha512 :key %2})
+                 :hs512 {:signer   #(mac/hash %1 {:alg :hmac+sha512 :key %2})
                          :verifier #(mac/verify %1 %2 {:alg :hmac+sha512 :key %3})}
                  :rs256 {:signer   #(dsa/sign %1 {:alg :rsassa-pkcs15+sha256 :key %2})
                          :verifier #(dsa/verify %1 %2 {:alg :rsassa-pkcs15+sha256 :key %3})}
