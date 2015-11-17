@@ -37,8 +37,7 @@
             [buddy.sign.util :as util]
             [clojure.string :as str]
             [taoensso.nippy :as nippy]
-            [taoensso.nippy.compression :as nippycompress]
-            [cats.monad.exception :as exc])
+            [taoensso.nippy.compression :as nippycompress])
   (:import clojure.lang.Keyword))
 
 (defn- sign-poly
@@ -143,16 +142,5 @@
                         {:type :validation :cause :max-age})))
       (nippy/thaw input {:v1-compatibility? false}))))
 
-(defn encode
-  "Sign arbitrary length string/byte array using
-  compact sigining method and return date wrapped in
-  a Success instance of the Exception monad."
-  [& args]
-  (exc/try-on (apply sign args)))
-
-(defn decode
-  "Given a signed message, verify it and return
-  the decoded data wrapped in a Success instance
-  of the Exception monad."
-  [& args]
-  (exc/try-on (apply unsign args)))
+(util/defalias encode sign)
+(util/defalias decode unsign)

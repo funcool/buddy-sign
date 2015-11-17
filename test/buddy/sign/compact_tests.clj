@@ -21,9 +21,7 @@
             [buddy.core.bytes :as bytes]
             [buddy.core.nonce :as nonce]
             [buddy.sign.compact :as compact]
-            [buddy.sign.util :as util]
-            [cats.monad.either :as either]
-            [cats.monad.exception :as exc]))
+            [buddy.sign.util :as util]))
 
 (def secret (hash/sha256 "secret"))
 (def rsa-privkey (keys/private-key "test/_files/privkey.3des.rsa.pem" "secret"))
@@ -34,8 +32,8 @@
 (deftest compact-sign-unsign
   (testing "Signing with compat implementation using :hs256."
     (let [data {:foo1 "bar1"}
-          signed (compact/sign data secret)]
-      (is (= data (compact/unsign signed secret)))))
+          signed (compact/encode data secret)]
+      (is (= data (compact/decode signed secret)))))
 
   (testing "Using :poly1305-aes mac algorithm"
     (let [data {:foo1 "bar1"}
@@ -63,14 +61,11 @@
   (testing "Using :hs256 with max-age"
     (let [candidate {:foo "bar"}
           signed    (compact/sign candidate secret)
-          unsigned1 (compact/decode signed secret {:max-age 1})
-          _         (Thread/sleep 2000)
-          unsigned2 (compact/decode signed secret {:max-age 1})]
-      (is (exc/success? unsigned1))
-      (is (= @unsigned1 candidate))
-      (is (exc/failure? unsigned2))
+          unsigned1 (compact/decode signed secret {:max-age 1})]
+      (Thread/sleep 2000)
+      (is (= unsigned1 candidate))
       (try
-        (deref unsigned2)
+        (compact/decode signed secret {:max-age 1})
         (catch clojure.lang.ExceptionInfo e
           (let [data (ex-data e)]
             (is (= (:cause data) :max-age)))))))
