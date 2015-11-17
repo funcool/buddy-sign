@@ -86,6 +86,18 @@
             (is (= cause :aud)))))))
   )
 
+(deftest jws-hs256-sign-unsign
+  (let [candidate {:foo "bar"}
+        result    (jws/sign candidate secret {:alg :hs256})
+        result'   (jws/unsign result secret {:alg :hs256})]
+    (is (= result' candidate))))
+
+(deftest jws-hs512-sign-unsign
+  (let [candidate {:foo "bar"}
+        result    (jws/sign candidate secret {:alg :hs512})
+        result'   (jws/unsign result secret {:alg :hs512})]
+    (is (= result' candidate))))
+
 (deftest jws-rs256-sign-unsign
   (let [candidate {:foo "bar"}
         result    (jws/sign candidate rsa-privkey {:alg :rs256})
