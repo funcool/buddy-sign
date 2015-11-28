@@ -45,7 +45,7 @@ dependency vector on your *_project.clj_* file:
 
 [source,clojure]
 ----
-[funcool/buddy-sign "0.8.1"]
+[buddy/buddy-sign "0.8.1"]
 ----
 
 And is tested under JDK7 and JDK8.
