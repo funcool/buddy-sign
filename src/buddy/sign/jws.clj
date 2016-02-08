@@ -99,7 +99,7 @@
   (let [header (-> (codecs/safebase64->str headerdata)
                    (json/parse-string true))]
     (when (not= alg (keyword (str/lower-case (:alg header))))
-      (throw (ex-info "The `alg` param mismatch with header value."
+      (throw (ex-info "The `alg` param is mismatched with the header value."
                       {:type :validation :cause :header})))
     (merge {:alg alg} (dissoc header :alg))))
 
