@@ -1,5 +1,15 @@
 = Changelog
 
+== Version 0.10.0
+
+Date: 2016-03-26
+
+- Update buddy-core dependency to 0.10.0
+- Update nippy dependency to 2.11.1.
+- Fix exception data inconsistency with jwt on compact impl.
+- Fix wrong documentation about auto detection of the alg.
+
+
 == Version 0.9.0
 
 Date: 2016-01-06
