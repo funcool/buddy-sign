@@ -136,8 +136,6 @@ function from `buddy.sign.jws` namespace:
 ;; => {:userid 1}
 ----
 
-You do not need specify the algorithm explicitly, it is automatically detected.
-
 
 === Claims validation
 
