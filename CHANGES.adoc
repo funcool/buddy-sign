@@ -1,5 +1,13 @@
 = Changelog
 
+== Version 0.11.0
+
+Date: 2016-03-27
+
+- Update buddy-core dependency to 0.11.0
+- Remove user.clj accindentally pulled into the jar.
+
+
 == Version 0.10.0
 
 Date: 2016-03-26
