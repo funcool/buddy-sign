@@ -28,6 +28,7 @@
   transfer, it is not really good candidate for auth token
   because of not good space efficiency for small messages."
   (:require [buddy.core.codecs :as codecs]
+            [buddy.core.codecs.base64 :as b64]
             [buddy.core.bytes :as bytes]
             [buddy.core.keys :as keys]
             [buddy.core.mac :as mac]
@@ -106,6 +107,9 @@
     :else
     (nippy/freeze data)))
 
+(def ^:private bytes->base64str
+  (comp codecs/bytes->str #(b64/encode % true)))
+
 (defn sign
   "Sign arbitrary length string/byte array using
   compact sigining method."
@@ -116,10 +120,10 @@
         stamp (codecs/long->bytes (util/timestamp))
         signature (-> (bytes/concat input salt stamp)
                       (calculate-signature key alg))]
-    (str/join "." [(codecs/bytes->safebase64 input)
-                   (codecs/bytes->safebase64 signature)
-                   (codecs/bytes->safebase64 salt)
-                   (codecs/bytes->safebase64 stamp)])))
+    (str/join "." [(bytes->base64str input)
+                   (bytes->base64str signature)
+                   (bytes->base64str salt)
+                   (bytes->base64str stamp)])))
 
 (defn unsign
   "Given a signed message, verify it and return
@@ -127,10 +131,10 @@
   [data key & [{:keys [alg compress max-age]
                 :or {alg :hs256 compress true}}]]
   (let [[input signature salt stamp] (str/split data #"\." 4)
-        input (codecs/safebase64->bytes input)
-        signature (codecs/safebase64->bytes signature)
-        salt (codecs/safebase64->bytes salt)
-        stamp (codecs/safebase64->bytes stamp)
+        input (b64/decode input)
+        signature (b64/decode signature)
+        salt (b64/decode salt)
+        stamp (b64/decode stamp)
         candidate (bytes/concat input salt stamp)]
     (when-not (verify-signature candidate signature key alg)
       (throw (ex-info "Message seems corrupt or manipulated."

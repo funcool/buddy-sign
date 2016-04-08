@@ -20,6 +20,7 @@
 (ns buddy.sign.jws
   "Json Web Signature implementation."
   (:require [buddy.core.codecs :as codecs]
+            [buddy.core.codecs.base64 :as b64]
             [buddy.core.mac :as mac]
             [buddy.core.dsa :as dsa]
             [buddy.sign.util :as util]
@@ -75,8 +76,8 @@
         type (.toUpperCase (name typ))]
     (-> {:alg algorithm :typ type}
         (json/generate-string)
-        (codecs/str->bytes)
-        (codecs/bytes->safebase64))))
+        (b64/encode true)
+        (codecs/bytes->str))))
 
 (defn- encode-claims
   "Encode jws claims."
@@ -87,8 +88,8 @@
     (-> (normalize-date-claims input)
         (merge additionalclaims)
         (json/generate-string)
-        (codecs/str->bytes)
-        (codecs/bytes->safebase64))))
+        (b64/encode true)
+        (codecs/bytes->str))))
 
 (defn- parse-header
   "Parse jws header."
@@ -96,18 +97,18 @@
   (when (nil? alg)
     (throw (ex-info "Missing `alg` parameter."
                     {:type :validation :cause :header})))
-  (let [header (-> (codecs/safebase64->str headerdata)
+  (let [header (-> (b64/decode headerdata)
+                   (codecs/bytes->str)
                    (json/parse-string true))]
     (when (not= alg (keyword (str/lower-case (:alg header))))
       (throw (ex-info "The `alg` param is mismatched with the header value."
                       {:type :validation :cause :header})))
-    (merge {:alg alg} (dissoc header :alg))))
+    {:alg alg}))
 
 (defn- parse-claims
   "Parse jws claims"
   [^String claimsdata {:keys [max-age iss aud]}]
-  (let [claims (-> claimsdata
-                   (codecs/safebase64->bytes)
+  (let [claims (-> (b64/decode claimsdata)
                    (codecs/bytes->str)
                    (json/parse-string true))
         now (util/timestamp)]
@@ -135,7 +136,8 @@
   (let [signer (get-in *signers-map* [alg :signer])
         authdata (str/join "." [header claims])]
     (-> (signer authdata key)
-        (codecs/bytes->safebase64))))
+        (b64/encode true)
+        (codecs/bytes->str))))
 
 (defn- verify-signature
   "Given a bunch of bytes, a previously generated
@@ -173,7 +175,7 @@
    (try
      (let [[header claims signature] (str/split input #"\." 3)
            {:keys [alg]} (parse-header header opts)
-           signature (codecs/safebase64->bytes signature)]
+           signature (b64/decode signature)]
        (when-not (verify-signature {:key pkey :signature signature
                                     :alg alg :header header :claims claims})
          (throw (ex-info "Message seems corrupt or manipulated."

@@ -87,7 +87,7 @@
 (defn generate
   [{:keys [key alg enc] :as options}]
   (case alg
-    :dir (codecs/->byte-array key)
+    :dir (codecs/to-bytes key)
     (case enc
       :a128cbc-hs256 (nonce/random-bytes 32)
       :a192cbc-hs384 (nonce/random-bytes 48)
@@ -116,14 +116,14 @@
     (encrypt-with-rsa-pkcs15 cek key)
 
     (aeskw? alg)
-    (let [secret (codecs/->byte-array key)]
+    (let [secret (codecs/to-bytes key)]
       (keys/wrap cek secret :aes))))
 
 (defn decrypt
   [{:keys [key alg enc ecek] :as options}]
   (cond
     (= alg :dir)
-    (codecs/->byte-array key)
+    (codecs/to-bytes key)
 
     (= alg :rsa-oaep)
     (decrypt-with-rsaaoep ecek key)
@@ -135,5 +135,5 @@
     (decrypt-with-rsa-pkcs15 ecek key)
 
     (aeskw? alg)
-    (let [secret (codecs/->byte-array key)]
+    (let [secret (codecs/to-bytes key)]
       (keys/unwrap ecek secret :aes))))
