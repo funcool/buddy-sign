@@ -14,6 +14,7 @@
 
 (ns buddy.sign.jwe-tests
   (:require [clojure.test :refer :all]
+            [clojure.string :as str]
             [buddy.core.codecs :as codecs]
             [buddy.core.crypto :as crypto]
             [buddy.core.bytes :as bytes]
@@ -219,7 +220,6 @@
       (let [cause (:cause (ex-data e))]
         (is (= cause :signature))))))
 
-
 (deftest wrong-key
   (let [data (jwe/encrypt {:data "foobar"} key32 {:enc :a256gcm :alg :a256kw})]
     (try
@@ -228,3 +228,58 @@
       (catch clojure.lang.ExceptionInfo e
         (let [cause (:cause (ex-data e))]
           (is (= cause :signature)))))))
+
+
+(import 'com.nimbusds.jose.JWEHeader
+        'com.nimbusds.jose.JWEAlgorithm
+        'com.nimbusds.jose.EncryptionMethod
+        'com.nimbusds.jose.Payload
+        'com.nimbusds.jose.JWEObject
+        'com.nimbusds.jwt.EncryptedJWT
+        'com.nimbusds.jwt.JWTClaimsSet
+        'com.nimbusds.jwt.JWTClaimsSet$Builder
+        'com.nimbusds.jose.crypto.DirectEncrypter
+        'com.nimbusds.jose.crypto.DirectDecrypter)
+
+;; (deftest regression-compatibility
+;;   (let [header (JWEHeader. JWEAlgorithm/DIR EncryptionMethod/A128GCM)
+;;         payload (Payload. "{}")
+;;         jweobj (JWEObject. header, payload)
+;;         _ (.encrypt jweobj (DirectEncrypter. key16))
+;;         result (.serialize jweobj)]
+;;     (println "numbus:" result))
+;;   (let [result (jwe/encrypt {} key16 {:alg :dir :enc :a128gcm})]
+;;     (println "buddy" result)))
+
+(deftest interoperability-test-1
+  (let [header (JWEHeader. JWEAlgorithm/DIR EncryptionMethod/A128GCM)
+        claimsbuilder (doto (JWTClaimsSet$Builder.)
+                        (.claim "test1" "test"))
+        claims (.build claimsbuilder)
+
+        jwt (doto (EncryptedJWT. header claims)
+              (.encrypt (DirectEncrypter. key16)))
+
+        result (.serialize jwt)]
+    (let [data (jwe/decrypt result key16 {:alg :dir :enc :a128gcm})]
+      (is (= data {:test1 "test"})))))
+
+
+(deftest interoperability-test-2
+  (let [header (JWEHeader. JWEAlgorithm/DIR EncryptionMethod/A128CBC_HS256)
+        claimsbuilder (doto (JWTClaimsSet$Builder.)
+                        (.claim "test1" "test"))
+        claims (.build claimsbuilder)
+
+        jwt (doto (EncryptedJWT. header claims)
+              (.encrypt (DirectEncrypter. key32)))
+
+        result (.serialize jwt)]
+    (let [data (jwe/decrypt result key32 {:alg :dir :enc :a128cbc-hs256})]
+      (is (= data {:test1 "test"})))))
+
+(deftest interoperability-test-3
+  (let [token (jwe/encrypt {:test1 "test"} key16 {:alg :dir :enc :a128gcm})
+        jwt (doto (EncryptedJWT/parse token)
+              (.decrypt (DirectDecrypter. key16)))]
+    (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
