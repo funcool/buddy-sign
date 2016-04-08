@@ -25,6 +25,7 @@
   (:require [clojure.string :as str]
             [cheshire.core :as json]
             [buddy.core.codecs :as codecs]
+            [buddy.core.codecs.base64 :as b64]
             [buddy.core.bytes :as bytes]
             [buddy.core.nonce :as nonce]
             [buddy.core.crypto :as crypto]
@@ -48,18 +49,14 @@
         enc (.toUpperCase (name enc))
         header (merge {:alg alg :typ typ :enc enc}
                       (when zip {:zip "DEF"}))]
-    (-> (json/generate-string header)
-        (codecs/str->bytes))))
+    ;; (-> (codecs/str->safebase64 "{\"enc\":\"A128GCM\",\"alg\":\"dir\"}")
+    ;;     (codecs/str->bytes))
+    (b64/encode (json/generate-string header))))
 
 (defn- parse-header
   [^String headerdata {:keys [alg enc] :or {alg :dir enc :a128cbc-hs256}}]
-  (when (nil? alg)
-    (throw (ex-info "Missing `alg` parameter."
-                    {:type :validation :cause :header})))
-  (when (nil? enc)
-    (throw (ex-info "Missing `enc` parameter."
-                    {:type :validation :cause :header})))
-  (let [header (-> (codecs/safebase64->str headerdata)
+  (let [header (-> (b64/decode headerdata)
+                   (codecs/bytes->str)
                    (json/parse-string true))]
     (when (not= alg (keyword (str/lower-case (:alg header))))
       (throw (ex-info "The `alg` param mismatch with header value."
@@ -67,7 +64,10 @@
     (when (not= enc (keyword (str/lower-case (:enc header))))
       (throw (ex-info "The `enc` param mismatch with header value."
                       {:type :validation :cause :header})))
-    (merge {:alg alg :enc enc} (dissoc header :alg :enc))))
+
+    {:alg alg
+     :enc enc
+     :zip (= (:zip header) "DEF")}))
 
 (defmulti generate-iv :enc)
 (defmethod generate-iv :a128cbc-hs256 [_] (nonce/random-bytes 16))
@@ -85,7 +85,7 @@
         data (-> (jws/normalize-date-claims claims)
                  (merge additional)
                  (json/generate-string)
-                 (codecs/str->bytes))]
+                 (codecs/to-bytes))]
     (if zip
       (deflate/compress data)
       data)))
@@ -116,12 +116,12 @@
                       {:type :validation :cause :max-age})))
     claims))
 
-(defmulti aead-encrypt :algorithm)
-(defmulti aead-decrypt :algorithm)
+(defmulti aead-encrypt :alg)
+(defmulti aead-decrypt :alg)
 
 (defmethod aead-encrypt :a128cbc-hs256
-  [{:keys [algorithm plaintext secret iv aad] :as params}]
-  (let [result (crypto/encrypt* {:algorithm :aes128-cbc-hmac-sha256 :input plaintext
+  [{:keys [alg plaintext secret iv aad] :as params}]
+  (let [result (crypto/-encrypt {:alg :aes128-cbc-hmac-sha256 :input plaintext
                                  :key secret :iv iv :aad aad})
         resultlen (count result)
         ciphertext (bytes/slice result 0 (- resultlen 16))
@@ -129,16 +129,16 @@
     [ciphertext tag]))
 
 (defmethod aead-decrypt :a128cbc-hs256
-  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
-  (crypto/decrypt* {:algorithm :aes128-cbc-hmac-sha256
+  [{:keys [alg authtag ciphertext secret iv aad] :as params}]
+  (crypto/-decrypt {:alg :aes128-cbc-hmac-sha256
                     :input (bytes/concat ciphertext authtag)
                     :key secret
                     :iv iv
                     :aad aad}))
 
 (defmethod aead-encrypt :a192cbc-hs384
-  [{:keys [algorithm plaintext secret iv aad] :as params}]
-  (let [result (crypto/encrypt* {:algorithm :aes192-cbc-hmac-sha384 :input plaintext
+  [{:keys [alg plaintext secret iv aad] :as params}]
+  (let [result (crypto/-encrypt {:alg :aes192-cbc-hmac-sha384 :input plaintext
                                  :key secret :iv iv :aad aad})
         resultlen (count result)
         ciphertext (bytes/slice result 0 (- resultlen 24))
@@ -146,16 +146,16 @@
     [ciphertext tag]))
 
 (defmethod aead-decrypt :a192cbc-hs384
-  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
-  (crypto/decrypt* {:algorithm :aes192-cbc-hmac-sha384
+  [{:keys [alg authtag ciphertext secret iv aad] :as params}]
+  (crypto/-decrypt {:alg :aes192-cbc-hmac-sha384
                     :input (bytes/concat ciphertext authtag)
                     :key secret
                     :iv iv
                     :aad aad}))
 
 (defmethod aead-encrypt :a256cbc-hs512
-  [{:keys [algorithm plaintext secret iv aad] :as params}]
-  (let [result (crypto/encrypt* {:algorithm :aes256-cbc-hmac-sha512 :input plaintext
+  [{:keys [alg plaintext secret iv aad] :as params}]
+  (let [result (crypto/-encrypt {:alg :aes256-cbc-hmac-sha512 :input plaintext
                                  :key secret :iv iv :aad aad})
         resultlen (count result)
         ciphertext (bytes/slice result 0 (- resultlen 32))
@@ -163,33 +163,36 @@
     [ciphertext tag]))
 
 (defmethod aead-decrypt :a256cbc-hs512
-  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
-  (crypto/decrypt* {:algorithm :aes256-cbc-hmac-sha512
+  [{:keys [alg authtag ciphertext secret iv aad] :as params}]
+  (crypto/-decrypt {:alg :aes256-cbc-hmac-sha512
                     :input (bytes/concat ciphertext authtag)
                     :key secret
                     :iv iv
                     :aad aad}))
 
 (defmethod aead-encrypt :a128gcm
-  [{:keys [algorithm plaintext secret iv aad] :as params}]
-  (let [result (crypto/encrypt* {:algorithm :aes128-gcm :input plaintext
-                                 :key secret :iv iv :aad aad})
-        resultlen (count result)
+  [{:keys [alg plaintext secret iv aad] :as params}]
+  (let [result (crypto/-encrypt {:alg :aes128-gcm
+                                 :input plaintext
+                                 :key secret
+                                 :iv iv
+                                 :aad aad})
+        resultlen (alength result)
         ciphertext (bytes/slice result 0 (- resultlen 16))
         tag (bytes/slice result (- resultlen 16) resultlen)]
     [ciphertext tag]))
 
 (defmethod aead-decrypt :a128gcm
-  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
-  (crypto/decrypt* {:algorithm :aes128-gcm
+  [{:keys [alg authtag ciphertext secret iv aad] :as params}]
+  (crypto/-decrypt {:alg :aes128-gcm
                     :input (bytes/concat ciphertext authtag)
                     :key secret
                     :iv iv
                     :aad aad}))
 
 (defmethod aead-encrypt :a192gcm
-  [{:keys [algorithm plaintext secret iv aad] :as params}]
-  (let [result (crypto/encrypt* {:algorithm :aes192-gcm :input plaintext
+  [{:keys [alg plaintext secret iv aad] :as params}]
+  (let [result (crypto/-encrypt {:alg :aes192-gcm :input plaintext
                                  :key secret :iv iv :aad aad})
         resultlen (count result)
         ciphertext (bytes/slice result 0 (- resultlen 16))
@@ -197,16 +200,16 @@
     [ciphertext tag]))
 
 (defmethod aead-decrypt :a192gcm
-  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
-  (crypto/decrypt* {:algorithm :aes192-gcm
+  [{:keys [alg authtag ciphertext secret iv aad] :as params}]
+  (crypto/-decrypt {:alg :aes192-gcm
                     :input (bytes/concat ciphertext authtag)
                     :key secret
                     :iv iv
                     :aad aad}))
 
 (defmethod aead-encrypt :a256gcm
-  [{:keys [algorithm plaintext secret iv aad] :as params}]
-  (let [result (crypto/encrypt* {:algorithm :aes256-gcm :input plaintext
+  [{:keys [alg plaintext secret iv aad] :as params}]
+  (let [result (crypto/-encrypt {:alg :aes256-gcm :input plaintext
                                  :key secret :iv iv :aad aad})
         resultlen (count result)
         ciphertext (bytes/slice result 0 (- resultlen 16))
@@ -214,8 +217,8 @@
     [ciphertext tag]))
 
 (defmethod aead-decrypt :a256gcm
-  [{:keys [algorithm authtag ciphertext secret iv aad] :as params}]
-  (crypto/decrypt* {:algorithm :aes256-gcm
+  [{:keys [alg authtag ciphertext secret iv aad] :as params}]
+  (crypto/-decrypt {:alg :aes256-gcm
                     :input (bytes/concat ciphertext authtag)
                     :key secret
                     :iv iv
@@ -225,10 +228,13 @@
 ;; Public Api
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(def ^:private bytes->base64str
+  (comp codecs/bytes->str #(b64/encode % true)))
+
 (defn encrypt
   "Encrypt then sign arbitrary length string/byte array using
   json web encryption."
-  [claims key & [{:keys [alg enc exp nbf iat zip typ]
+  [claims key & [{:keys [alg enc exp nbf iat zip typ iv]
                   :or {alg :dir enc :a128cbc-hs256 zip false typ :jws}
                   :as opts}]]
   {:pre [(map? claims)]}
@@ -237,33 +243,33 @@
         iv (generate-iv {:enc enc})
         header (encode-header {:alg alg :enc enc :zip zip :typ typ})
         claims (encode-claims claims zip opts)
-        [ciphertext authtag] (aead-encrypt {:algorithm enc
+        [ciphertext authtag] (aead-encrypt {:alg enc
                                             :plaintext claims
                                             :secret scek
                                             :aad header
                                             :iv iv})]
-    (str/join "." [(codecs/bytes->safebase64 header)
-                   (codecs/bytes->safebase64 ecek)
-                   (codecs/bytes->safebase64 iv)
-                   (codecs/bytes->safebase64 ciphertext)
-                   (codecs/bytes->safebase64 authtag)])))
+    (str/join "." [(codecs/bytes->str header)
+                   (bytes->base64str ecek)
+                   (bytes->base64str iv)
+                   (bytes->base64str ciphertext)
+                   (bytes->base64str authtag)])))
 
 (defn decrypt
   "Decrypt the jwe compliant message and return its claims."
   ([input key] (decrypt input key {}))
-  ([input key {:keys [zip] :as opts} ]
+  ([input key opts]
    (try
      (let [[header ecek iv ciphertext authtag] (str/split input #"\." 5)
-           {:keys [alg enc]} (parse-header header opts)
-           ecek (codecs/safebase64->bytes ecek)
+           {:keys [alg enc zip]} (parse-header header opts)
+           ecek (b64/decode ecek)
            scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
-           iv (codecs/safebase64->bytes iv)
-           header (codecs/safebase64->bytes header)
-           ciphertext (codecs/safebase64->bytes ciphertext)
-           authtag (codecs/safebase64->bytes authtag)
+           iv (b64/decode iv)
+           header (codecs/str->bytes header)
+           ciphertext (b64/decode ciphertext)
+           authtag (b64/decode authtag)
            claims (aead-decrypt {:ciphertext ciphertext
                                  :authtag authtag
-                                 :algorithm enc
+                                 :alg enc
                                  :aad header
                                  :secret scek
                                  :iv iv})]
