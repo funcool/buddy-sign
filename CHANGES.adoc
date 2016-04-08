@@ -1,5 +1,14 @@
 = Changelog
 
+== Version 0.12.0
+
+Date: 2016-04-08
+
+- Fix compliance with RFC bug in JWE implementation (header was improperly encoded
+  before passed as aad that causes incompatibilities with other implementations).
+- Adapt to buddy-core api changes.
+
+
 == Version 0.11.0
 
 Date: 2016-03-27
