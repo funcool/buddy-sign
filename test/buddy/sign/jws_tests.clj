@@ -62,6 +62,7 @@
           signed    (jws/encode candidate secret {:exp 10})]
       (unsign-exp-succ signed (assoc candidate :exp 10) {:now 0})
       (unsign-exp-succ signed (assoc candidate :exp 10) {:now 9})
+      (unsign-exp-fail signed :exp {:now 10})
       (unsign-exp-fail signed :exp {:now 11}))
 
   (testing ":nbf claim validation"

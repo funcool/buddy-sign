@@ -118,7 +118,7 @@
     (when (and aud (not= aud (:aud claims)))
       (throw (ex-info (str "Audience does not match " aud)
                       {:type :validation :cause :aud})))
-    (when (and (:exp claims) (> now (:exp claims)))
+    (when (and (:exp claims) (>= now (:exp claims)))
       (throw (ex-info (format "Token is expired (%s)" (:exp claims))
                       {:type :validation :cause :exp})))
     (when (and (:nbf claims) (< now (:nbf claims)))
