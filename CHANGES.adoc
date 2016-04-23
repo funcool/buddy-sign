@@ -1,5 +1,15 @@
 = Changelog
 
+== Version 0.13.0
+
+Date: 2016-04-24
+
+- Fix unexpected NPE on header parsing on jws/jwe.
+- Fixed `:exp` claim validation (thanks @dottedmag) for JWS/JWE.
+- Fixed `:nbf` claim validation on JWE.
+- Add improved `:iat` validation (thanks @dottedmag) for JWS/JWE.
+
+
 == Version 0.12.0
 
 Date: 2016-04-08
