@@ -1,4 +1,4 @@
-;; Copyright 2014-2015 Andrey Antukh <niwi@niwi.nz>
+;; Copyright 2014-2016 Andrey Antukh <niwi@niwi.nz>
 ;;
 ;; Licensed under the Apache License, Version 2.0 (the "License")
 ;; you may not use this file except in compliance with the License.
@@ -51,35 +51,34 @@
 
 (deftest jws-time-claims-validation
   (testing "current time claims validation"
-    (let [candidate {:foo "bar"}
-          now       (util/timestamp)
-          claims    {:iat now :nbf now :exp (+ now 60)}
-          signed    (jws/sign candidate secret claims)]
-      (unsign-exp-succ signed (merge candidate claims))))
+    (let [now       (util/timestamp)
+          candidate {:foo "bar" :iat now :nbf now :exp (+ now 60)}
+          signed    (jws/sign candidate secret)]
+      (unsign-exp-succ signed candidate)))
 
   (testing ":iat claim validation"
-    (let [candidate {:foo "bar"}
-          signed    (jws/encode candidate secret {:iat 10})]
+    (let [candidate {:foo "bar" :iat 10}
+          signed    (jws/encode candidate secret)]
       (unsign-exp-fail signed :iat {:now 0})
       (unsign-exp-fail signed :iat {:now 9})
-      (unsign-exp-succ signed (assoc candidate :iat 10) {:now 10})
-      (unsign-exp-succ signed (assoc candidate :iat 10) {:now 11})))
+      (unsign-exp-succ signed candidate {:now 10})
+      (unsign-exp-succ signed candidate {:now 11})))
 
   (testing ":exp claim validation"
-    (let [candidate {:foo "bar"}
-          signed    (jws/encode candidate secret {:exp 10})]
-      (unsign-exp-succ signed (assoc candidate :exp 10) {:now 0})
-      (unsign-exp-succ signed (assoc candidate :exp 10) {:now 9})
+    (let [candidate {:foo "bar" :exp 10}
+          signed    (jws/encode candidate secret)]
+      (unsign-exp-succ signed candidate {:now 0})
+      (unsign-exp-succ signed candidate {:now 9})
       (unsign-exp-fail signed :exp {:now 10})
-      (unsign-exp-fail signed :exp {:now 11}))
+      (unsign-exp-fail signed :exp {:now 11})))
 
   (testing ":nbf claim validation"
-    (let [candidate {:foo "bar"}
-          signed    (jws/sign candidate secret {:nbf 10})]
+    (let [candidate {:foo "bar" :nbf 10}
+          signed    (jws/sign candidate secret)]
       (unsign-exp-fail signed :nbf {:now 0})
       (unsign-exp-fail signed :nbf {:now 9})
-      (unsign-exp-succ signed (assoc candidate :nbf 10) {:now 10})
-      (unsign-exp-succ signed (assoc candidate :nbf 10) {:now 11})))))
+      (unsign-exp-succ signed candidate {:now 10})
+      (unsign-exp-succ signed candidate {:now 11}))))
 
 (deftest jws-other-claims-validation
   (testing ":iss claim validation"

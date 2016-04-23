@@ -1,4 +1,4 @@
-;; Copyright 2014-2015 Andrey Antukh <niwi@niwi.nz>
+;; Copyright 2014-2016 Andrey Antukh <niwi@niwi.nz>
 ;;
 ;; Licensed under the Apache License, Version 2.0 (the "License")
 ;; you may not use this file except in compliance with the License.
@@ -38,61 +38,65 @@
 (def ec-privkey (keys/private-key "test/_files/privkey.ecdsa.pem" "secret"))
 (def ec-pubkey (keys/public-key "test/_files/pubkey.ecdsa.pem"))
 
+(defn- decrypt-exp-succ
+  ([signed claims]
+   (decrypt-exp-succ signed claims {}))
+  ([signed claims opts]
+   (is (= (jwe/decrypt signed secret opts) claims))))
+
+(defn- decrypt-exp-fail
+  ([signed cause]
+   (decrypt-exp-fail signed cause {}))
+  ([signed cause opts]
+   (try
+     (jwe/decrypt signed secret opts)
+     (throw (Exception. "unexpected"))
+     (catch clojure.lang.ExceptionInfo e
+       (is (= (:cause (ex-data e)) cause))))))
+
 (deftest jwe-time-claims-validation
+  (testing "current time claims validation"
+    (let [now (util/timestamp)
+          candidate {:foo "bar" :iat now :nbf now :exp (+ now 60)}
+          signed    (jwe/encrypt candidate secret)]
+      (decrypt-exp-succ signed candidate)))
+
+  (testing ":iat claim validation"
+    (let [candidate {:foo "bar" :iat 10}
+          signed    (jwe/encrypt candidate secret)]
+      (decrypt-exp-fail signed :iat {:now 0})
+      (decrypt-exp-fail signed :iat {:now 9})
+      (decrypt-exp-succ signed candidate {:now 10})
+      (decrypt-exp-succ signed candidate {:now 11})))
+
   (testing ":exp claim validation"
-    (let [candidate {:foo "bar"}
-          now       (util/timestamp)
-          exp       (+ now 2)
-          signed    (jwe/encode candidate secret {:exp exp})
-          unsigned  (jwe/decode signed secret)]
-      (is (= unsigned (assoc candidate :exp exp)))
-      (Thread/sleep 3000)
-      (try
-        (jwe/decrypt signed secret)
-        (throw (Exception. "unexpected"))
-        (catch clojure.lang.ExceptionInfo e
-          (let [cause (:cause (ex-data e))]
-            (is (= cause :exp)))))))
+    (let [candidate {:foo "bar" :exp 10}
+          signed    (jwe/encrypt candidate secret)]
+      (decrypt-exp-succ signed candidate {:now 0})
+      (decrypt-exp-succ signed candidate {:now 9})
+      (decrypt-exp-fail signed :exp {:now 10})
+      (decrypt-exp-fail signed :exp {:now 11})))
 
   (testing ":nbf claim validation"
-    (let [candidate {:foo "bar"}
-          now       (util/timestamp)
-          nbf       (+ now 2)
-          signed    (jwe/encrypt candidate secret {:nbf nbf})
-          unsigned  (jwe/decrypt signed secret)]
-      (is (= unsigned (assoc candidate :nbf nbf)))
-      (Thread/sleep 3000)
-      (try
-        (jwe/decrypt signed secret)
-        (throw (Exception. "unexpected"))
-        (catch clojure.lang.ExceptionInfo e
-          (let [cause (:cause (ex-data e))]
-            (is (= cause :nbf)))))))
+    (let [candidate {:foo "bar" :nbf 10}
+          signed    (jwe/encrypt candidate secret)]
+      (decrypt-exp-fail signed :nbf {:now 0})
+      (decrypt-exp-fail signed :nbf {:now 9})
+      (decrypt-exp-succ signed candidate {:now 10})
+      (decrypt-exp-succ signed candidate {:now 11}))))
 
+(deftest jws-other-claims-validation
   (testing ":iss claim validation"
     (let [candidate {:foo "bar" :iss "foo:bar"}
-          result  (jwe/encrypt candidate secret)
-          result' (jwe/decrypt result secret)]
-      (is (= result' candidate))
-      (try
-        (jwe/decrypt result secret {:iss "bar:foo"})
-        (throw (Exception. "unexpected"))
-        (catch clojure.lang.ExceptionInfo e
-          (let [cause (:cause (ex-data e))]
-            (is (= cause :iss)))))))
+          signed    (jwe/encrypt candidate secret)]
+      (decrypt-exp-succ signed candidate)
+      (decrypt-exp-fail signed :iss {:iss "bar:foo"})))
 
   (testing ":aud claim validation"
     (let [candidate {:foo "bar" :aud "foo:bar"}
-          result  (jwe/encrypt candidate secret)
-          result' (jwe/decrypt result secret)]
-      (is (= result' candidate))
-      (try
-        (jwe/decrypt result secret {:aud "bar:foo"})
-        (throw (Exception. "unexpected"))
-        (catch clojure.lang.ExceptionInfo e
-          (let [cause (:cause (ex-data e))]
-            (is (= cause :aud)))))))
-  )
+          signed    (jwe/encrypt candidate secret)]
+      (decrypt-exp-succ signed candidate)
+      (decrypt-exp-fail signed :aud {:aud "bar:foo"}))))
 
 (deftest jwe-alg-dir-enc-a128-hs256
   (testing "Encrypt and decrypt"
