@@ -58,8 +58,9 @@
 
       (Thread/sleep 3000)
       (let[unsigned  (jws/unsign signed secret)]
-        (is (= unsigned (assoc candidate :nbf nbf))))))
+        (is (= unsigned (assoc candidate :nbf nbf)))))))
 
+(deftest jws-other-claims-validation
   (testing ":iss claim validation"
     (let [candidate {:foo "bar" :iss "foo:bar"}
           signed    (jws/sign candidate secret)
@@ -72,9 +73,7 @@
           signed    (jws/sign candidate secret)
           unsigned  (jws/unsign signed secret)]
       (is (= unsigned candidate))
-      (is (= (unsign-exp-fail signed {:aud "bar:foo"}) :aud))
-      ))
-  )
+      (is (= (unsign-exp-fail signed {:aud "bar:foo"}) :aud)))))
 
 (deftest jws-hs256-sign-unsign
   (let [candidate {:foo "bar"}
