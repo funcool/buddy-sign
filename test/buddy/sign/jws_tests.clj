@@ -38,6 +38,13 @@
      (catch clojure.lang.ExceptionInfo e
        (:cause (ex-data e))))))
 
+(deftest jws-decode
+  (let [candidate {:foo "bar"}
+        exp (+ (util/timestamp) 2)
+        signed (jws/encode candidate secret {:exp exp})
+        unsigned (jws/decode signed secret)]
+    (is (= unsigned (assoc candidate :exp exp)))))
+
 (deftest jws-time-claims-validation
   (testing ":exp claim validation"
     (let [candidate {:foo "bar"}
@@ -45,7 +52,6 @@
           exp       (+ now 2)
           signed    (jws/encode candidate secret {:exp exp})
           unsigned  (jws/decode signed secret)]
-      (is (= unsigned (assoc candidate :exp exp)))
       (Thread/sleep 3000)
       (is (= (unsign-exp-fail signed) :exp))))
 
