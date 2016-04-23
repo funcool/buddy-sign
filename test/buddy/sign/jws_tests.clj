@@ -40,10 +40,9 @@
 
 (deftest jws-decode
   (let [candidate {:foo "bar"}
-        exp (+ (util/timestamp) 2)
-        signed (jws/encode candidate secret {:exp exp})
+        signed (jws/encode candidate secret)
         unsigned (jws/decode signed secret)]
-    (is (= unsigned (assoc candidate :exp exp)))))
+    (is (= unsigned candidate))))
 
 (deftest jws-time-claims-validation
   (testing ":exp claim validation"
