@@ -321,6 +321,10 @@ Let see an example using direct api:
 
 (jwe/decrypt token secret)
 ;; => ExceptionInfo "Token is older than :exp (1427836475)"
+
+;; use timestamp in the past
+(jwe/decrypt token "key" {:now (time/minus (time/now) (time/seconds 5))})
+;; => {:user 1}
 ----
 
 
@@ -455,6 +459,7 @@ openssl genrsa -aes256 -out privkey.pem 2048
 # Generate public key from previously created private key.
 openssl rsa -pubout -in privkey.pem -out pubkey.pem
 ----
+
 
 == Developers Guide
 
