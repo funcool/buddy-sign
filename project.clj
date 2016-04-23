@@ -7,7 +7,7 @@
                  [buddy/buddy-core "0.12.1"]
                  [com.taoensso/nippy "2.11.1"]
                  [clj-time "0.11.0"]
-                 [cheshire "5.5.0"]]
+                 [cheshire "5.6.1"]]
   :source-paths ["src"]
   :javac-options ["-target" "1.7" "-source" "1.7" "-Xlint:-options"]
   :test-paths ["test"])
