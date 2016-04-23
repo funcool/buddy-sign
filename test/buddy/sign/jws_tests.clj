@@ -157,7 +157,7 @@
   (let [data (str "."
                   "eyJmb28iOiJiYXIifQ."
                   "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")]
-    (unsign-exp-fail data :signature))
+    (unsign-exp-fail data :header))
   (let [data (str "eyJmb28iOiJiYXIifQ."
                   "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")]
-    (unsign-exp-fail data :signature)))
+    (unsign-exp-fail data :header)))
