@@ -146,9 +146,36 @@
           (is (= cause :header)))))))
 
 (deftest wrong-data
+  ;; Just wrong data
   (try
     (jws/unsign "xyz" secret)
     (throw (Exception. "unexpected"))
     (catch clojure.lang.ExceptionInfo e
       (let [cause (:cause (ex-data e))]
-        (is (= cause :signature))))))
+        (is (= cause :signature)))))
+
+  ;; (str "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXUyJ9."
+  ;;      "eyJmb28iOiJiYXIifQ."
+  ;;      "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")
+
+  ;; tramped header
+  (let [data (str "."
+                  "eyJmb28iOiJiYXIifQ."
+                  "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")]
+    (try
+      (jws/unsign data secret)
+      (throw (Exception. "unexpected"))
+      (catch clojure.lang.ExceptionInfo e
+        (let [cause (:cause (ex-data e))]
+          (is (= cause :header))))))
+
+  ;; tramped header
+  (let [data (str "eyJmb28iOiJiYXIifQ."
+                  "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")]
+    (try
+      (jws/unsign data secret)
+      (throw (Exception. "unexpected"))
+      (catch clojure.lang.ExceptionInfo e
+        (let [cause (:cause (ex-data e))]
+          (is (= cause :header))))))
+  )

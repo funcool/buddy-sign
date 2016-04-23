@@ -49,8 +49,6 @@
         enc (.toUpperCase (name enc))
         header (merge {:alg alg :typ typ :enc enc}
                       (when zip {:zip "DEF"}))]
-    ;; (-> (codecs/str->safebase64 "{\"enc\":\"A128GCM\",\"alg\":\"dir\"}")
-    ;;     (codecs/str->bytes))
     (b64/encode (json/generate-string header))))
 
 (defn- parse-header
@@ -58,13 +56,12 @@
   (let [header (-> (b64/decode headerdata)
                    (codecs/bytes->str)
                    (json/parse-string true))]
-    (when (not= alg (keyword (str/lower-case (:alg header))))
+    (when (not= alg (keyword (str/lower-case (:alg header ""))))
       (throw (ex-info "The `alg` param mismatch with header value."
                       {:type :validation :cause :header})))
     (when (not= enc (keyword (str/lower-case (:enc header))))
       (throw (ex-info "The `enc` param mismatch with header value."
                       {:type :validation :cause :header})))
-
     {:alg alg
      :enc enc
      :zip (= (:zip header) "DEF")}))
@@ -89,9 +86,6 @@
     (if zip
       (deflate/compress data)
       data)))
-
-
-;; TODO: split validation from parsing
 
 (defn- parse-claims
   [^bytes claimsdata zip {:keys [max-age iss aud]}]

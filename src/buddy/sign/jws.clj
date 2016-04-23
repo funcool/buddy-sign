@@ -100,7 +100,7 @@
   (let [header (-> (b64/decode headerdata)
                    (codecs/bytes->str)
                    (json/parse-string true))]
-    (when (not= alg (keyword (str/lower-case (:alg header))))
+    (when (not= alg (keyword (str/lower-case (:alg header ""))))
       (throw (ex-info "The `alg` param is mismatched with the header value."
                       {:type :validation :cause :header})))
     {:alg alg}))
