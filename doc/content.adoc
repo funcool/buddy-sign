@@ -145,6 +145,8 @@ claims: *exp* (expiration time), *nbf* (not before), *iss* (issuer) and *aud*
 
 The validation is performed on decoding the token. If `:exp` claim is found and
 is posterior to the current date time (UTC) an validation exception will be raised.
+Alternatively, the time to validate token against can be specified as `:now`
+option to `unsign`.
 
 Let see an example using direct api:
 
@@ -163,6 +165,10 @@ Let see an example using direct api:
 
 (jws/unsign token "key")
 ;; => ExceptionInfo "Token is older than :exp (1427836475)"
+
+;; use timestamp in the past
+(jws/unsign token "key" {:now (time/minus (time/now) (time/seconds 5))})
+;; => {:user 1}
 ----
 
 
