@@ -28,57 +28,57 @@
 (def ec-privkey (keys/private-key "test/_files/privkey.ecdsa.pem" "secret"))
 (def ec-pubkey (keys/public-key "test/_files/pubkey.ecdsa.pem"))
 
+(defn- unsign-exp-succ
+  ([signed claims]
+   (unsign-exp-succ signed claims {}))
+  ([signed claims opt]
+   (is (= (jws/unsign signed secret) (merge claims opt)))))
+
 (defn- unsign-exp-fail
-  ([signed]
-   (unsign-exp-fail signed {}))
-  ([signed opts]
+  ([signed cause]
+   (unsign-exp-fail signed {} cause))
+  ([signed opts cause]
    (try
      (jws/unsign signed secret opts)
      (throw (Exception. "unexpected"))
      (catch clojure.lang.ExceptionInfo e
-       (:cause (ex-data e))))))
+       (is (= (:cause (ex-data e)) cause))))))
 
 (deftest jws-decode
   (let [candidate {:foo "bar"}
-        signed (jws/encode candidate secret)
-        unsigned (jws/decode signed secret)]
-    (is (= unsigned candidate))))
+        signed (jws/encode candidate secret)]
+    (unsign-exp-succ signed candidate)))
 
 (deftest jws-time-claims-validation
   (testing ":exp claim validation"
     (let [candidate {:foo "bar"}
           now       (util/timestamp)
           exp       (+ now 2)
-          signed    (jws/encode candidate secret {:exp exp})
-          unsigned  (jws/decode signed secret)]
+          signed    (jws/encode candidate secret {:exp exp})]
       (Thread/sleep 3000)
-      (is (= (unsign-exp-fail signed) :exp))))
+      (unsign-exp-fail signed :exp)))
 
   (testing ":nbf claim validation"
     (let [candidate {:foo "bar"}
           now       (util/timestamp)
           nbf       (+ now 2)
           signed    (jws/sign candidate secret {:nbf nbf})]
-      (is (= (unsign-exp-fail signed) :nbf))
-
+      (unsign-exp-fail signed :nbf)
       (Thread/sleep 3000)
-      (let [unsigned (jws/unsign signed secret)]
-        (is (= unsigned (assoc candidate :nbf nbf)))))))
+      (unsign-exp-succ signed candidate {:nbf nbf}))))
 
 (deftest jws-other-claims-validation
   (testing ":iss claim validation"
     (let [candidate {:foo "bar" :iss "foo:bar"}
-          signed    (jws/sign candidate secret)
-          unsigned  (jws/unsign signed secret)]
-      (is (= unsigned candidate))
-      (is (= (unsign-exp-fail signed {:iss "bar:foo"}) :iss))))
+          signed    (jws/sign candidate secret)]
+      (unsign-exp-succ signed candidate)
+      (unsign-exp-fail signed {:iss "bar:foo"} :iss)))
 
   (testing ":aud claim validation"
     (let [candidate {:foo "bar" :aud "foo:bar"}
-          signed    (jws/sign candidate secret)
-          unsigned  (jws/unsign signed secret)]
-      (is (= unsigned candidate))
-      (is (= (unsign-exp-fail signed {:aud "bar:foo"}) :aud)))))
+          signed    (jws/sign candidate secret)]
+      (unsign-exp-succ signed candidate)
+      (unsign-exp-fail signed {:aud "bar:foo"} :aud))))
 
 (deftest jws-hs256-sign-unsign
   (let [candidate {:foo "bar"}
@@ -132,19 +132,18 @@
 (deftest jws-wrong-key
   (let [candidate {:foo "bar"}
         result    (jws/sign candidate ec-privkey {:alg :es512})]
-    (is (= (unsign-exp-fail result) :header))))
+    (unsign-exp-fail result :header)))
 
 (deftest wrong-data
   ;; (str "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXUyJ9."
   ;;      "eyJmb28iOiJiYXIifQ."
   ;;      "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")
 
-  (is (= (unsign-exp-fail "xyz") :signature))
+  (unsign-exp-fail "xyz" :signature)
   (let [data (str "."
                   "eyJmb28iOiJiYXIifQ."
                   "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")]
-    (is (= (unsign-exp-fail data) :signature)))
+    (unsign-exp-fail data :signature))
   (let [data (str "eyJmb28iOiJiYXIifQ."
                   "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")]
-    (is (= (unsign-exp-fail data) :signature))))
-
+    (unsign-exp-fail data :signature)))
