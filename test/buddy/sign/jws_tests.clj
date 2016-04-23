@@ -28,6 +28,22 @@
 (def ec-privkey (keys/private-key "test/_files/privkey.ecdsa.pem" "secret"))
 (def ec-pubkey (keys/public-key "test/_files/pubkey.ecdsa.pem"))
 
+(defn- unsign-exp-fail
+  ([signed]
+   (unsign-exp-fail signed {}))
+  ([signed opts]
+   (try
+     (jws/unsign signed secret opts)
+     (throw (Exception. "unexpected"))
+     (catch clojure.lang.ExceptionInfo e
+       (:cause (ex-data e))))))
+
+(deftest jws-decode
+  (let [candidate {:foo "bar"}
+        exp (+ (util/timestamp) 2)
+        signed (jws/encode candidate secret {:exp exp})
+        unsigned (jws/decode signed secret)]
+    (is (= unsigned (assoc candidate :exp exp)))))
 
 (deftest jws-time-claims-validation
   (testing ":exp claim validation"
@@ -36,55 +52,34 @@
           exp       (+ now 2)
           signed    (jws/encode candidate secret {:exp exp})
           unsigned  (jws/decode signed secret)]
-      (is (= unsigned (assoc candidate :exp exp)))
       (Thread/sleep 3000)
-      (try
-        (jws/unsign signed secret)
-        (throw (Exception. "unexpected"))
-        (catch clojure.lang.ExceptionInfo e
-          (let [cause (:cause (ex-data e))]
-            (is (= cause :exp)))))))
+      (is (= (unsign-exp-fail signed) :exp))))
 
   (testing ":nbf claim validation"
     (let [candidate {:foo "bar"}
           now       (util/timestamp)
           nbf       (+ now 2)
           signed    (jws/sign candidate secret {:nbf nbf})]
-      (try
-        (jws/unsign signed secret)
-        (throw (Exception. "unexpected"))
-        (catch clojure.lang.ExceptionInfo e
-          (let [cause (:cause (ex-data e))]
-            (is (= cause :nbf)))))
+      (is (= (unsign-exp-fail signed) :nbf))
 
       (Thread/sleep 3000)
       (let[unsigned  (jws/unsign signed secret)]
-        (is (= unsigned (assoc candidate :nbf nbf))))))
+        (is (= unsigned (assoc candidate :nbf nbf)))))))
 
+(deftest jws-other-claims-validation
   (testing ":iss claim validation"
     (let [candidate {:foo "bar" :iss "foo:bar"}
           signed    (jws/sign candidate secret)
           unsigned  (jws/unsign signed secret)]
       (is (= unsigned candidate))
-      (try
-        (jws/unsign signed secret {:iss "bar:foo"})
-        (throw (Exception. "unexpected"))
-        (catch clojure.lang.ExceptionInfo e
-          (let [cause (:cause (ex-data e))]
-            (is (= cause :iss)))))))
+      (is (= (unsign-exp-fail signed {:iss "bar:foo"}) :iss))))
 
   (testing ":aud claim validation"
     (let [candidate {:foo "bar" :aud "foo:bar"}
           signed    (jws/sign candidate secret)
           unsigned  (jws/unsign signed secret)]
       (is (= unsigned candidate))
-      (try
-        (jws/unsign signed secret {:aud "bar:foo"})
-        (throw (Exception. "unexpected"))
-        (catch clojure.lang.ExceptionInfo e
-          (let [cause (:cause (ex-data e))]
-            (is (= cause :aud)))))))
-  )
+      (is (= (unsign-exp-fail signed {:aud "bar:foo"}) :aud)))))
 
 (deftest jws-hs256-sign-unsign
   (let [candidate {:foo "bar"}
@@ -138,44 +133,19 @@
 (deftest jws-wrong-key
   (let [candidate {:foo "bar"}
         result    (jws/sign candidate ec-privkey {:alg :es512})]
-    (try
-      (jws/unsign result secret)
-      (throw (Exception. "unexpected"))
-      (catch clojure.lang.ExceptionInfo e
-        (let [cause (:cause (ex-data e))]
-          (is (= cause :header)))))))
+    (is (= (unsign-exp-fail result) :header))))
 
 (deftest wrong-data
-  ;; Just wrong data
-  (try
-    (jws/unsign "xyz" secret)
-    (throw (Exception. "unexpected"))
-    (catch clojure.lang.ExceptionInfo e
-      (let [cause (:cause (ex-data e))]
-        (is (= cause :signature)))))
-
   ;; (str "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXUyJ9."
   ;;      "eyJmb28iOiJiYXIifQ."
   ;;      "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")
 
-  ;; tramped header
+  (is (= (unsign-exp-fail "xyz") :signature))
   (let [data (str "."
                   "eyJmb28iOiJiYXIifQ."
                   "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")]
-    (try
-      (jws/unsign data secret)
-      (throw (Exception. "unexpected"))
-      (catch clojure.lang.ExceptionInfo e
-        (let [cause (:cause (ex-data e))]
-          (is (= cause :header))))))
-
-  ;; tramped header
+    (is (= (unsign-exp-fail data) :signature)))
   (let [data (str "eyJmb28iOiJiYXIifQ."
                   "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")]
-    (try
-      (jws/unsign data secret)
-      (throw (Exception. "unexpected"))
-      (catch clojure.lang.ExceptionInfo e
-        (let [cause (:cause (ex-data e))]
-          (is (= cause :header))))))
-  )
+    (is (= (unsign-exp-fail data) :signature))))
+
