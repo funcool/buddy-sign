@@ -62,7 +62,7 @@
       (is (= (unsign-exp-fail signed) :nbf))
 
       (Thread/sleep 3000)
-      (let[unsigned  (jws/unsign signed secret)]
+      (let [unsigned (jws/unsign signed secret)]
         (is (= unsigned (assoc candidate :nbf nbf)))))))
 
 (deftest jws-other-claims-validation
