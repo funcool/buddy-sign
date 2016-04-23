@@ -107,11 +107,11 @@
 
 (defn- parse-claims
   "Parse jws claims"
-  [^String claimsdata {:keys [max-age iss aud]}]
+  [^String claimsdata {:keys [max-age iss aud now]}]
   (let [claims (-> (b64/decode claimsdata)
                    (codecs/bytes->str)
                    (json/parse-string true))
-        now (util/timestamp)]
+        now (or now (util/timestamp))]
     (when (and iss (not= iss (:iss claims)))
       (throw (ex-info (str "Issuer does not match " iss)
                       {:type :validation :cause :iss})))

@@ -31,13 +31,13 @@
 (defn- unsign-exp-succ
   ([signed claims]
    (unsign-exp-succ signed claims {}))
-  ([signed claims opt]
-   (is (= (jws/unsign signed secret) (merge claims opt)))))
+  ([signed claims opts]
+   (is (= (jws/unsign signed secret opts) claims))))
 
 (defn- unsign-exp-fail
   ([signed cause]
-   (unsign-exp-fail signed {} cause))
-  ([signed opts cause]
+   (unsign-exp-fail signed cause {}))
+  ([signed cause opts]
    (try
      (jws/unsign signed secret opts)
      (throw (Exception. "unexpected"))
@@ -50,35 +50,40 @@
     (unsign-exp-succ signed candidate)))
 
 (deftest jws-time-claims-validation
-  (testing ":exp claim validation"
+  (testing "current time claims validation"
     (let [candidate {:foo "bar"}
           now       (util/timestamp)
-          exp       (+ now 2)
-          signed    (jws/encode candidate secret {:exp exp})]
-      (Thread/sleep 3000)
-      (unsign-exp-fail signed :exp)))
+          claims    {:iat now :nbf now :exp (+ now 60)}
+          signed    (jws/sign candidate secret claims)]
+      (unsign-exp-succ signed (merge candidate claims))))
+
+  (testing ":exp claim validation"
+    (let [candidate {:foo "bar"}
+          signed    (jws/encode candidate secret {:exp 10})]
+      (unsign-exp-succ signed (assoc candidate :exp 10) {:now 0})
+      (unsign-exp-succ signed (assoc candidate :exp 10) {:now 9})
+      (unsign-exp-fail signed :exp {:now 11}))
 
   (testing ":nbf claim validation"
     (let [candidate {:foo "bar"}
-          now       (util/timestamp)
-          nbf       (+ now 2)
-          signed    (jws/sign candidate secret {:nbf nbf})]
-      (unsign-exp-fail signed :nbf)
-      (Thread/sleep 3000)
-      (unsign-exp-succ signed candidate {:nbf nbf}))))
+          signed    (jws/sign candidate secret {:nbf 10})]
+      (unsign-exp-fail signed :nbf {:now 0})
+      (unsign-exp-fail signed :nbf {:now 9})
+      (unsign-exp-succ signed (assoc candidate :nbf 10) {:now 10})
+      (unsign-exp-succ signed (assoc candidate :nbf 10) {:now 11})))))
 
 (deftest jws-other-claims-validation
   (testing ":iss claim validation"
     (let [candidate {:foo "bar" :iss "foo:bar"}
           signed    (jws/sign candidate secret)]
       (unsign-exp-succ signed candidate)
-      (unsign-exp-fail signed {:iss "bar:foo"} :iss)))
+      (unsign-exp-fail signed :iss {:iss "bar:foo"})))
 
   (testing ":aud claim validation"
     (let [candidate {:foo "bar" :aud "foo:bar"}
           signed    (jws/sign candidate secret)]
       (unsign-exp-succ signed candidate)
-      (unsign-exp-fail signed {:aud "bar:foo"} :aud))))
+      (unsign-exp-fail signed :aud {:aud "bar:foo"}))))
 
 (deftest jws-hs256-sign-unsign
   (let [candidate {:foo "bar"}
