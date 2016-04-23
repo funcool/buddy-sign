@@ -1,6 +1,6 @@
 = buddy-sign - High level message signing.
 Andrey Antukh, <niwi@niwi.be>
-0.12.0
+0.13.0
 :toc: left
 :!numbered:
 :source-highlighter: pygments
@@ -45,7 +45,7 @@ dependency vector on your *_project.clj_* file:
 
 [source,clojure]
 ----
-[buddy/buddy-sign "0.12.0"]
+[buddy/buddy-sign "0.13.0"]
 ----
 
 And is tested under JDK7 and JDK8.
@@ -296,11 +296,13 @@ incoming token will come with content encryption algorithm stored in its header 
 === Claims validation
 
 _buddy-sign_ json web encryption, like *jws*, also implements validation of a
-concrete subset of claims: *exp* (expiration time), *nbf* (not before), *iss*
-(issuer) and *aud* (audience).
+concrete subset of claims: *iat* (issue time), *exp* (expiration time),
+*nbf* (not before), *iss* (issuer) and *aud* (audience).
 
 The validation is performed on decoding the token. If `:exp` claim is found and
 is posterior to the current date time (UTC) an validation exception will be raised.
+Alternatively, the time to validate token against can be specified as `:now`
+option to `decrypt`.
 
 Let see an example using direct api:
 
