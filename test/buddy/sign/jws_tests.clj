@@ -57,6 +57,14 @@
           signed    (jws/sign candidate secret claims)]
       (unsign-exp-succ signed (merge candidate claims))))
 
+  (testing ":iat claim validation"
+    (let [candidate {:foo "bar"}
+          signed    (jws/encode candidate secret {:iat 10})]
+      (unsign-exp-fail signed :iat {:now 0})
+      (unsign-exp-fail signed :iat {:now 9})
+      (unsign-exp-succ signed (assoc candidate :iat 10) {:now 10})
+      (unsign-exp-succ signed (assoc candidate :iat 10) {:now 11})))
+
   (testing ":exp claim validation"
     (let [candidate {:foo "bar"}
           signed    (jws/encode candidate secret {:exp 10})]
