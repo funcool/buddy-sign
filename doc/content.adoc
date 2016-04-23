@@ -140,8 +140,8 @@ function from `buddy.sign.jws` namespace:
 === Claims validation
 
 _buddy-sign_ json web signature implements validation of a concrete subset of
-claims: *exp* (expiration time), *nbf* (not before), *iss* (issuer) and *aud*
-(audience).
+claims: *iat* (issue time), *exp* (expiration time), *nbf* (not before), *iss*
+(issuer) and *aud* (audience).
 
 The validation is performed on decoding the token. If `:exp` claim is found and
 is posterior to the current date time (UTC) an validation exception will be raised.
