@@ -110,29 +110,9 @@
 (defn- parse-claims
   "Parse jws claims"
   [^String claimsdata {:keys [max-age iss aud now]}]
-  (let [claims (-> (b64/decode claimsdata)
-                   (codecs/bytes->str)
-                   (json/parse-string true))
-        now (or now (util/timestamp))]
-    (when (and iss (not= iss (:iss claims)))
-      (throw (ex-info (str "Issuer does not match " iss)
-                      {:type :validation :cause :iss})))
-    (when (and aud (not= aud (:aud claims)))
-      (throw (ex-info (str "Audience does not match " aud)
-                      {:type :validation :cause :aud})))
-    (when (and (:exp claims) (>= now (:exp claims)))
-      (throw (ex-info (format "Token is expired (%s)" (:exp claims))
-                      {:type :validation :cause :exp})))
-    (when (and (:nbf claims) (< now (:nbf claims)))
-      (throw (ex-info (format "Token is not yet valid (%s)" (:nbf claims))
-                      {:type :validation :cause :nbf})))
-    (when (and (:iat claims) (< now (:iat claims)))
-      (throw (ex-info (format "Token is from the future (%s)" (:iat claims))
-                      {:type :validation :cause :iat})))
-    (when (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
-      (throw (ex-info (format "Token is older than max-age (%s)" max-age)
-                      {:type :validation :cause :max-age})))
-    claims))
+  (-> (b64/decode claimsdata)
+      (codecs/bytes->str)
+      (json/parse-string true)))
 
 (defn- calculate-signature
   "Given the bunch of bytes, a private key and algorithm,
