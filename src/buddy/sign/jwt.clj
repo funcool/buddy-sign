@@ -64,10 +64,14 @@
 (defn get-claims-jws
   ([message pkey] (get-claims-jws message pkey {}))
   ([message pkey opts]
-   (-> message 
-       (jws/unsign pkey opts)
-       (json/parse-string true)
-       (validate-claims opts))))
+   (try 
+     (-> message 
+         (jws/unsign pkey opts)
+         (json/parse-string true)
+         (validate-claims opts))
+     (catch com.fasterxml.jackson.core.JsonParseException e
+       (throw (ex-info "Message seems corrupt or manipulated."
+                       {:type :validation :cause :signature}))))))
 
 
 (defn make-jws
@@ -78,4 +82,5 @@
                          (prepare-claims opts)
                          (json/generate-string))]
      (jws/sign jws-payload pkey (merge opts {:typ "JWT" :serialize-json? false})))))
+
 

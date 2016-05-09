@@ -116,3 +116,13 @@
 (deftest claims-must-be-map
   (is (thrown? AssertionError (jwt/make-jws "qwe" mac-secret {:alg :hs256}))
       "claims should be a map"))
+
+(deftest no-json-payload
+  (let [jws (jws/sign "foobar" mac-secret {:alg :hs256})]
+    (try
+      (jwt/get-claims-jws jws mac-secret {:alg :hs256})
+      (is false "get-claims-jws should throw")
+      (catch clojure.lang.ExceptionInfo e
+        (is (= (:cause (ex-data e)) :signature))))))
+
+
