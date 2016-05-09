@@ -45,105 +45,72 @@
        (is (= (:cause (ex-data e)) cause))))))
 
 (deftest jws-decode
-  (let [candidate {:foo "bar"}
+  (let [candidate "foo bar"
         signed (jws/encode candidate secret)]
     (unsign-exp-succ signed candidate)))
 
-(deftest jws-time-claims-validation
-  (testing "current time claims validation"
-    (let [now       (util/timestamp)
-          candidate {:foo "bar" :iat now :nbf now :exp (+ now 60)}
-          signed    (jws/sign candidate secret)]
-      (unsign-exp-succ signed candidate)))
+(deftest jws-decode-header
+  (let [claims {:foo "bar"}
+        signed (jws/sign claims secret {:typ "FOO" :alg :hs256})
+        header (jws/decode-header signed {:alg :hs256})]
+    (is (= header {:typ "FOO" :alg :hs256}))))
 
-  (testing ":iat claim validation"
-    (let [candidate {:foo "bar" :iat 10}
-          signed    (jws/encode candidate secret)]
-      (unsign-exp-fail signed :iat {:now 0})
-      (unsign-exp-fail signed :iat {:now 9})
-      (unsign-exp-succ signed candidate {:now 10})
-      (unsign-exp-succ signed candidate {:now 11})))
-
-  (testing ":exp claim validation"
-    (let [candidate {:foo "bar" :exp 10}
-          signed    (jws/encode candidate secret)]
-      (unsign-exp-succ signed candidate {:now 0})
-      (unsign-exp-succ signed candidate {:now 9})
-      (unsign-exp-fail signed :exp {:now 10})
-      (unsign-exp-fail signed :exp {:now 11})))
-
-  (testing ":nbf claim validation"
-    (let [candidate {:foo "bar" :nbf 10}
-          signed    (jws/sign candidate secret)]
-      (unsign-exp-fail signed :nbf {:now 0})
-      (unsign-exp-fail signed :nbf {:now 9})
-      (unsign-exp-succ signed candidate {:now 10})
-      (unsign-exp-succ signed candidate {:now 11}))))
-
-(deftest jws-other-claims-validation
-  (testing ":iss claim validation"
-    (let [candidate {:foo "bar" :iss "foo:bar"}
-          signed    (jws/sign candidate secret)]
-      (unsign-exp-succ signed candidate)
-      (unsign-exp-fail signed :iss {:iss "bar:foo"})))
-
-  (testing ":aud claim validation"
-    (let [candidate {:foo "bar" :aud "foo:bar"}
-          signed    (jws/sign candidate secret)]
-      (unsign-exp-succ signed candidate)
-      (unsign-exp-fail signed :aud {:aud "bar:foo"}))))
+(deftest jws-decode-arbitrary-data
+  (let [candidate "foo"
+        signed (jws/encode candidate secret)]
+    (unsign-exp-succ signed candidate)))
 
 (deftest jws-hs256-sign-unsign
-  (let [candidate {:foo "bar"}
+  (let [candidate "foo bar "
         result    (jws/sign candidate secret {:alg :hs256})
         result'   (jws/unsign result secret {:alg :hs256})]
     (is (= result' candidate))))
 
 (deftest jws-hs512-sign-unsign
-  (let [candidate {:foo "bar"}
+  (let [candidate "foo bar "
         result    (jws/sign candidate secret {:alg :hs512})
         result'   (jws/unsign result secret {:alg :hs512})]
     (is (= result' candidate))))
 
 (deftest jws-rs256-sign-unsign
-  (let [candidate {:foo "bar"}
+  (let [candidate "foo bar "
         result    (jws/sign candidate rsa-privkey {:alg :rs256})
         result'   (jws/unsign result rsa-pubkey {:alg :rs256})]
     (is (= result' candidate))))
 
 (deftest jws-rs512-sign-unsign
-  (let [candidate {:foo "bar"}
+  (let [candidate "foo bar "
         result    (jws/sign candidate rsa-privkey {:alg :rs512})
         result'   (jws/unsign result rsa-pubkey {:alg :rs512})]
     (is (= result' candidate))))
 
 
 (deftest jws-ps256-sign-unsign
-  (let [candidate {:foo "bar"}
+  (let [candidate "foo bar "
         result    (jws/sign candidate rsa-privkey {:alg :ps256})
         result'   (jws/unsign result rsa-pubkey {:alg :ps256})]
     (is (= result' candidate))))
 
 (deftest jws-ps512-sign-unsign
-  (let [candidate {:foo "bar"}
+  (let [candidate "foo bar "
         result    (jws/sign candidate rsa-privkey {:alg :ps512})
         result'   (jws/unsign result rsa-pubkey {:alg :ps512})]
     (is (= result' candidate))))
 
 (deftest jws-es256-sign-unsign
-  (let [candidate {:foo "bar"}
+  (let [candidate "foo bar "
         result    (jws/sign candidate ec-privkey {:alg :es256})
         result'   (jws/unsign result ec-pubkey {:alg :es256})]
     (is (= result' candidate))))
 
 (deftest jws-es512-sign-unsign
-  (let [candidate {:foo "bar"}
+  (let [candidate "foo bar "
         result    (jws/sign candidate ec-privkey {:alg :es512})
         result'   (jws/unsign result ec-pubkey {:alg :es512})]
     (is (= result' candidate))))
 
 (deftest jws-wrong-key
-  (let [candidate {:foo "bar"}
+  (let [candidate "foo bar "
         result    (jws/sign candidate ec-privkey {:alg :es512})]
     (unsign-exp-fail result :header)))
 
