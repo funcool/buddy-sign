@@ -144,7 +144,7 @@
   "Given a signed message, verify it and return
   the decoded payload."
   ([input pkey] (unsign input pkey {}))
-  ([input pkey {:keys [expect-json?] :or {expect-json? true} :as opts}]
+  ([input pkey opts]
    (try
      (let [[header payload signature] (split-jws-message input)
            {:keys [alg]} (decode-header input opts)
