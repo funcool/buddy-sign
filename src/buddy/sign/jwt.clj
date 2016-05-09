@@ -67,7 +67,7 @@
    (-> message 
        (jws/unsign pkey opts)
        (json/parse-string true)
-       (validate-claims (merge opts {:expect-json? false})))))
+       (validate-claims opts))))
 
 
 (defn make-jws
