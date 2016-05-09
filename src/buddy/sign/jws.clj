@@ -180,7 +180,7 @@
   "Given a signed message, verify it and return
   the decoded claims."
   ([input pkey] (unsign input pkey {}))
-  ([input pkey opts]
+  ([input pkey {:keys [expect-json] :or {expect-json true} :as opts}]
    (try
      (let [[header payload signature] (split-jws-message input)
            {:keys [alg]} (decode-header input opts)
@@ -190,7 +190,7 @@
          (throw (ex-info "Message seems corrupt or manipulated."
                          {:type :validation :cause :signature})))
        (let [decoded-payload (decode-payload payload)]
-         (if (= (first decoded-payload) \{)
+         (if expect-json
            (parse-claims payload opts)
            decoded-payload)))
      (catch com.fasterxml.jackson.core.JsonParseException e
