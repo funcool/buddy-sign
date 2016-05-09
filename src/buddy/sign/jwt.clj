@@ -64,7 +64,9 @@
 (defn get-claims-jws
   ([message pkey] (get-claims-jws message pkey {}))
   ([message pkey opts]
-   (-> (jws/unsign message pkey opts)
+   (-> message 
+       (jws/unsign pkey opts)
+       (json/parse-string true)
        (validate-claims (merge opts {:expect-json? false})))))
 
 
