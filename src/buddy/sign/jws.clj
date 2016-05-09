@@ -79,17 +79,17 @@
         (b64/encode true)
         (codecs/bytes->str))))
 
-(defn- encode-claims
-  "Encode jws claims."
-  [input opts]
+(defn- augment-claims [claims opts]
   (let [additionalclaims (-> (select-keys opts [:exp :nbf :iat :iss :aud])
                              (normalize-nil-claims)
                              (normalize-date-claims))]
-    (-> (normalize-date-claims input)
-        (merge additionalclaims)
-        (json/generate-string)
-        (b64/encode true)
-        (codecs/bytes->str))))
+    (-> (normalize-date-claims claims)
+        (merge additionalclaims))))
+
+(defn- encode-payload [input]
+  (-> input
+      (b64/encode true)
+      (codecs/bytes->str)))
 
 (defn- parse-header
   "Parse jws header."
@@ -107,19 +107,24 @@
       (cond-> {:alg alg}
         typ (assoc :typ typ)))))
 
+(defn- decode-payload [payload]
+  (-> payload 
+      (b64/decode)
+      (codecs/bytes->str)))
+
 (defn- parse-claims
   "Parse jws claims"
-  [^String claimsdata {:keys [max-age iss aud now]}]
-  (-> (b64/decode claimsdata)
-      (codecs/bytes->str)
+  [^String payload _]
+  (-> payload
+      (decode-payload)
       (json/parse-string true)))
 
 (defn- calculate-signature
   "Given the bunch of bytes, a private key and algorithm,
   return a calculated signature as byte array."
-  [{:keys [key alg header claims]}]
+  [{:keys [key alg header payload]}]
   (let [signer (get-in *signers-map* [alg :signer])
-        authdata (str/join "." [header claims])]
+        authdata (str/join "." [header payload])]
     (-> (signer authdata key)
         (b64/encode true)
         (codecs/bytes->str))))
@@ -128,15 +133,18 @@
   "Given a bunch of bytes, a previously generated
   signature, the private key and algorithm, return
   signature matches or not."
-  [{:keys [alg signature key header claims]}]
+  [{:keys [alg signature key header payload]}]
   (let [verifier (get-in *signers-map* [alg :verifier])
-        authdata (str/join "." [header claims])]
+        authdata (str/join "." [header payload])]
     (verifier authdata signature key)))
 
 
 (defn- split-jws-message [message]
   (str/split message #"\." 3))
 
+(defn- serialize-payload [payload opts]
+  (cond (map? payload) (json/generate-string (augment-claims payload opts)) ;backward compatible special case
+        :else (.toString payload)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
@@ -147,15 +155,15 @@
   json web token/signature."
   ;; The exp nbf and iat keys in the options are deprecated
   ;; and will be removed in the next version.
-  [claims pkey & [{:keys [alg typ] :or {alg :hs256 typ :jws} :as opts}]]
-  {:pre [(map? claims)]}
+  [payload pkey & [{:keys [alg typ] :or {alg :hs256 typ :jws} :as opts}]]
+  {:pre [payload]}
   (let [header (encode-header alg typ)
-        claims (encode-claims claims opts)
+        payload (-> payload (serialize-payload opts) (encode-payload))
         signature (calculate-signature {:key pkey
                                         :alg alg
                                         :header header
-                                        :claims claims})]
-    (str/join "." [header claims signature])))
+                                        :payload payload})]
+    (str/join "." [header payload signature])))
 
 (defn decode-header
   "Given a message, decode the header"
@@ -174,14 +182,17 @@
   ([input pkey] (unsign input pkey {}))
   ([input pkey opts]
    (try
-     (let [[header claims signature] (split-jws-message input)
+     (let [[header payload signature] (split-jws-message input)
            {:keys [alg]} (decode-header input opts)
            signature (b64/decode signature)]
        (when-not (verify-signature {:key pkey :signature signature
-                                    :alg alg :header header :claims claims})
+                                    :alg alg :header header :payload payload})
          (throw (ex-info "Message seems corrupt or manipulated."
                          {:type :validation :cause :signature})))
-       (parse-claims claims opts))
+       (let [decoded-payload (decode-payload payload)]
+         (if (= (first decoded-payload) \{)
+           (parse-claims payload opts)
+           decoded-payload)))
      (catch com.fasterxml.jackson.core.JsonParseException e
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature}))))))

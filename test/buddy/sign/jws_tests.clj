@@ -55,6 +55,11 @@
         header (jws/decode-header signed {:alg :hs256})]
     (is (= header {:typ "FOO" :alg :hs256}))))
 
+(deftest jws-decode-arbitrary-data
+  (let [candidate "foo"
+        signed (jws/encode candidate secret)]
+    (unsign-exp-succ signed candidate)))
+
 (deftest jws-hs256-sign-unsign
   (let [candidate {:foo "bar"}
         result    (jws/sign candidate secret {:alg :hs256})
