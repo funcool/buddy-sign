@@ -42,6 +42,17 @@
         returned-claims (jwt/get-claims-jws signed mac-secret {:alg :hs256})]
     (is (= returned-claims claims) "decoded claims must match up to original"))) 
 
+(deftest jwt-jws-encode
+  (let [claims {:aud "buddy"}
+        jwt (jwt/make-jws claims mac-secret {:alg :hs256})]
+    (testing "round trip"
+      (let [returned-claims (jwt/get-claims-jws jwt mac-secret {:alg :hs256})]
+            (is (= returned-claims claims) "claims should match")))
+    (testing "JWT typ in JOSE Header"
+      (let [header (jws/decode-header jwt {:alg :hs256})]
+        (is (= "JWT" (:typ header)) "typ header not found")))))
+
+
 (defn test-claims-validation [make-jwt-fn get-claims-fn]
   (let [unsign-exp-succ (partial unsign-exp-succ get-claims-fn)
         unsign-exp-fail (partial unsign-exp-fail get-claims-fn)]

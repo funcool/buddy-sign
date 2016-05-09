@@ -44,3 +44,8 @@
    (-> (jws/unsign message pkey opts)
        (validate-claims opts))))
 
+(defn make-jws
+  ([claims pkey] (make-jws claims pkey {}))
+  ([claims pkey opts]
+   (jws/sign claims pkey (merge opts {:typ "JWT"}))))
+
