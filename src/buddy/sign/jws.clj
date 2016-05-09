@@ -48,24 +48,6 @@
            :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha512 :key %3})}})
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Helpers
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn normalize-date-claims
-  "Normalize date related claims and return transformed object."
-  [data]
-  (into {} (map (fn [[key val]]
-                  (if (satisfies? util/ITimestamp val)
-                    [key (util/to-timestamp val)]
-                    [key val])) data)))
-
-(defn normalize-nil-claims
-  "Given a raw headers, try normalize it removing any
-  key with null values."
-  [data]
-  (into {} (remove (comp nil? second) data)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation details
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -78,13 +60,6 @@
         (json/generate-string)
         (b64/encode true)
         (codecs/bytes->str))))
-
-(defn- augment-claims [claims opts]
-  (let [additionalclaims (-> (select-keys opts [:exp :nbf :iat :iss :aud])
-                             (normalize-nil-claims)
-                             (normalize-date-claims))]
-    (-> (normalize-date-claims claims)
-        (merge additionalclaims))))
 
 (defn- encode-payload [input]
   (-> input
@@ -112,13 +87,6 @@
       (b64/decode)
       (codecs/bytes->str)))
 
-(defn- parse-claims
-  "Parse jws claims"
-  [^String payload _]
-  (-> payload
-      (decode-payload)
-      (json/parse-string true)))
-
 (defn- calculate-signature
   "Given the bunch of bytes, a private key and algorithm,
   return a calculated signature as byte array."
@@ -142,11 +110,6 @@
 (defn- split-jws-message [message]
   (str/split message #"\." 3))
 
-(defn- serialize-payload [payload {:keys [serialize-json?] :or {serialize-json? true} :as opts}]
-  (cond 
-    ;(and serialize-json? (map? payload)) (json/generate-string (augment-claims payload opts)) ;backward compatible special case
-        :else (.toString payload)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -159,7 +122,7 @@
   [payload pkey & [{:keys [alg typ] :or {alg :hs256 typ :jws} :as opts}]]
   {:pre [payload]}
   (let [header (encode-header alg typ)
-        payload (-> payload (serialize-payload opts) (encode-payload))
+        payload (-> payload str (encode-payload))
         signature (calculate-signature {:key pkey
                                         :alg alg
                                         :header header
@@ -179,7 +142,7 @@
 
 (defn unsign
   "Given a signed message, verify it and return
-  the decoded claims."
+  the decoded payload."
   ([input pkey] (unsign input pkey {}))
   ([input pkey {:keys [expect-json?] :or {expect-json? true} :as opts}]
    (try
