@@ -16,7 +16,8 @@
   (:require [clojure.test :refer :all]
             [buddy.sign.jws :as jws]
             [buddy.sign.jwt :as jwt]
-            [buddy.sign.util :as util]))
+            [buddy.sign.util :as util]
+            [cheshire.core :as json]))
 
 (def mac-secret "mac-secret")
 
@@ -38,7 +39,7 @@
 
 (deftest jwt-jws-decode 
   (let [claims {:aud "buddy"}
-        signed (jws/sign claims mac-secret {:alg :hs256 :typ "JWT"})
+        signed (jwt/make-jws claims mac-secret {:alg :hs256})
         returned-claims (jwt/get-claims-jws signed mac-secret {:alg :hs256})]
     (is (= returned-claims claims) "decoded claims must match up to original"))) 
 
@@ -101,6 +102,6 @@
 (deftest jws-claims-validation
   (testing "claims validation for jws jwts"
     (test-claims-validation 
-      (fn [claims] (jws/sign claims mac-secret {:alg :hs256 :typ "JWT"}))
+      (fn [claims] (jwt/make-jws claims mac-secret {:alg :hs256}))
       (fn [message opts] 
         (jwt/get-claims-jws message mac-secret (merge {:alg :hs256} opts))))))

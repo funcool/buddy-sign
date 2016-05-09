@@ -143,7 +143,8 @@
   (str/split message #"\." 3))
 
 (defn- serialize-payload [payload {:keys [serialize-json?] :or {serialize-json? true} :as opts}]
-  (cond (and serialize-json? (map? payload)) (json/generate-string (augment-claims payload opts)) ;backward compatible special case
+  (cond 
+    ;(and serialize-json? (map? payload)) (json/generate-string (augment-claims payload opts)) ;backward compatible special case
         :else (.toString payload)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -170,7 +171,7 @@
   ([input] (decode-header input {}))
   ([input opts]
    (try 
-     (let [[header claims signature] (split-jws-message input)]
+     (let [[header _ _] (split-jws-message input)]
        (parse-header header opts))
      (catch com.fasterxml.jackson.core.JsonParseException e
        (throw (ex-info "Message seems corrupt or manipulated."
@@ -189,10 +190,7 @@
                                     :alg alg :header header :payload payload})
          (throw (ex-info "Message seems corrupt or manipulated."
                          {:type :validation :cause :signature})))
-       (let [decoded-payload (decode-payload payload)]
-         (if expect-json?
-           (parse-claims payload opts)
-           decoded-payload)))
+       (decode-payload payload))
      (catch com.fasterxml.jackson.core.JsonParseException e
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature}))))))
