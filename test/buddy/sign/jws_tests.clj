@@ -49,6 +49,12 @@
         signed (jws/encode candidate secret)]
     (unsign-exp-succ signed candidate)))
 
+(deftest jws-decode-header
+  (let [claims {:foo "bar"}
+        signed (jws/sign claims secret {:typ "FOO" :alg :hs256})
+        header (jws/decode-header signed {:alg :hs256})]
+    (is (= header {:typ "FOO" :alg :hs256}))))
+
 (deftest jws-time-claims-validation
   (testing "current time claims validation"
     (let [now       (util/timestamp)

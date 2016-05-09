@@ -103,7 +103,9 @@
     (when (not= alg (keyword (str/lower-case (:alg header ""))))
       (throw (ex-info "The `alg` param is mismatched with the header value."
                       {:type :validation :cause :header})))
-    {:alg alg}))
+    (let [{:keys [typ]} header]
+      (cond-> {:alg alg}
+        typ (assoc :typ typ)))))
 
 (defn- parse-claims
   "Parse jws claims"
@@ -151,6 +153,11 @@
         authdata (str/join "." [header claims])]
     (verifier authdata signature key)))
 
+
+(defn- split-jws-message [message]
+  (str/split message #"\." 3))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Public Api
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -170,14 +177,25 @@
                                         :claims claims})]
     (str/join "." [header claims signature])))
 
+(defn decode-header
+  "Given a message, decode the header"
+  ([input] (decode-header input {}))
+  ([input opts]
+   (try 
+     (let [[header claims signature] (split-jws-message input)]
+       (parse-header header opts))
+     (catch com.fasterxml.jackson.core.JsonParseException e
+       (throw (ex-info "Message seems corrupt or manipulated."
+                       {:type :validation :cause :signature}))))))
+
 (defn unsign
   "Given a signed message, verify it and return
   the decoded claims."
   ([input pkey] (unsign input pkey {}))
   ([input pkey opts]
    (try
-     (let [[header claims signature] (str/split input #"\." 3)
-           {:keys [alg]} (parse-header header opts)
+     (let [[header claims signature] (split-jws-message input)
+           {:keys [alg]} (decode-header input opts)
            signature (b64/decode signature)]
        (when-not (verify-signature {:key pkey :signature signature
                                     :alg alg :header header :claims claims})
