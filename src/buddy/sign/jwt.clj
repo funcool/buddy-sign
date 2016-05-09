@@ -73,6 +73,7 @@
 (defn make-jws
   ([claims pkey] (make-jws claims pkey {}))
   ([claims pkey opts]
+   {:pre [(map? claims)]}
    (let [jws-payload (-> claims
                          (prepare-claims opts)
                          (json/generate-string))]
