@@ -13,9 +13,34 @@
 ;; limitations under the License.
 
 (ns buddy.sign.jwt
-  (:require [buddy.sign.jws :as jws]))
+  (:require [buddy.sign.jws :as jws]
+            [buddy.sign.util :as util]))
+
+(defn validate-claims [claims {:keys [max-age iss aud now] :or
+                               {now (util/timestamp)}}]
+  (when (and iss (not= iss (:iss claims)))
+    (throw (ex-info (str "Issuer does not match " iss)
+                    {:type :validation :cause :iss})))
+  (when (and aud (not= aud (:aud claims)))
+    (throw (ex-info (str "Audience does not match " aud)
+                    {:type :validation :cause :aud})))
+  (when (and (:exp claims) (>= now (:exp claims)))
+    (throw (ex-info (format "Token is expired (%s)" (:exp claims))
+                    {:type :validation :cause :exp})))
+  (when (and (:nbf claims) (< now (:nbf claims)))
+    (throw (ex-info (format "Token is not yet valid (%s)" (:nbf claims))
+                    {:type :validation :cause :nbf})))
+  (when (and (:iat claims) (< now (:iat claims)))
+    (throw (ex-info (format "Token is from the future (%s)" (:iat claims))
+                    {:type :validation :cause :iat})))
+  (when (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
+    (throw (ex-info (format "Token is older than max-age (%s)" max-age)
+                    {:type :validation :cause :max-age})))
+  claims)
 
 (defn get-claims-jws
   ([message pkey] (get-claims-jws message pkey {}))
   ([message pkey opts]
-   (jws/unsign message pkey opts)))
+   (-> (jws/unsign message pkey opts)
+       (validate-claims opts))))
+

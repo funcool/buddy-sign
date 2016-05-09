@@ -55,50 +55,6 @@
         header (jws/decode-header signed {:alg :hs256})]
     (is (= header {:typ "FOO" :alg :hs256}))))
 
-(deftest jws-time-claims-validation
-  (testing "current time claims validation"
-    (let [now       (util/timestamp)
-          candidate {:foo "bar" :iat now :nbf now :exp (+ now 60)}
-          signed    (jws/sign candidate secret)]
-      (unsign-exp-succ signed candidate)))
-
-  (testing ":iat claim validation"
-    (let [candidate {:foo "bar" :iat 10}
-          signed    (jws/encode candidate secret)]
-      (unsign-exp-fail signed :iat {:now 0})
-      (unsign-exp-fail signed :iat {:now 9})
-      (unsign-exp-succ signed candidate {:now 10})
-      (unsign-exp-succ signed candidate {:now 11})))
-
-  (testing ":exp claim validation"
-    (let [candidate {:foo "bar" :exp 10}
-          signed    (jws/encode candidate secret)]
-      (unsign-exp-succ signed candidate {:now 0})
-      (unsign-exp-succ signed candidate {:now 9})
-      (unsign-exp-fail signed :exp {:now 10})
-      (unsign-exp-fail signed :exp {:now 11})))
-
-  (testing ":nbf claim validation"
-    (let [candidate {:foo "bar" :nbf 10}
-          signed    (jws/sign candidate secret)]
-      (unsign-exp-fail signed :nbf {:now 0})
-      (unsign-exp-fail signed :nbf {:now 9})
-      (unsign-exp-succ signed candidate {:now 10})
-      (unsign-exp-succ signed candidate {:now 11}))))
-
-(deftest jws-other-claims-validation
-  (testing ":iss claim validation"
-    (let [candidate {:foo "bar" :iss "foo:bar"}
-          signed    (jws/sign candidate secret)]
-      (unsign-exp-succ signed candidate)
-      (unsign-exp-fail signed :iss {:iss "bar:foo"})))
-
-  (testing ":aud claim validation"
-    (let [candidate {:foo "bar" :aud "foo:bar"}
-          signed    (jws/sign candidate secret)]
-      (unsign-exp-succ signed candidate)
-      (unsign-exp-fail signed :aud {:aud "bar:foo"}))))
-
 (deftest jws-hs256-sign-unsign
   (let [candidate {:foo "bar"}
         result    (jws/sign candidate secret {:alg :hs256})

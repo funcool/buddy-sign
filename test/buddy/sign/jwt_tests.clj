@@ -32,7 +32,7 @@
   ([get-claims-fn signed cause opts]
    (try
      (get-claims-fn signed opts)
-     (throw (Exception. "unexpected"))
+     (is false "get-claims-fn should throw")
      (catch clojure.lang.ExceptionInfo e
        (is (= (:cause (ex-data e)) cause))))))
 
@@ -88,6 +88,8 @@
         (unsign-exp-fail signed :aud {:aud "bar:foo"})))))
 
 (deftest jws-claims-validation
-  (test-claims-validation (fn [claims] (jws/sign claims mac-secret {:alg :hs256 :typ "JWT"}))
-                          (fn [message opts] 
-                            (jwt/get-claims-jws message mac-secret (merge {:alg :hs256} opts)))))
+  (testing "claims validation for jws jwts"
+    (test-claims-validation 
+      (fn [claims] (jws/sign claims mac-secret {:alg :hs256 :typ "JWT"}))
+      (fn [message opts] 
+        (jwt/get-claims-jws message mac-secret (merge {:alg :hs256} opts))))))
