@@ -39,6 +39,24 @@
            java.nio.ByteBuffer))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Helpers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn normalize-date-claims
+  "Normalize date related claims and return transformed object."
+  [data]
+  (into {} (map (fn [[key val]]
+                  (if (satisfies? util/ITimestamp val)
+                    [key (util/to-timestamp val)]
+                    [key val])) data)))
+
+(defn normalize-nil-claims
+  "Given a raw headers, try normalize it removing any
+  key with null values."
+  [data]
+  (into {} (remove (comp nil? second) data)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Implementation details
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -77,9 +95,9 @@
 (defn- encode-claims
   [claims zip opts]
   (let [additional (-> (select-keys opts [:exp :nbf :iat :iss :aud])
-                       (jws/normalize-nil-claims)
-                       (jws/normalize-date-claims))
-        data (-> (jws/normalize-date-claims claims)
+                       (normalize-nil-claims)
+                       (normalize-date-claims))
+        data (-> (normalize-date-claims claims)
                  (merge additional)
                  (json/generate-string)
                  (codecs/to-bytes))]
