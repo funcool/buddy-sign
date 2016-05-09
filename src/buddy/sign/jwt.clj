@@ -14,9 +14,10 @@
 
 (ns buddy.sign.jwt
   (:require [buddy.sign.jws :as jws]
-            [buddy.sign.util :as util]))
+            [buddy.sign.util :as util]
+            [cheshire.core :as json]))
 
-(defn validate-claims [claims {:keys [max-age iss aud now] :or
+(defn- validate-claims [claims {:keys [max-age iss aud now] :or
                                {now (util/timestamp)}}]
   (when (and iss (not= iss (:iss claims)))
     (throw (ex-info (str "Issuer does not match " iss)
@@ -38,14 +39,40 @@
                     {:type :validation :cause :max-age})))
   claims)
 
+(defn- normalize-date-claims
+  "Normalize date related claims and return transformed object."
+  [data]
+  (into {} (map (fn [[key val]]
+                  (if (satisfies? util/ITimestamp val)
+                    [key (util/to-timestamp val)]
+                    [key val])) data)))
+
+(defn- normalize-nil-claims
+  "Given a raw headers, try normalize it removing any
+  key with null values."
+  [data]
+  (into {} (remove (comp nil? second) data)))
+
+(defn- prepare-claims [claims opts]
+  (let [additionalclaims (-> (select-keys opts [:exp :nbf :iat :iss :aud])
+                             (normalize-nil-claims)
+                             (normalize-date-claims))]
+    (-> (normalize-date-claims claims)
+        (merge additionalclaims))))
+
+
 (defn get-claims-jws
   ([message pkey] (get-claims-jws message pkey {}))
   ([message pkey opts]
    (-> (jws/unsign message pkey opts)
-       (validate-claims opts))))
+       (validate-claims (merge opts {:expect-json? false})))))
+
 
 (defn make-jws
   ([claims pkey] (make-jws claims pkey {}))
   ([claims pkey opts]
-   (jws/sign claims pkey (merge opts {:typ "JWT"}))))
+   (let [jws-payload (-> claims
+                         (prepare-claims opts)
+                         (json/generate-string))]
+     (jws/sign jws-payload pkey (merge opts {:typ "JWT" :serialize-json? false})))))
 

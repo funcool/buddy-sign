@@ -58,7 +58,7 @@
 (deftest jws-decode-arbitrary-data
   (let [candidate "foo"
         signed (jws/encode candidate secret)]
-    (unsign-exp-succ signed candidate {:expect-json false})))
+    (unsign-exp-succ signed candidate {:expect-json? false})))
 
 (deftest jws-hs256-sign-unsign
   (let [candidate {:foo "bar"}
