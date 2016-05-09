@@ -145,18 +145,14 @@
   the decoded payload."
   ([input pkey] (unsign input pkey {}))
   ([input pkey opts]
-   (try
-     (let [[header payload signature] (split-jws-message input)
-           {:keys [alg]} (decode-header input opts)
-           signature (b64/decode signature)]
-       (when-not (verify-signature {:key pkey :signature signature
-                                    :alg alg :header header :payload payload})
-         (throw (ex-info "Message seems corrupt or manipulated."
-                         {:type :validation :cause :signature})))
-       (decode-payload payload))
-     (catch com.fasterxml.jackson.core.JsonParseException e
+   (let [[header payload signature] (split-jws-message input)
+         {:keys [alg]} (decode-header input opts)
+         signature (b64/decode signature)]
+     (when-not (verify-signature {:key pkey :signature signature
+                                  :alg alg :header header :payload payload})
        (throw (ex-info "Message seems corrupt or manipulated."
-                       {:type :validation :cause :signature}))))))
+                       {:type :validation :cause :signature})))
+     (decode-payload payload))))
 
 (util/defalias encode sign)
 (util/defalias decode unsign)
