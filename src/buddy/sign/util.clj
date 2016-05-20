@@ -13,35 +13,62 @@
 ;; limitations under the License.
 
 (ns buddy.sign.util
-  (:require [buddy.core.codecs :as codecs]
-            [clj-time.coerce :as coerce]
-            [clj-time.core :as time]))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Utils protocols related to time checking
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (:require [buddy.core.codecs :as codecs]))
 
 (defprotocol ITimestamp
   "Default protocol for convert any type to
   unix timestamp in UTC."
   (to-timestamp [obj] "Covert to timestamp"))
 
-(extend-protocol ITimestamp
-  java.util.Date
+(extend-type java.util.Date
+  ITimestamp
   (to-timestamp [obj]
-    (let [date (coerce/from-date obj)]
-      (quot (coerce/to-long date) 1000)))
+    (-> (.getTime ^java.util.Date obj)
+        (quot 1000))))
 
-  org.joda.time.DateTime
-  (to-timestamp [obj]
-    (let [date (time/to-time-zone obj time/utc)]
-      (quot (coerce/to-long date) 1000))))
+(defmacro ^:private apply-jodatime-extensions
+  []
+  (try
+    (Class/forName "org.joda.time.DateTime")
+    (Class/forName "org.joda.time.Instant")
 
-(defn timestamp
+    `(extend-protocol ITimestamp
+       org.joda.time.DateTime
+       (to-timestamp [obj#]
+         (-> (.getMillis ^org.joda.time.DateTime obj#)
+             (quot 1000)))
+
+       org.joda.time.Instant
+       (to-timestamp [obj#]
+         (-> (.getMillis ^org.joda.time.Instant obj#)
+             (quot 1000))))
+    (catch ClassNotFoundException e
+      ;; pass
+      )))
+
+(defmacro ^:private apply-jdk8-extensions
+  []
+  (try
+    (Class/forName "java.time.Instant")
+    `(extend-protocol ITimestamp
+       java.time.Instant
+       (to-timestamp [obj#]
+         (.getEpochSecond ^java.time.Instant obj#)))
+    (catch ClassNotFoundException e
+      ;; pass
+      )))
+
+(apply-jodatime-extensions)
+(apply-jdk8-extensions)
+
+(defn now
   "Get a current timestamp."
   []
-  (let [date (time/now)]
-    (to-timestamp date)))
+  (quot (System/currentTimeMillis) 1000))
+
+(def ^:deprecated timestamp
+  "Alias to `now`."
+  now)
 
 (defmacro defalias
   [name orig]
