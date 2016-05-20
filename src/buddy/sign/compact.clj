@@ -116,8 +116,8 @@
   [data key & [{:keys [alg compress]
                 :or {alg :hs256 compress true}}]]
   (let [input (serialize data compress)
-        salt (nonce/random-nonce 8)
-        stamp (codecs/long->bytes (util/timestamp))
+        salt (nonce/random-bytes 12)
+        stamp (codecs/long->bytes (util/now))
         signature (-> (bytes/concat input salt stamp)
                       (calculate-signature key alg))]
     (str/join "." [(bytes->base64str input)
