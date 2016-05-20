@@ -27,15 +27,14 @@
             [clojure.string :as str]
             [cheshire.core :as json]))
 
-(def ^{:doc "List of supported signing algorithms"
-       :dynamic true}
-  *signers-map*
+(def +signers-map+
+  "Supported algorithms."
   {:hs256 {:signer   #(mac/hash %1 {:alg :hmac+sha256 :key %2})
            :verifier #(mac/verify %1 %2 {:alg :hmac+sha256 :key %3})}
    :hs512 {:signer   #(mac/hash %1 {:alg :hmac+sha512 :key %2})
            :verifier #(mac/verify %1 %2 {:alg :hmac+sha512 :key %3})}
    :rs256 {:signer   #(dsa/sign %1 {:alg :rsassa-pkcs15+sha256 :key %2})
-                         :verifier #(dsa/verify %1 %2 {:alg :rsassa-pkcs15+sha256 :key %3})}
+           :verifier #(dsa/verify %1 %2 {:alg :rsassa-pkcs15+sha256 :key %3})}
    :rs512 {:signer   #(dsa/sign %1 {:alg :rsassa-pkcs15+sha512 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pkcs15+sha512 :key %3})}
    :ps256 {:signer   #(dsa/sign %1 {:alg :rsassa-pss+sha256 :key %2})
@@ -47,51 +46,39 @@
    :es512 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha512 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha512 :key %3})}})
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Implementation details
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; --- Implementation
 
 (defn- encode-header
-  "Encode jws header"
   [alg typ]
-  (let [algorithm (.toUpperCase (name alg))
-        type (.toUpperCase (name typ))]
-    (-> {:alg algorithm :typ type}
+  (let [alg (.toUpperCase (name alg))
+        typ (.toUpperCase (name typ))]
+    (-> {:alg alg :typ typ}
         (json/generate-string)
         (b64/encode true)
         (codecs/bytes->str))))
 
-(defn- encode-payload [input]
-  (-> input
-      (b64/encode true)
-      (codecs/bytes->str)))
-
 (defn- parse-header
-  "Parse jws header."
-  [^String headerdata {:keys [alg] :or {alg :hs256}}]
-  (when (nil? alg)
-    (throw (ex-info "Missing `alg` parameter."
-                    {:type :validation :cause :header})))
-  (let [header (-> (b64/decode headerdata)
-                   (codecs/bytes->str)
-                   (json/parse-string true))]
-    (when (not= alg (keyword (str/lower-case (:alg header ""))))
-      (throw (ex-info "The `alg` param is mismatched with the header value."
-                      {:type :validation :cause :header})))
-    (let [{:keys [typ]} header]
-      (cond-> {:alg alg}
-        typ (assoc :typ typ)))))
+  [^String data]
+  (let [{:keys [alg typ]} (-> (b64/decode data)
+                              (codecs/bytes->str)
+                              (json/parse-string true))]
+    (cond-> {:typ typ}
+      alg (assoc :alg (keyword (str/lower-case alg))))))
 
-(defn- decode-payload [payload]
-  (-> payload 
-      (b64/decode)
+(defn- encode-payload
+  [input]
+  (-> (b64/encode input true)
       (codecs/bytes->str)))
+
+(defn- decode-payload
+  [payload]
+  (b64/decode payload))
 
 (defn- calculate-signature
   "Given the bunch of bytes, a private key and algorithm,
   return a calculated signature as byte array."
   [{:keys [key alg header payload]}]
-  (let [signer (get-in *signers-map* [alg :signer])
+  (let [signer (get-in +signers-map+ [alg :signer])
         authdata (str/join "." [header payload])]
     (-> (signer authdata key)
         (b64/encode true)
@@ -102,54 +89,52 @@
   signature, the private key and algorithm, return
   signature matches or not."
   [{:keys [alg signature key header payload]}]
-  (let [verifier (get-in *signers-map* [alg :verifier])
-        authdata (str/join "." [header payload])]
+  (let [verifier (get-in +signers-map+ [alg :verifier])
+        authdata (str/join "." [header payload])
+        signature (b64/decode signature)]
     (verifier authdata signature key)))
 
-
-(defn- split-jws-message [message]
+(defn- split-jws-message
+  [message]
   (str/split message #"\." 3))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Public Api
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; --- Public Api
+
+(defn decode-header
+  "Given a message, decode the header.
+  WARNING: This does not perform any signature validation."
+  [input]
+  (try
+    (let [[header] (split-jws-message input)]
+      (parse-header header))
+    (catch com.fasterxml.jackson.core.JsonParseException e
+      (throw (ex-info "Message seems corrupt or manipulated."
+                      {:type :validation :cause :header})))))
 
 (defn sign
   "Sign arbitrary length string/byte array using
   json web token/signature."
-  ;; The exp nbf and iat keys in the options are deprecated
-  ;; and will be removed in the next version.
   [payload pkey & [{:keys [alg typ] :or {alg :hs256 typ :jws} :as opts}]]
   {:pre [payload]}
   (let [header (encode-header alg typ)
-        payload (-> payload str (encode-payload))
+        payload (encode-payload payload)
         signature (calculate-signature {:key pkey
                                         :alg alg
                                         :header header
                                         :payload payload})]
     (str/join "." [header payload signature])))
 
-(defn decode-header
-  "Given a message, decode the header"
-  ([input] (decode-header input {}))
-  ([input opts]
-   (try 
-     (let [[header _ _] (split-jws-message input)]
-       (parse-header header opts))
-     (catch com.fasterxml.jackson.core.JsonParseException e
-       (throw (ex-info "Message seems corrupt or manipulated."
-                       {:type :validation :cause :signature}))))))
-
 (defn unsign
   "Given a signed message, verify it and return
   the decoded payload."
-  ([input pkey] (unsign input pkey {}))
-  ([input pkey opts]
-   (let [[header payload signature] (split-jws-message input)
-         {:keys [alg]} (decode-header input opts)
-         signature (b64/decode signature)]
-     (when-not (verify-signature {:key pkey :signature signature
-                                  :alg alg :header header :payload payload})
+  ([input pkey] (unsign input pkey nil))
+  ([input pkey {:keys [alg] :or {alg :hs256}}]
+   (let [[header payload signature] (split-jws-message input)]
+     (when-not (verify-signature {:key pkey
+                                  :signature signature
+                                  :alg alg
+                                  :header header
+                                  :payload payload})
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature})))
      (decode-payload payload))))

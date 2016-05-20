@@ -29,20 +29,21 @@
 (def ec-pubkey (keys/public-key "test/_files/pubkey.ecdsa.pem"))
 
 (defn- unsign-exp-succ
-  ([signed claims]
-   (unsign-exp-succ signed claims {}))
-  ([signed claims opts]
-   (is (= (jws/unsign signed secret opts) claims))))
+  ([signed candidate]
+   (unsign-exp-succ signed candidate nil))
+  ([signed candidate opts]
+   (is (bytes/equals? (jws/unsign signed secret opts)
+                      (codecs/to-bytes candidate)))))
 
 (defn- unsign-exp-fail
   ([signed cause]
-   (unsign-exp-fail signed cause {}))
+   (unsign-exp-fail signed cause nil))
   ([signed cause opts]
    (try
      (jws/unsign signed secret opts)
      (throw (Exception. "unexpected"))
      (catch clojure.lang.ExceptionInfo e
-       (is (= (:cause (ex-data e)) cause))))))
+       (is (= cause (:cause (ex-data e))))))))
 
 (deftest jws-decode
   (let [candidate "foo bar"
@@ -50,9 +51,9 @@
     (unsign-exp-succ signed candidate)))
 
 (deftest jws-decode-header
-  (let [claims {:foo "bar"}
+  (let [claims "foo bar"
         signed (jws/sign claims secret {:typ "FOO" :alg :hs256})
-        header (jws/decode-header signed {:alg :hs256})]
+        header (jws/decode-header signed)]
     (is (= header {:typ "FOO" :alg :hs256}))))
 
 (deftest jws-decode-arbitrary-data
@@ -64,66 +65,61 @@
   (let [candidate "foo bar "
         result    (jws/sign candidate secret {:alg :hs256})
         result'   (jws/unsign result secret {:alg :hs256})]
-    (is (= result' candidate))))
+    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
 
 (deftest jws-hs512-sign-unsign
   (let [candidate "foo bar "
         result    (jws/sign candidate secret {:alg :hs512})
         result'   (jws/unsign result secret {:alg :hs512})]
-    (is (= result' candidate))))
+    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
 
 (deftest jws-rs256-sign-unsign
   (let [candidate "foo bar "
         result    (jws/sign candidate rsa-privkey {:alg :rs256})
         result'   (jws/unsign result rsa-pubkey {:alg :rs256})]
-    (is (= result' candidate))))
+    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
 
 (deftest jws-rs512-sign-unsign
   (let [candidate "foo bar "
         result    (jws/sign candidate rsa-privkey {:alg :rs512})
         result'   (jws/unsign result rsa-pubkey {:alg :rs512})]
-    (is (= result' candidate))))
-
+    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
 
 (deftest jws-ps256-sign-unsign
   (let [candidate "foo bar "
         result    (jws/sign candidate rsa-privkey {:alg :ps256})
         result'   (jws/unsign result rsa-pubkey {:alg :ps256})]
-    (is (= result' candidate))))
+    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
 
 (deftest jws-ps512-sign-unsign
   (let [candidate "foo bar "
         result    (jws/sign candidate rsa-privkey {:alg :ps512})
         result'   (jws/unsign result rsa-pubkey {:alg :ps512})]
-    (is (= result' candidate))))
+    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
 
 (deftest jws-es256-sign-unsign
   (let [candidate "foo bar "
         result    (jws/sign candidate ec-privkey {:alg :es256})
         result'   (jws/unsign result ec-pubkey {:alg :es256})]
-    (is (= result' candidate))))
+    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
 
 (deftest jws-es512-sign-unsign
   (let [candidate "foo bar "
         result    (jws/sign candidate ec-privkey {:alg :es512})
         result'   (jws/unsign result ec-pubkey {:alg :es512})]
-    (is (= result' candidate))))
+    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
 
 (deftest jws-wrong-key
   (let [candidate "foo bar "
         result    (jws/sign candidate ec-privkey {:alg :es512})]
-    (unsign-exp-fail result :header)))
+    (unsign-exp-fail result :signature)))
 
-(deftest wrong-data
-  ;; (str "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXUyJ9."
-  ;;      "eyJmb28iOiJiYXIifQ."
-  ;;      "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")
-
+(deftest jws-wrong-data
   (unsign-exp-fail "xyz" :signature)
   (let [data (str "."
                   "eyJmb28iOiJiYXIifQ."
                   "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")]
-    (unsign-exp-fail data :header))
+    (unsign-exp-fail data :signature))
   (let [data (str "eyJmb28iOiJiYXIifQ."
                   "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")]
-    (unsign-exp-fail data :header)))
+    (unsign-exp-fail data :signature)))
