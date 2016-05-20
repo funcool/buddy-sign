@@ -14,12 +14,28 @@
 
 (ns buddy.sign.jwt-tests
   (:require [clojure.test :refer :all]
+            [buddy.core.codecs :as codecs]
+            [buddy.core.nonce :as nonce]
+            [buddy.core.keys :as keys]
             [buddy.sign.jws :as jws]
             [buddy.sign.jwt :as jwt]
             [buddy.sign.util :as util]
             [cheshire.core :as json]))
 
-(def mac-secret "mac-secret")
+(def secret (codecs/hex->bytes (str "000102030405060708090a0b0c0d0e0f"
+                                    "101112131415161718191a1b1c1d1e1f")))
+
+(def data (codecs/to-bytes "test-data"))
+(def key16 (nonce/random-bytes 16))
+(def key24 (nonce/random-bytes 24))
+(def key32 (nonce/random-bytes 32))
+(def key32' (nonce/random-bytes 32))
+(def key48 (nonce/random-bytes 48))
+(def key64 (nonce/random-bytes 64))
+(def rsa-privkey (keys/private-key "test/_files/privkey.3des.rsa.pem" "secret"))
+(def rsa-pubkey (keys/public-key "test/_files/pubkey.3des.rsa.pem"))
+(def ec-privkey (keys/private-key "test/_files/privkey.ecdsa.pem" "secret"))
+(def ec-pubkey (keys/public-key "test/_files/pubkey.ecdsa.pem"))
 
 (defn- unsign-exp-succ
   ([get-claims-fn signed claims]
@@ -37,26 +53,34 @@
      (catch clojure.lang.ExceptionInfo e
        (is (= (:cause (ex-data e)) cause))))))
 
-(deftest jwt-jws-decode 
+(deftest jwt-jws-decode
   (let [claims {:aud "buddy"}
-        signed (jwt/make-jws claims mac-secret {:alg :hs256})
-        returned-claims (jwt/get-claims-jws signed mac-secret {:alg :hs256})]
-    (is (= returned-claims claims) "decoded claims must match up to original"))) 
+        signed (jwt/sign claims secret {:alg :hs256})
+        returned-claims (jwt/unsign signed secret {:alg :hs256})]
+    (is (= returned-claims claims) "decoded claims must match up to original")))
+
+(deftest jwt-jwe-decode
+  (let [claims {:aud "buddy"}
+        signed (jwt/encrypt claims key16 {:alg :dir :enc :a128gcm})
+        returned-claims (jwt/decrypt signed key16 {:alg :dir :enc :a128gcm})]
+    (is (= returned-claims claims) "decoded claims must match up to original")))
 
 (deftest jwt-jws-encode
   (let [claims {:aud "buddy"}
-        jwt (jwt/make-jws claims mac-secret {:alg :hs256})]
+        jwt (jwt/sign claims secret {:alg :hs256})]
     (testing "round trip"
-      (let [returned-claims (jwt/get-claims-jws jwt mac-secret {:alg :hs256})]
+      (let [returned-claims (jwt/unsign jwt secret {:alg :hs256})]
             (is (= returned-claims claims) "claims should match")))
     (testing "JWT typ in JOSE Header"
-      (let [header (jws/decode-header jwt {:alg :hs256})]
+      (let [header (jws/decode-header jwt)]
         (is (= "JWT" (:typ header)) "typ header not found")))))
 
-
-(defn test-claims-validation [make-jwt-fn get-claims-fn]
-  (let [unsign-exp-succ (partial unsign-exp-succ get-claims-fn)
+(deftest jwt-claims-validation
+  (let [make-jwt-fn #(jwt/sign % secret {:alg :hs256})
+        get-claims-fn #(jwt/unsign %1 secret (merge {:alg :hs256} %2))
+        unsign-exp-succ (partial unsign-exp-succ get-claims-fn)
         unsign-exp-fail (partial unsign-exp-fail get-claims-fn)]
+
     (testing "current time claims validation"
       (let [now       (util/timestamp)
             candidate {:foo "bar" :iat now :nbf now :exp (+ now 60)}
@@ -99,29 +123,25 @@
         (unsign-exp-succ signed candidate)
         (unsign-exp-fail signed :aud {:aud "bar:foo"})))))
 
-(deftest jws-claims-validation
-  (testing "claims validation for jws jwts"
-    (test-claims-validation 
-      (fn [claims] (jwt/make-jws claims mac-secret {:alg :hs256}))
-      (fn [message opts] 
-        (jwt/get-claims-jws message mac-secret (merge {:alg :hs256} opts))))))
-
-(deftest jwt-io-example
-  (let [jwt "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ"
-        claims (jwt/get-claims-jws jwt "secret" {:alg :hs256})]
+(deftest jwt-jwtio-example
+  (let [jwt (str "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+                 "eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6I"
+                 "kpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA9"
+                 "5OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ")
+        claims (jwt/unsign jwt "secret" {:alg :hs256})]
     (is (= claims {:sub "1234567890"
                    :name "John Doe"
                    :admin true}) "jwt.io example")))
 
-(deftest claims-must-be-map
-  (is (thrown? AssertionError (jwt/make-jws "qwe" mac-secret {:alg :hs256}))
+(deftest jwt-claims-must-be-map
+  (is (thrown? AssertionError (jwt/sign "qwe" secret {:alg :hs256}))
       "claims should be a map"))
 
-(deftest no-json-payload
-  (let [jws (jws/sign "foobar" mac-secret {:alg :hs256})]
+(deftest jwt-no-json-payload
+  (let [jws (jws/sign "foobar" secret {:alg :hs256})]
     (try
-      (jwt/get-claims-jws jws mac-secret {:alg :hs256})
-      (is false "get-claims-jws should throw")
+      (jwt/unsign jws secret {:alg :hs256})
+      (is false "unsign should throw")
       (catch clojure.lang.ExceptionInfo e
         (is (= (:cause (ex-data e)) :signature))))))
 

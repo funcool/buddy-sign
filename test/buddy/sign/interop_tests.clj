@@ -22,6 +22,7 @@
             [buddy.core.keys :as keys]
             [buddy.sign.jwe :as jwe]
             [buddy.sign.jws :as jws]
+            [buddy.sign.jwt :as jwt]
             [buddy.sign.util :as util]
             [cheshire.core :as json])
   (:import com.nimbusds.jose.JWEHeader
@@ -65,11 +66,11 @@
               (.encrypt (DirectEncrypter. key16)))
 
         result (.serialize jwt)]
-    (let [data (jwe/decrypt result key16 {:alg :dir :enc :a128gcm})]
+    (let [data (jwt/decrypt result key16 {:alg :dir :enc :a128gcm})]
       (is (= data {:test1 "test"})))))
 
 (deftest interoperability-test-2
-  (let [token (jwe/encrypt {:test1 "test"} key16 {:alg :dir :enc :a128gcm})
+  (let [token (jwt/encrypt {:test1 "test"} key16 {:alg :dir :enc :a128gcm})
         jwt (doto (EncryptedJWT/parse token)
               (.decrypt (DirectDecrypter. key16)))]
     (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
@@ -84,11 +85,11 @@
               (.encrypt (DirectEncrypter. key32)))
 
         result (.serialize jwt)]
-    (let [data (jwe/decrypt result key32 {:alg :dir :enc :a128cbc-hs256})]
+    (let [data (jwt/decrypt result key32 {:alg :dir :enc :a128cbc-hs256})]
       (is (= data {:test1 "test"})))))
 
 (deftest interoperability-test-4
-  (let [token (jwe/encrypt {:test1 "test"} key32 {:alg :dir :enc :a128cbc-hs256})
+  (let [token (jwt/encrypt {:test1 "test"} key32 {:alg :dir :enc :a128cbc-hs256})
         jwt (doto (EncryptedJWT/parse token)
               (.decrypt (DirectDecrypter. key32)))]
     (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
@@ -103,7 +104,9 @@
               (.sign (MACSigner. key32)))
 
         result (.serialize jwt)]
-    (let [data (-> (jws/unsign result key32 {:alg :hs256}) (json/parse-string true))]
+    (let [data (-> (jws/unsign result key32 {:alg :hs256})
+                   (codecs/bytes->str)
+                   (json/parse-string true))]
       (is (= data {:test1 "test"})))))
 
 (deftest interoperability-test-6
