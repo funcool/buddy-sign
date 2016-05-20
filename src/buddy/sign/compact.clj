@@ -139,7 +139,7 @@
     (when-not (verify-signature candidate signature key alg)
       (throw (ex-info "Message seems corrupt or manipulated."
                       {:type :validation :cause :signature})))
-    (let [now (util/timestamp)
+    (let [now (util/now)
           stamp (codecs/bytes->long stamp)]
       (when (and (number? max-age) (> (- now stamp) max-age))
         (throw (ex-info (format "Token is older than %s" max-age)
