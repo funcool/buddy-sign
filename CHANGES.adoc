@@ -4,33 +4,34 @@
 
 Date: 2016-05-20
 
-**Important**: This is an major release beacause it inclused a breaking api change.
+**Important**: This is an major release beacause it inclused a breaking api changes.
 
 Important changes:
 
-JWS and JWE becomes a more low level functions for sign or encrypt arbitrary
-data (as RFC specifies) and all claims and json related stuff is moved into
-specific **JWT** related namespace.
+- JWS and JWE becomes a more low level functions for sign or encrypt arbitrary
+  data (as RFC specifies) and all claims and json related stuff is moved into
+  specific **JWT** related namespace.
 
-The api is preserved so, the migration is pretty easy; just replace your `jws` or
-`jwe` import with `jwt`.
+  The api is preserved so, the migration is pretty easy; just replace your `jws` or
+  `jwe` import with `jwt`.
 
-Old imports:
+  Old imports:
 
-[source, clojure]
-----
-(require '[buddy.sign.jws :as jws])
-(require '[buddy.sign.jwe :as jwe])
-----
+      (require '[buddy.sign.jws :as jws])
+      (require '[buddy.sign.jwe :as jwe])
 
-New import:
+  New import:
 
-[source, clojure]
-----
-(require '[buddy.sign.jwt :as jwt])
-----
+      (require '[buddy.sign.jwt :as jwt])
 
-Many thanks to @FreekPaans for the initial work on split JWS and JWT.
+  Many thanks to @FreekPaans for the initial work on split JWS and JWT.
+
+- The **clj-time** dependency is removed. JodaTime directly is used if it is
+  avaliable in the classpath.
+- Add jdk8 java.time.Instant support for time related claims.
+- Removed hardcoded dependency to `nippy` for compatct signing ns. Now the user
+  should specify a own dependency in order to be able use the compat message
+  signing implementation.
 
 
 == Version 0.13.0
