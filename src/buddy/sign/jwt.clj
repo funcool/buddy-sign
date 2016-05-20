@@ -13,7 +13,9 @@
 ;; limitations under the License.
 
 (ns buddy.sign.jwt
-  (:require [buddy.sign.jws :as jws]
+  (:require [buddy.core.codecs :as codecs]
+            [buddy.sign.jws :as jws]
+            [buddy.sign.jwe :as jwe]
             [buddy.sign.util :as util]
             [cheshire.core :as json]))
 
@@ -60,27 +62,42 @@
     (-> (normalize-date-claims claims)
         (merge additionalclaims))))
 
+(defn sign
+  ([claims pkey] (sign claims pkey {}))
+  ([claims pkey opts]
+   {:pre [(map? claims)]}
+   (let [payload (-> (prepare-claims claims opts)
+                     (json/generate-string))]
+     (jws/sign payload pkey (merge opts {:typ "JWT"})))))
 
-(defn get-claims-jws
-  ([message pkey] (get-claims-jws message pkey {}))
+(defn unsign
+  ([message pkey] (unsign message pkey {}))
   ([message pkey opts]
-   (try 
-     (-> message 
-         (jws/unsign pkey opts)
+   (try
+     (-> (jws/unsign message pkey opts)
+         (codecs/bytes->str)
          (json/parse-string true)
          (validate-claims opts))
      (catch com.fasterxml.jackson.core.JsonParseException e
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature}))))))
 
-
-(defn make-jws
-  ([claims pkey] (make-jws claims pkey {}))
+(defn encrypt
+  ([claims pkey] (encrypt claims pkey nil))
   ([claims pkey opts]
    {:pre [(map? claims)]}
-   (let [jws-payload (-> claims
-                         (prepare-claims opts)
-                         (json/generate-string))]
-     (jws/sign jws-payload pkey (merge opts {:typ "JWT" :serialize-json? false})))))
+   (let [payload (-> (prepare-claims claims opts)
+                     (json/generate-string))]
+     (jwe/encrypt payload pkey (merge opts {:typ "JWT"})))))
 
-
+(defn decrypt
+  ([message pkey] (decrypt message pkey nil))
+  ([message pkey opts]
+   (try
+     (-> (jwe/decrypt message pkey opts)
+         (codecs/bytes->str)
+         (json/parse-string true)
+         (validate-claims opts))
+     (catch com.fasterxml.jackson.core.JsonParseException e
+       (throw (ex-info "Message seems corrupt or manipulated."
+                       {:type :validation :cause :signature}))))))
