@@ -342,14 +342,17 @@ It has high influence by django's cryptographic library and json web
 signature/encryption but with focus on have a compact representation. It's
 build on top of fantastic ptaoussanis/nippy serialization library.
 
-This singing implementation is not very efficient with small messages, but is
-very space efficient with big messages.
+In order to use this you shall include the concrete `nippy` library because
+**buddy-sign** does not have a hardcoded dependency to it:
 
-The purpose of this implementation is for secure message transfer, it is not
-really good candidate for auth token because of not good space efficiency for
-small messages.
+[source, clojure]
+----
+[com.taoensso/nippy "2.11.1"]
+----
 
-.Supported Algorithms
+In the same way as JWS, it support a great number of different signing
+algorithms that can be used for sign your messages:
+
 [options="header"]
 |====================================================================================
 | Algorithm name     | Hash algorithms   | Keywords           | Priv/Pub Key?
@@ -362,29 +365,19 @@ small messages.
 
 +++*+++ indicates the default value.
 
-[NOTE]
-====
-Only HMAC and Poly1305 based algorithms support plain text secret keys, If you
-want to use Digital Signature instead of hmac then you must have a key pair
-(public and private).
-====
+In difference with jwt/jws, this implementation is not limited to hash-map
+like objects, and you can sign any clojure valid type.
 
-With difference with jwt/jws, this implementation is not limited to hash-map
-like objects, and you can sign any clojure valid type. Let see an example:
+Let see an example:
 
 [source,clojure]
 ----
 (require '[buddy.sign.compact :as cm])
 
-;; Sign data using default `:hs256` algorithm that does not
-;; requres special priv/pub key.
-(def data (cm/sign {:userid 1} "secret"))
-
-;; data will contains omething to
-;; "auJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
+(def data (cp/sign #{:foo :bar} "secret")
 
 (cm/unsign data "secret")
-;; => {:userid 1}
+;; => #{:foo :bar}
 ----
 
 Then, you also will be able validate the signed message based in its age:
