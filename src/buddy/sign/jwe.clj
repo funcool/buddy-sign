@@ -38,9 +38,7 @@
   (:import org.bouncycastle.crypto.InvalidCipherTextException
            java.nio.ByteBuffer))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Implementation details
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; --- Implementation details
 
 (defn- encode-header
   [{:keys [alg typ enc zip]}]
@@ -49,69 +47,37 @@
         enc (.toUpperCase (name enc))
         header (merge {:alg alg :typ typ :enc enc}
                       (when zip {:zip "DEF"}))]
-    (b64/encode (json/generate-string header))))
+    (-> (json/generate-string header)
+        (b64/encode true))))
 
 (defn- parse-header
-  [^String headerdata {:keys [alg enc] :or {alg :dir enc :a128cbc-hs256}}]
-  (let [header (-> (b64/decode headerdata)
-                   (codecs/bytes->str)
-                   (json/parse-string true))]
-    (when (not= alg (keyword (str/lower-case (:alg header ""))))
-      (throw (ex-info "The `alg` param mismatch with header value."
-                      {:type :validation :cause :header})))
-    (when (not= enc (keyword (str/lower-case (:enc header))))
-      (throw (ex-info "The `enc` param mismatch with header value."
-                      {:type :validation :cause :header})))
-    {:alg alg
-     :enc enc
-     :zip (= (:zip header) "DEF")}))
+  [^String data]
+  (let [{:keys [alg typ enc zip]} (-> (b64/decode data)
+                                      (codecs/bytes->str)
+                                      (json/parse-string true))]
+    (cond-> {:typ typ :zip (= zip "DEF") }
+      alg (assoc :alg (keyword (str/lower-case alg)))
+      enc (assoc :enc (keyword (str/lower-case enc))))))
 
-(defmulti generate-iv :enc)
-(defmethod generate-iv :a128cbc-hs256 [_] (nonce/random-bytes 16))
-(defmethod generate-iv :a192cbc-hs384 [_] (nonce/random-bytes 16))
-(defmethod generate-iv :a256cbc-hs512 [_] (nonce/random-bytes 16))
-(defmethod generate-iv :a128gcm [_] (nonce/random-bytes 12))
-(defmethod generate-iv :a192gcm [_] (nonce/random-bytes 12))
-(defmethod generate-iv :a256gcm [_] (nonce/random-bytes 12))
+(defn- generate-iv
+  [{:keys [enc]}]
+  (case enc
+    :a128cbc-hs256 (nonce/random-bytes 16)
+    :a192cbc-hs384 (nonce/random-bytes 16)
+    :a256cbc-hs512 (nonce/random-bytes 16)
+    :a128gcm (nonce/random-bytes 12)
+    :a192gcm (nonce/random-bytes 12)
+    :a256gcm (nonce/random-bytes 12)))
 
-(defn- encode-claims
-  [claims zip opts]
-  (let [additional (-> (select-keys opts [:exp :nbf :iat :iss :aud])
-                       (jws/normalize-nil-claims)
-                       (jws/normalize-date-claims))
-        data (-> (jws/normalize-date-claims claims)
-                 (merge additional)
-                 (json/generate-string)
-                 (codecs/to-bytes))]
-    (if zip
-      (deflate/compress data)
-      data)))
+(defn- encode-payload
+  [input zip]
+  (cond-> (codecs/to-bytes input)
+    zip (deflate/compress)))
 
-(defn- parse-claims
-  [^bytes claimsdata zip {:keys [max-age iss aud now] :as opts}]
-  (let [claims (-> (if zip (deflate/uncompress claimsdata) claimsdata)
-                   (codecs/bytes->str)
-                   (json/parse-string true))
-        now (or now (util/timestamp))]
-    (when (and iss (not= iss (:iss claims)))
-      (throw (ex-info (str "Issuer does not match " iss)
-                      {:type :validation :cause :iss})))
-    (when (and aud (not= aud (:aud claims)))
-      (throw (ex-info (str "Audience does not match " aud)
-                      {:type :validation :cause :aud})))
-    (when (and (:exp claims) (>= now (:exp claims)))
-      (throw (ex-info (format "Token is older than :exp (%s)" (:exp claims))
-                      {:type :validation :cause :exp})))
-    (when (and (:nbf claims) (< now (:nbf claims)))
-      (throw (ex-info (format "Token is not yet valid (%s)" (:nbf claims))
-                      {:type :validation :cause :nbf})))
-    (when (and (:iat claims) (< now (:iat claims)))
-      (throw (ex-info (format "Token is from the future (%s)" (:iat claims))
-                      {:type :validation :cause :iat})))
-    (when (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
-      (throw (ex-info (format "Token is older than max-age (%s)" max-age)
-                      {:type :validation :cause :max-age})))
-    claims))
+(defn- decode-payload
+  [payload zip]
+  (cond-> payload
+    zip (deflate/uncompress)))
 
 (defmulti aead-encrypt :alg)
 (defmulti aead-decrypt :alg)
@@ -221,27 +187,39 @@
                     :iv iv
                     :aad aad}))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Public Api
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defn- split-jwe-message
+  [message]
+  (str/split message #"\." 5))
+
+;; --- Public Api
 
 (def ^:private bytes->base64str
   (comp codecs/bytes->str #(b64/encode % true)))
 
+(defn decode-header
+  "Given a message, decode the header.
+  WARNING: This does not perform any signature validation."
+  [input]
+  (try
+    (let [[header] (split-jwe-message input)]
+      (parse-header header))
+    (catch com.fasterxml.jackson.core.JsonParseException e
+      (throw (ex-info "Message seems corrupt or manipulated."
+                      {:type :validation :cause :header})))))
+
 (defn encrypt
   "Encrypt then sign arbitrary length string/byte array using
   json web encryption."
-  [claims key & [{:keys [alg enc exp nbf iat zip typ iv]
-                  :or {alg :dir enc :a128cbc-hs256 zip false typ :jws}
+  [payload key & [{:keys [alg enc zip typ]
+                  :or {alg :dir enc :a128cbc-hs256 zip false typ :jwe}
                   :as opts}]]
-  {:pre [(map? claims)]}
   (let [scek (cek/generate {:key key :alg alg :enc enc})
         ecek (cek/encrypt {:key key :cek scek :alg alg :enc enc})
         iv (generate-iv {:enc enc})
         header (encode-header {:alg alg :enc enc :zip zip :typ typ})
-        claims (encode-claims claims zip opts)
+        payload (encode-payload payload zip)
         [ciphertext authtag] (aead-encrypt {:alg enc
-                                            :plaintext claims
+                                            :plaintext payload
                                             :secret scek
                                             :aad header
                                             :iv iv})]
@@ -252,25 +230,26 @@
                    (bytes->base64str authtag)])))
 
 (defn decrypt
-  "Decrypt the jwe compliant message and return its claims."
-  ([input key] (decrypt input key {}))
-  ([input key opts]
+  "Decrypt the jwe compliant message and return its payload."
+  ([input key] (decrypt input key nil))
+  ([input key {:keys [alg enc] :or {alg :dir enc :a128cbc-hs256} :as opts}]
    (try
-     (let [[header ecek iv ciphertext authtag] (str/split input #"\." 5)
-           {:keys [alg enc zip]} (parse-header header opts)
+     (let [[header ecek iv ciphertext authtag] (split-jwe-message input)
+
+           {:keys [zip] :as hdr} (parse-header header)
            ecek (b64/decode ecek)
            scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
            iv (b64/decode iv)
            header (codecs/str->bytes header)
            ciphertext (b64/decode ciphertext)
            authtag (b64/decode authtag)
-           claims (aead-decrypt {:ciphertext ciphertext
-                                 :authtag authtag
-                                 :alg enc
-                                 :aad header
-                                 :secret scek
-                                 :iv iv})]
-       (parse-claims claims zip opts))
+           payload (aead-decrypt {:ciphertext ciphertext
+                                  :authtag authtag
+                                  :alg enc
+                                  :aad header
+                                  :secret scek
+                                  :iv iv})]
+       (decode-payload payload zip))
      (catch com.fasterxml.jackson.core.JsonParseException e
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature})))

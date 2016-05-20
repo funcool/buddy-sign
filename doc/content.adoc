@@ -1,6 +1,6 @@
 = buddy-sign - High level message signing.
 Andrey Antukh, <niwi@niwi.be>
-0.13.0
+1.0.0
 :toc: left
 :!numbered:
 :source-highlighter: pygments
@@ -45,7 +45,7 @@ dependency vector on your *_project.clj_* file:
 
 [source,clojure]
 ----
-[buddy/buddy-sign "0.13.0"]
+[buddy/buddy-sign "1.0.0"]
 ----
 
 And is tested under JDK7 and JDK8.
@@ -61,36 +61,12 @@ or as the plaintext of a JSON Web Encryption (JWE) structure, enabling the claim
 to be digitally signed or MACed and/or encrypted.
 
 
-=== How to use it?
-
-_buddy-sign_ does not offers special api for Json Web Token because it is a subset
-of Json Web Signature (JWS) and Json Web Encryption (JSE) specifications. If you
-want use one or other see the corresponding documentation in below sections.
-
-
-=== Involved RFC's
-
-* http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32
-* http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-40
-* http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption-40
-* http://tools.ietf.org/html/draft-ietf-jose-json-web-signature-40
-* http://tools.ietf.org/html/draft-mcgrew-aead-aes-cbc-hmac-sha2-05
-* http://tools.ietf.org/html/rfc3394
-
-
-[[jws]]
-== Json Web Signature
-
-[small]#New in version: 0.2#
-
-JSON Web Signature (JWS) is a signing part of Json Web Token (JWT) specification
-and represents a content secured with digital signatures or Message Authentication
-Codes (MACs) using JavaScript Object Notation (JSON) as serialization format.
-
-
 === Supported algorithms
 
-Here a summary of supported algorithms for JWS:
+==== For claims signing
+
+Here a table of supported algorithms for signing JWT claims using
+JWS (Json Web Signature):
 
 [options="header"]
 |====================================================================================
@@ -101,6 +77,44 @@ Here a summary of supported algorithms for JWS:
 |HMAC               | sha256*, sha512   | `:hs256`, `:hs512` | No
 |====================================================================================
 
+==== For claims encryption
+
+The Json Web Encryption in difference to JWS uses two types of algoritms: key
+encryption algorithms and content encryption algorithms.
+
+The *key encryption algorithms* are responsible of encrypt the key that will be
+used for encrypt the content. This is a table that exposes the currently
+supported _Key Encryption Algorithms_ (specified in JWA RFC):
+
+[options="header", cols="1,2,1,1"]
+|===================================================================================
+| Algorithm name | Decription | Keyword       | Shared Key Size
+| DIR            | Direct use of a shared symmetric key | `:dir` | (depends on content
+encryption algorithm)
+| A128KW         | AES128 Key Wrap | `:a128kw` | 16 bytes
+| A192KW         | AES192 Key Wrap | `:a192kw` | 24 bytes
+| A256KW         | AES256 Key Wrap | `:a256kw` | 32 bytes
+| RSA1_5         | RSA PKCS1 V1_5  | `:rsa1_5` | Asymetric key pair
+| RSA-OAEP       | RSA OAEP with SHA1 | `:rsa-oaep` | Asymetric key pair
+| RSA-OAEP-256   | RSA OAEP with SHA256 | `:rsa-oaep-256` | Asymetric key pair
+|===================================================================================
+
+
+The *content encryption algoritms* are responsible of encrypt the content. This
+is a table that exposes the currently supported _Content Encryption Algorithms_
+(all specified in the JWA RFC):
+
+[options="header", cols="1,1,1,1"]
+|===================================================================================
+| Algorithm name | Description | Keyword | Shared Key Size
+| A128CBC-HS256  | AES128 with CBC mode and HMAC-SHA256  | `:a128cbc-hs256` | 32 bytes
+| A192CBC-HS384  | AES192 with CBC mode and HMAC-SHA384  | `:a192cbc-hs384` | 48 bytes
+| A256CBC-HS512  | AES256 with CBC mode and HMAC-SHA512  | `:a256cbc-hs512` | 64 bytes
+| A128GCM        | AES128 with GCM mode | `:a128gcm`    | 16 bytes
+| A192GCM        | AES192 with GCM mode | `:a192gcm`    | 24 bytes
+| A256GCM        | AES256 with GCM mode | `:a256gcm`    | 32 bytes
+|===================================================================================
+
 
 === Signing data
 
@@ -109,9 +123,9 @@ Let start with signing data. For it we will use the `sign` function from
 
 [source, clojure]
 ----
-(require '[buddy.sign.jws :as jws])
+(require '[buddy.sign.jwt :as jwt])
 
-(jws/sign {:userid 1} "secret")
+(jwt/sign {:userid 1} "secret")
 ;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
 ----
 
@@ -128,11 +142,11 @@ json objects in the current version.
 
 It's time to unsing data. That process consists on verify the signature of incoming
 data and return the plain data (without signature). For it we will use the `unsign`
-function from `buddy.sign.jws` namespace:
+function from `buddy.sign.jwt` namespace:
 
 [source, clojure]
 ----
-(jws/unsign data "secret")
+(jwt/unsign data "secret")
 ;; => {:userid 1}
 ----
 
@@ -159,16 +173,56 @@ Let see an example using direct api:
   {:user 1 :exp (time/plus (time/now) (time/seconds 5))})
 
 ;; Serialize and sign a token with previously defined claims
-(def token (jws/sign claims "key"))
+(def token (jwt/sign claims "key"))
 
 ;; wait 5 seconds and try unsign it
 
-(jws/unsign token "key")
+(jwt/unsign token "key")
 ;; => ExceptionInfo "Token is older than :exp (1427836475)"
 
 ;; use timestamp in the past
-(jws/unsign token "key" {:now (time/minus (time/now) (time/seconds 5))})
+(jwt/unsign token "key" {:now (time/minus (time/now) (time/seconds 5))})
 ;; => {:user 1}
+----
+
+=== Encrypting data
+
+Let start with encrypting data. For it we will use the `encrypt` function from the
+`buddy.sign.jwt` namespace:
+
+[source, clojure]
+----
+(require '[buddy.sign.jwt :as jwt])
+(require '[buddy.core.hash :as hash])
+
+;; Hash your secret key with sha256 for
+;; create a byte array of 32 bytes because
+;; is a requirement for default content
+;; encryption algorithm
+
+(def secret (hash/sha256 "mysecret"))
+
+;; Encrypt it using the previously
+;; hashed key
+
+(jwt/encrypt {:userid 1} secret {:alg :dir :enc :a128cbc-hs256})
+;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
+----
+
+The `encrypt` function, like `sign` from *JWS*, returns a plain string with
+encrypted and encoded content using a provided algorithm and shared secret key.
+
+
+=== Decrypting Data
+
+The decrypt is a inverse process, that takes encrypted data and the shared key,
+and returns the plain data. For it, _buddy-sign_ exposes the `decrypt` function.
+Let see how you can use it:
+
+[source, clojure]
+----
+(jwt/decrypt incoming-data secret)
+;; => {:userid 1}
 ----
 
 
@@ -191,140 +245,10 @@ of supported digital signature algorithms.
 (def ec-pubkey (keys/public-key "ecpubkey.pem"))
 
 ;; Use them like plain secret password with hmac algorithms for sign
-(def signed-data (jws/sign {:foo "bar"} ec-privkey {:alg :es256}))
+(def signed-data (jwt/sign {:foo "bar"} ec-privkey {:alg :es256}))
 
 ;; And unsign
-(def unsigned-data (jws/unsign signed-data ec-pubkey {:alg :es256}))
-----
-
-
-[[jwe]]
-== Json Web Encryption
-
-[small]#New in version: 0.5#
-
-JSON Web Encryption (JWE) is a encryption part of Json Web Token (JWT)
-specification and represents a encrypted content using JavaScript Object Notation
-(JSON) based data structures.
-
-
-=== Supported algorithms
-
-The Json Web Encryption in difference to JWS uses two types of algoritms: key
-encryption algorithms and content encryption algorithms.
-
-The *key encryption algorithms* are responsible of encrypt the key that will be
-used for encrypt the content. This is a table that exposes the currently
-supported _Key Encryption Algorithms_ (specified in JWA RFC):
-
-.Supported Key Encryption Algorithms
-[options="header", cols="1,2,1,1"]
-|===================================================================================
-| Algorithm name | Decription | Keyword       | Shared Key Size
-| DIR            | Direct use of a shared symmetric key | `:dir` | (depends on content
-encryption algorithm)
-| A128KW         | AES128 Key Wrap | `:a128kw` | 16 bytes
-| A192KW         | AES192 Key Wrap | `:a192kw` | 24 bytes
-| A256KW         | AES256 Key Wrap | `:a256kw` | 32 bytes
-| RSA1_5         | RSA PKCS1 V1_5  | `:rsa1_5` | Asymetric key pair
-| RSA-OAEP       | RSA OAEP with SHA1 | `:rsa-oaep` | Asymetric key pair
-| RSA-OAEP-256   | RSA OAEP with SHA256 | `:rsa-oaep-256` | Asymetric key pair
-|===================================================================================
-
-
-The *content encryption algoritms* are responsible of encrypt the content. This
-is a table that exposes the currently supported _Content Encryption Algorithms_
-(all specified in the JWA RFC):
-
-.Supported Content Encryption Algorithms
-[options="header", cols="1,1,1,1"]
-|===================================================================================
-| Algorithm name | Description | Keyword | Shared Key Size
-| A128CBC-HS256  | AES128 with CBC mode and HMAC-SHA256  | `:a128cbc-hs256` | 32 bytes
-| A192CBC-HS384  | AES192 with CBC mode and HMAC-SHA384  | `:a192cbc-hs384` | 48 bytes
-| A256CBC-HS512  | AES256 with CBC mode and HMAC-SHA512  | `:a256cbc-hs512` | 64 bytes
-| A128GCM        | AES128 with GCM mode | `:a128gcm`    | 16 bytes
-| A192GCM        | AES192 with GCM mode | `:a192gcm`    | 24 bytes
-| A256GCM        | AES256 with GCM mode | `:a256gcm`    | 32 bytes
-|===================================================================================
-
-
-=== Encrypting data
-
-Let start with encrypting data. For it we will use the `encrypt` function from the
-`buddy.sign.jwe` namespace:
-
-[source, clojure]
-----
-(require '[buddy.sign.jwe :as jwe])
-(require '[buddy.core.hash :as hash])
-
-;; Hash your secret key with sha256 for
-;; create a byte array of 32 bytes because
-;; is a requirement for default content
-;; encryption algorithm
-
-(def secret (hash/sha256 "mysecret"))
-
-;; Encrypt it using the previously
-;; hashed key
-
-(jwe/encrypt {:userid 1} secret {:alg :dir :enc :a128cbc-hs256})
-;; "eyJ0eXAiOiJKV1MiLCJhbGciOiJIU..."
-----
-
-The `encrypt` function, like `sign` from *JWS*, returns a plain string with
-encrypted and encoded content using a provided algorithm and shared secret key.
-
-
-=== Decrypting Data
-
-The decrypt is a inverse process, that takes encrypted data and the shared key,
-and returns the plain data. For it, _buddy-sign_ exposes the `decrypt` function.
-Let see how you can use it:
-
-[source, clojure]
-----
-(jwe/decrypt incoming-data secret)
-;; => {:userid 1}
-----
-
-You do not need specify the encryption algorithm explicitly, it is automatically detected, because the
-incoming token will come with content encryption algorithm stored in its header part.
-
-
-=== Claims validation
-
-_buddy-sign_ json web encryption, like *jws*, also implements validation of a
-concrete subset of claims: *iat* (issue time), *exp* (expiration time),
-*nbf* (not before), *iss* (issuer) and *aud* (audience).
-
-The validation is performed on decoding the token. If `:exp` claim is found and
-is posterior to the current date time (UTC) an validation exception will be raised.
-Alternatively, the time to validate token against can be specified as `:now`
-option to `decrypt`.
-
-Let see an example using direct api:
-
-[source, clojure]
-----
-(require '[clj-time.core :as time])
-
-;; Define claims with `:exp` key
-(def claims
-  {:user 1 :exp (time/plus (time/now) (time/seconds 5))})
-
-;; Serialize and sign a token with previously defined claims
-(def token (jwe/encrypt claims secret))
-
-;; wait 5 seconds and try unsign it
-
-(jwe/decrypt token secret)
-;; => ExceptionInfo "Token is older than :exp (1427836475)"
-
-;; use timestamp in the past
-(jwe/decrypt token "key" {:now (time/minus (time/now) (time/seconds 5))})
-;; => {:user 1}
+(def unsigned-data (jwt/unsign signed-data ec-pubkey {:alg :es256}))
 ----
 
 
@@ -349,13 +273,67 @@ Let see an demostration example:
 (def pubkey (keys/public-key "pubkey.pem"))
 
 ;; Encrypt data
-(def encrypted-data (jwe/encrypt {:foo "bar"} pubkey {:alg :rsa-oaep :enc :a128cbc-hs256})
+(def encrypted-data (jwt/encrypt {:foo "bar"} pubkey
+                                 {:alg :rsa-oaep
+                                  :enc :a128cbc-hs256})
 
 ;; Decrypted
-(def decrypted-data (jwe/decrypt encrypted-data privkey {:alg :rsa-oaep :enc :a128cbc-hs256}))
+(def decrypted-data (jwt/decrypt encrypted-data privkey
+                                 {:alg :rsa-oaep
+                                  :enc :a128cbc-hs256}))
 ----
 
 
+[[jws]]
+== Json Web Signature
+
+JSON Web Signature (JWS) is a signing part of Json Web Token (JWT) specification
+and represents a content secured with digital signatures or Message Authentication
+Codes (MACs) using JavaScript Object Notation (JSON) as serialization format.
+
+In difference to JWT, this is more lowlevel signing primitive and allows signining
+arbitrary data (instead of json formated claims):
+
+[source, clojure]
+----
+(require '[buddy.sign.jws :as jws])
+(require '[buddy.core.nonce :as nonce])
+(require '[buddy.core.bytes :as bytes])
+
+(def data (nonce/random-bytes 1024))
+(def message (jws/sign data "secret"))
+
+(bytes/equals? (jws/unsign message "secret") data)
+;; => true
+----
+
+
+[[jwe]]
+== Json Web Encryption
+
+JSON Web Encryption (JWE) is a encryption part of Json Web Token (JWT)
+specification and represents a encrypted content using JavaScript Object Notation
+(JSON) based data structures.
+
+In same way as JWS, this is a low level primitive that allows create fully encrypted
+messages of arbitrary data:
+
+[source, clojure]
+----
+(require '[buddy.sign.jws :as jws])
+(require '[buddy.core.nonce :as nonce])
+(require '[buddy.core.bytes :as bytes])
+
+(def key32 (nonce/random-bytes 32))
+(def data (nonce/random-bytes 1024))
+
+(def message (jwt/encrypt data key32))
+(bytes/equals? (jws/decrypt message key32) data)
+;; => true
+----
+
+
+[[compact]]
 == Compact message signing
 
 Compact high level message signing implementation.
@@ -390,9 +368,6 @@ Only HMAC and Poly1305 based algorithms support plain text secret keys, If you
 want to use Digital Signature instead of hmac then you must have a key pair
 (public and private).
 ====
-
-
-=== Signing and unsigning data
 
 With difference with jwt/jws, this implementation is not limited to hash-map
 like objects, and you can sign any clojure valid type. Let see an example:
@@ -459,6 +434,15 @@ openssl genrsa -aes256 -out privkey.pem 2048
 # Generate public key from previously created private key.
 openssl rsa -pubout -in privkey.pem -out pubkey.pem
 ----
+
+=== Involved RFC's?
+
+* http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32
+* http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-40
+* http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption-40
+* http://tools.ietf.org/html/draft-ietf-jose-json-web-signature-40
+* http://tools.ietf.org/html/draft-mcgrew-aead-aes-cbc-hmac-sha2-05
+* http://tools.ietf.org/html/rfc3394
 
 
 == Developers Guide
