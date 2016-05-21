@@ -50,7 +50,7 @@ dependency vector on your *_project.clj_* file:
 
 And is tested under JDK7 and JDK8.
 
-
+[[jwt]]
 == Json Web Token
 
 JSON Web Token (JWT) is a compact claims representation format intended for space
