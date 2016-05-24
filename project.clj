@@ -4,7 +4,7 @@
   :license {:name "Apache 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
   :dependencies [[org.clojure/clojure "1.8.0" :scope "provided"]
-                 [com.taoensso/nippy "2.11.1" :scope "provided"]
+                 [com.taoensso/nippy "2.11.1"]
                  [buddy/buddy-core "0.12.1"]
                  [cheshire "5.6.1"]]
   :source-paths ["src"]
