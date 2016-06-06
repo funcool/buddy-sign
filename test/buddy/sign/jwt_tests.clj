@@ -118,10 +118,19 @@
         (unsign-exp-fail signed :iss {:iss "bar:foo"})))
 
     (testing ":aud claim validation"
-      (let [candidate {:foo "bar" :aud "foo:bar"}
-            signed    (make-jwt-fn candidate)]
-        (unsign-exp-succ signed candidate)
-        (unsign-exp-fail signed :aud {:aud "bar:foo"})))))
+      (testing "single audience special case"
+        (let [candidate {:foo "bar" :aud "foo:bar"}
+              signed    (make-jwt-fn candidate)]
+          (unsign-exp-succ signed candidate)
+          (unsign-exp-fail signed :aud {:aud "bar:foo"})))
+
+      (testing "multi-audience case"
+        (let [audience  ["foo:bar" "bar:baz"]
+              candidate {:foo "bar" :aud audience}
+              signed    (make-jwt-fn candidate)]
+          (doseq [aud audience]
+            (unsign-exp-succ signed candidate {:aud aud}))
+          (unsign-exp-fail signed :aud {:aud "bar:foo"}))))))
 
 (deftest jwt-jwtio-example
   (let [jwt (str "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
@@ -144,5 +153,3 @@
       (is false "unsign should throw")
       (catch clojure.lang.ExceptionInfo e
         (is (= (:cause (ex-data e)) :signature))))))
-
-
