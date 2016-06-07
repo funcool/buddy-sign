@@ -24,7 +24,10 @@
   (when (and iss (not= iss (:iss claims)))
     (throw (ex-info (str "Issuer does not match " iss)
                     {:type :validation :cause :iss})))
-  (when (and aud (not= aud (:aud claims)))
+  (when (and aud (let [aud-claim (:aud claims)]
+                   (if (coll? aud-claim)
+                     (not-any? #{aud} aud-claim)
+                     (not= aud aud-claim))))
     (throw (ex-info (str "Audience does not match " aud)
                     {:type :validation :cause :aud})))
   (when (and (:exp claims) (>= now (:exp claims)))
