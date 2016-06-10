@@ -14,6 +14,9 @@
 
 (ns buddy.sign.jwe-tests
   (:require [clojure.test :refer :all]
+            [clojure.test.check.clojure-test :refer (defspec)]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as props]
             [clojure.string :as str]
             [buddy.core.codecs :as codecs]
             [buddy.core.crypto :as crypto]
@@ -38,31 +41,14 @@
 (def ec-privkey (keys/private-key "test/_files/privkey.ecdsa.pem" "secret"))
 (def ec-pubkey (keys/public-key "test/_files/pubkey.ecdsa.pem"))
 
-;; --- Helpers
+(def rsa-algs
+  [:rsa-oaep :rsa-oaep-256 :rsa1_5])
 
-(defn- decrypt-exp-succ
-  ([encrypted candidate]
-   (decrypt-exp-succ encrypted candidate nil))
-  ([encrypted candidate opts]
-   (is (bytes/equals? (jwe/decrypt encrypted secret opts)
-                      (codecs/to-bytes candidate)))))
-
-(defn- decrypt-exp-fail
-  ([encrypted cause]
-   (decrypt-exp-fail encrypted cause nil))
-  ([encrypted cause opts]
-   (try
-     (jwe/decrypt encrypted secret opts)
-     (throw (Exception. "unexpected"))
-     (catch clojure.lang.ExceptionInfo e
-       (is (= cause (:cause (ex-data e))))))))
+(def encs
+  [:a128gcm :a192gcm :a256gcm :a128cbc-hs256
+   :a192cbc-hs384 :a256cbc-hs512])
 
 ;; --- Tests
-
-(deftest jwe-decode
-  (let [candidate "foo bar"
-        encrypted (jwe/encrypt candidate secret)]
-    (decrypt-exp-succ encrypted candidate)))
 
 (deftest jwe-decode-header
   (let [candidate "foo bar"
@@ -70,137 +56,153 @@
         header (jwe/decode-header encrypted)]
     (is (= {:alg :dir, :enc :a128cbc-hs256, :typ "FOO", :zip false} header))))
 
-(deftest jwe-alg-dir-enc-a128-hs256
-  (testing "Encrypt and decrypt"
-    (let [result (jwe/encrypt data key32 {:enc :a128cbc-hs256})
-          result' (jwe/decrypt result key32 {:enc :a128cbc-hs256})]
-      (is (bytes/equals? result' data))))
-
-  (testing "Wrong key"
-    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a128cbc-hs256})))
-    (is (thrown? AssertionError (jwe/encrypt data key48 {:enc :a128cbc-hs256}))))
-
-  (testing "Wrong data"
-    (let [token (str "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.."
-                     "zkV7_0---NDlvQYfpNDfqw.hECYr8zURDvz9hdjz6s-O0HNF2"
-                     "MhgHgXjnQN6KuUcgE.eXYr6ybqAYcQkkkuGNcNKA")]
-      (try
-        (jwe/decrypt token key32 {:enc :a128cbc-hs256})
-        (throw (Exception. "unexpected"))
-        (catch clojure.lang.ExceptionInfo e
-          (let [cause (:cause (ex-data e))]
-            (is (= cause :authtag)))))))
-  )
-
-(deftest jwe-alg-dir-enc-a192-hs384
-  (testing "Encrypt and decrypt"
-    (let [result (jwe/encrypt data key48 {:enc :a192cbc-hs384})
-          result' (jwe/decrypt result key48 {:enc :a192cbc-hs384})]
-      (is (bytes/equals? result' data))))
-
-  (testing "Wrong key"
-    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a192cbc-hs384})))
-    (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a192cbc-hs384})))
-    (is (thrown? AssertionError (jwe/encrypt data key64 {:enc :a192cbc-hs384}))))
-  )
-
-(deftest jwe-alg-dir-enc-a256-hs512
-  (testing "Encrypt and decrypt"
-    (let [result (jwe/encrypt data key64 {:enc :a256cbc-hs512})
-          result' (jwe/decrypt result key64 {:enc :a256cbc-hs512})]
-      (is (bytes/equals? result' data))))
-
-  (testing "Wrong key"
-    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a256cbc-hs512})))
-    (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a256cbc-hs512}))))
-  )
-
-(deftest jwe-alg-dir-enc-a128gcm
-  (testing "Encrypt and decrypt"
-    (let [result (jwe/encrypt data key16 {:enc :a128gcm})
-          result' (jwe/decrypt result key16 {:enc :a128gcm})]
-      (is (bytes/equals? result' data))))
-
-  (testing "Wrong key"
-    (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a128gcm})))
-    (is (thrown? AssertionError (jwe/encrypt data key48 {:enc :a128gcm}))))
-  )
-
-(deftest jwe-alg-dir-enc-a192gcm
-  (testing "Encrypt and decrypt"
-    (let [result (jwe/encrypt data key24 {:enc :a192gcm})
-          result' (jwe/decrypt result key24 {:enc :a192gcm})]
-      (is (bytes/equals? result' data))))
-
-  (testing "Wrong key"
-    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a192gcm})))
-    (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a192gcm}))))
-  )
-
-(deftest jwe-alg-dir-enc-a256gcm
-  (testing "Encrypt and decrypt"
-    (let [result (jwe/encrypt data key32 {:enc :a256gcm})
-          result' (jwe/decrypt result key32 {:enc :a256gcm})]
-      (is (bytes/equals? result' data))))
-
-  (testing "Wrong key"
-    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a256gcm})))
-    (is (thrown? AssertionError (jwe/encrypt data key48 {:enc :a256gcm}))))
-  )
-
-(def encs [:a128gcm :a192gcm :a256gcm :a128cbc-hs256 :a192cbc-hs384 :a256cbc-hs512])
-
-(deftest jwe-alg-aes128kw-matrix
-  (testing "Encrypt and decrypt."
-    (doseq [enc encs]
-      (let [result (jwe/encrypt data key16 {:enc enc :alg :a128kw})
-            result' (jwe/decrypt result key16 {:enc enc :alg :a128kw})]
-        (is (bytes/equals? result' data)))))
-
-  (testing "Wrong key length for algorithm"
-    (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a128gcm :alg :a128kw})))))
-
-(deftest jwe-alg-aes192kw-matrix
-  (testing "Encrypt and decrypt."
-    (doseq [enc encs]
-      (let [result (jwe/encrypt data key24 {:enc enc :alg :a192kw})
-            result' (jwe/decrypt result key24 {:enc enc :alg :a192kw})]
-        (is (bytes/equals? result' data)))))
-
-  (testing "Wrong key length for algorithm"
-    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a128gcm :alg :a192kw})))))
-
-(deftest jwe-alg-aes256kw-matrix
-  (testing "Encrypt and decrypt."
-    (doseq [enc encs]
-      (let [result (jwe/encrypt data key32 {:enc enc :alg :a256kw})
-            result' (jwe/decrypt result key32 {:enc enc :alg :a256kw})]
-        (is (bytes/equals? result' data)))))
-
-  (testing "Wrong key length for algorithm"
-    (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a128gcm :alg :a256kw})))))
-
-(deftest jwe-alg-rsa-matrix
-  (testing "Encrypt and decrypt."
-    (doseq [alg [:rsa-oaep :rsa-oaep-256 :rsa1_5]
-            enc encs]
-      (let [result (jwe/encrypt data rsa-pubkey {:enc enc :alg alg})
-            result' (jwe/decrypt result rsa-privkey {:enc enc :alg alg})]
-        (is (bytes/equals? result' data))))))
-
-(deftest jwe-wrong-data
-  (try
-    (jwe/decrypt "xyz" secret)
-    (throw (Exception. "unexpected"))
-    (catch clojure.lang.ExceptionInfo e
-      (let [cause (:cause (ex-data e))]
-        (is (= cause :signature))))))
-
-(deftest jwe-wrong-key
-  (let [data (jwe/encrypt data key32 {:enc :a256gcm :alg :a256kw})]
+(deftest jwe-wrong-date-specific-test
+  (let [token (str "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.."
+                   "zkV7_0---NDlvQYfpNDfqw.hECYr8zURDvz9hdjz6s-O0HNF2"
+                   "MhgHgXjnQN6KuUcgE.eXYr6ybqAYcQkkkuGNcNKA")]
     (try
-      (jwe/decrypt data key32' {:enc :a256gcm :alg :a256kw})
+      (jwe/decrypt token key32 {:enc :a128cbc-hs256})
       (throw (Exception. "unexpected"))
       (catch clojure.lang.ExceptionInfo e
         (let [cause (:cause (ex-data e))]
-          (is (= cause :signature)))))))
+          (is (= cause :authtag)))))))
+
+(deftest wrong-key-for-enc
+  (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a256gcm})))
+  (is (thrown? AssertionError (jwe/encrypt data key48 {:enc :a256gcm})))
+  (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a192gcm})))
+  (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a192gcm})))
+  (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a128gcm})))
+  (is (thrown? AssertionError (jwe/encrypt data key48 {:enc :a128gcm})))
+  (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a256cbc-hs512})))
+  (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a256cbc-hs512})))
+  (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a192cbc-hs384})))
+  (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a192cbc-hs384})))
+  (is (thrown? AssertionError (jwe/encrypt data key64 {:enc :a192cbc-hs384})))
+  (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a128cbc-hs256})))
+  (is (thrown? AssertionError (jwe/encrypt data key48 {:enc :a128cbc-hs256})))
+  (is (thrown? AssertionError (jwe/encrypt data key32 {:enc :a128gcm :alg :a128kw})))
+  (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a128gcm :alg :a192kw})))
+  (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a128gcm :alg :a256kw})))
+  )
+
+(defspec jwe-spec-alg-dir-enc-a256gcm 1000
+  (props/for-all
+   [zip gen/boolean
+    data gen/bytes]
+   (let [res1 (jwe/encrypt data key32 {:enc :a256gcm :alg :dir :zip zip})
+         res2 (jwe/decrypt res1 key32 {:enc :a256gcm :alg :dir :zip zip})]
+     (is (bytes/equals? res2 data)))))
+
+(defspec jwe-spec-alg-dir-enc-a192gcm 1000
+  (props/for-all
+   [zip gen/boolean
+    data gen/bytes]
+   (let [res1 (jwe/encrypt data key24 {:enc :a192gcm :alg :dir :zip zip})
+         res2 (jwe/decrypt res1 key24 {:enc :a192gcm :alg :dir :zip zip})]
+     (is (bytes/equals? res2 data)))))
+
+(defspec jwe-spec-alg-dir-enc-a128gcm 1000
+  (props/for-all
+   [zip gen/boolean
+    data gen/bytes]
+   (let [res1 (jwe/encrypt data key16 {:enc :a128gcm :alg :dir :zip zip})
+         res2 (jwe/decrypt res1 key16 {:enc :a128gcm :alg :dir :zip zip})]
+     (is (bytes/equals? res2 data)))))
+
+(defspec jwe-spec-alg-dir-enc-a256cbc-hs512 1000
+  (props/for-all
+   [zip gen/boolean
+    data gen/bytes]
+   (let [res1 (jwe/encrypt data key64 {:enc :a256cbc-hs512 :zip zip})
+         res2 (jwe/decrypt res1 key64 {:enc :a256cbc-hs512 :zip zip})]
+     (is (bytes/equals? res2 data)))))
+
+(defspec jwe-spec-alg-dir-enc-a192cbc-hs384 1000
+  (props/for-all
+   [zip gen/boolean
+    data gen/bytes]
+   (let [res1 (jwe/encrypt data key48 {:enc :a192cbc-hs384 :zip zip})
+         res2 (jwe/decrypt res1 key48 {:enc :a192cbc-hs384 :zip zip})]
+     (is (bytes/equals? res2 data)))))
+
+(defspec jwe-spec-alg-dir-enc-a128cbc-hs256 1000
+  (props/for-all
+   [zip gen/boolean
+    data gen/bytes]
+   (let [res1 (jwe/encrypt data key32 {:enc :a128cbc-hs256 :zip zip})
+         res2 (jwe/decrypt res1 key32 {:enc :a128cbc-hs256 :zip zip})]
+     (is (bytes/equals? res2 data)))))
+
+(defspec jwe-spec-wrong-data 10000
+  (props/for-all
+   [data gen/string-ascii]
+   (try
+    (jwe/decrypt data secret)
+    (throw (Exception. "unexpected"))
+    (catch clojure.lang.ExceptionInfo e
+      (let [cause (:cause (ex-data e))]
+        (is (or (= cause :signature)
+                (= cause :header))))))))
+
+(defspec jwe-spec-wrong-token 1000
+  (props/for-all
+   [data1 gen/string-alphanumeric
+    data2 gen/string-alphanumeric
+    data3 gen/string-alphanumeric
+    data4 gen/string-alphanumeric
+    data5 gen/string-alphanumeric]
+   (let [data (str data1 "." data2 "." data3 "." data4 "." data5)]
+     (try
+       (jwe/decrypt data secret)
+       (throw (Exception. "unexpected"))
+       (catch clojure.lang.ExceptionInfo e
+         (let [cause (:cause (ex-data e))]
+           (is (or (= cause :signature)
+                   (= cause :header)))))))))
+
+;; (deftest jwe-spec-wrong-data
+;;   (try
+;;     (jwe/decrypt ">e31kI6Gr)u2#FGRtGOGeK6^GM:\\]OuUgR7Qwqs[`pUw^Ll~VC?V:ddTa%l@$&]/T%z<`[]6[" secret)
+;;     (throw (Exception. "unexpected"))
+;;     (catch clojure.lang.ExceptionInfo e
+;;       (let [cause (:cause (ex-data e))]
+;;         (is (or (= cause :signature)
+;;                 (= cause :header)))))))
+
+(defspec jwe-spec-alg-rsa 100
+  (props/for-all
+   [enc (gen/elements encs)
+    alg (gen/elements rsa-algs)
+    zip gen/boolean
+    data gen/bytes]
+   (let [res1 (jwe/encrypt data rsa-pubkey {:enc enc :alg alg :zip zip})
+         res2 (jwe/decrypt res1 rsa-privkey {:enc enc :alg alg :zip zip})]
+     (is (bytes/equals? res2 data)))))
+
+(defspec jwe-spec-alg-a128kw 1000
+  (props/for-all
+   [enc (gen/elements encs)
+    zip gen/boolean
+    data gen/bytes]
+   (let [res1 (jwe/encrypt data key16 {:enc enc :alg :a128kw :zip zip})
+         res2 (jwe/decrypt res1 key16 {:enc enc :alg :a128kw :zip zip})]
+     (is (bytes/equals? res2 data)))))
+
+(defspec jwe-spec-alg-a192kw 1000
+  (props/for-all
+   [enc (gen/elements encs)
+    zip gen/boolean
+    data gen/bytes]
+   (let [res1 (jwe/encrypt data key24 {:enc enc :alg :a192kw :zip zip})
+         res2 (jwe/decrypt res1 key24 {:enc enc :alg :a192kw :zip zip})]
+     (is (bytes/equals? res2 data)))))
+
+(defspec jwe-spec-alg-a256kw 1000
+  (props/for-all
+   [enc (gen/elements encs)
+    zip gen/boolean
+    data gen/bytes]
+   (let [res1 (jwe/encrypt data key32 {:enc enc :alg :a256kw :zip zip})
+         res2 (jwe/decrypt res1 key32 {:enc enc :alg :a256kw :zip zip})]
+     (is (bytes/equals? res2 data)))))

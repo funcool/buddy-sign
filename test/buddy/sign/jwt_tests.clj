@@ -14,9 +14,14 @@
 
 (ns buddy.sign.jwt-tests
   (:require [clojure.test :refer :all]
+            [clojure.test.check.clojure-test :refer (defspec)]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as props]
             [buddy.core.codecs :as codecs]
             [buddy.core.nonce :as nonce]
             [buddy.core.keys :as keys]
+            [buddy.core.bytes :as bytes]
+            [buddy.sign.jwe :as jwe]
             [buddy.sign.jws :as jws]
             [buddy.sign.jwt :as jwt]
             [buddy.sign.util :as util]
@@ -53,27 +58,37 @@
      (catch clojure.lang.ExceptionInfo e
        (is (= (:cause (ex-data e)) cause))))))
 
-(deftest jwt-jws-decode
-  (let [claims {:aud "buddy"}
-        signed (jwt/sign claims secret {:alg :hs256})
-        returned-claims (jwt/unsign signed secret {:alg :hs256})]
-    (is (= returned-claims claims) "decoded claims must match up to original")))
+(defspec jwt-spec-encode-decode-jws 100
+  (props/for-all
+   [key (gen/one-of [gen/bytes gen/string])
+    alg (gen/elements [:hs512 :hs256])
+    data (gen/map (gen/resize 4 gen/keyword)
+                  (gen/one-of [gen/string-alphanumeric gen/int]))]
+   (let [res1 (jwt/sign data key {:alg alg})
+         res2 (jwt/unsign res1 key {:alg alg})]
+     (is (= res2 data)))))
 
-(deftest jwt-jwe-decode
-  (let [claims {:aud "buddy"}
-        signed (jwt/encrypt claims key16 {:alg :dir :enc :a128gcm})
-        returned-claims (jwt/decrypt signed key16 {:alg :dir :enc :a128gcm})]
-    (is (= returned-claims claims) "decoded claims must match up to original")))
+(defspec jwt-spec-encode-decode-jwe 100
+  (props/for-all
+   [enc (gen/elements [:a128gcm :a192gcm :a256gcm :a128cbc-hs256
+                       :a192cbc-hs384 :a256cbc-hs512])
+    zip gen/boolean
+    data (gen/map (gen/resize 4 gen/keyword)
+                  (gen/one-of [gen/string-alphanumeric gen/int]))]
+   (let [res1 (jwt/encrypt data key16 {:alg :a128kw :enc enc :zip zip})
+         res2 (jwt/decrypt res1 key16 {:alg :a128kw :enc enc :zip zip})]
+     (is (= res2 data)))))
 
-(deftest jwt-jws-encode
-  (let [claims {:aud "buddy"}
-        jwt (jwt/sign claims secret {:alg :hs256})]
-    (testing "round trip"
-      (let [returned-claims (jwt/unsign jwt secret {:alg :hs256})]
-            (is (= returned-claims claims) "claims should match")))
-    (testing "JWT typ in JOSE Header"
-      (let [header (jws/decode-header jwt)]
-        (is (= "JWT" (:typ header)) "typ header not found")))))
+(defspec jwt-spec-jwt-typ-on-header 100
+  (props/for-all
+   [data (gen/map (gen/resize 4 gen/keyword)
+                  (gen/one-of [gen/string-alphanumeric gen/int]))]
+   (let [res1 (jwt/encrypt data key16 {:alg :a128kw :enc :a128gcm :zip true})
+         res2 (jwt/sign data key16 {:alg :hs256})
+         hdr1 (jwe/decode-header res1)
+         hdr2 (jws/decode-header res2)]
+     (is (= "JWT" (:typ hdr1)) "typ header not found")
+     (is (= "JWT" (:typ hdr2)) "typ header not found"))))
 
 (deftest jwt-claims-validation
   (let [make-jwt-fn #(jwt/sign % secret {:alg :hs256})

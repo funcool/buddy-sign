@@ -14,6 +14,9 @@
 
 (ns buddy.sign.jws-tests
   (:require [clojure.test :refer :all]
+            [clojure.test.check.clojure-test :refer (defspec)]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as props]
             [buddy.core.codecs :as codecs]
             [buddy.core.crypto :as crypto]
             [buddy.core.keys :as keys]
@@ -45,81 +48,57 @@
      (catch clojure.lang.ExceptionInfo e
        (is (= cause (:cause (ex-data e))))))))
 
-(deftest jws-decode
-  (let [candidate "foo bar"
-        signed (jws/encode candidate secret)]
-    (unsign-exp-succ signed candidate)))
-
-(deftest jws-decode-header
-  (let [claims "foo bar"
-        signed (jws/sign claims secret {:typ "FOO" :alg :hs256})
-        header (jws/decode-header signed)]
-    (is (= header {:typ "FOO" :alg :hs256}))))
-
-(deftest jws-decode-arbitrary-data
-  (let [candidate "foo"
-        signed (jws/encode candidate secret)]
-    (unsign-exp-succ signed candidate)))
-
-(deftest jws-hs256-sign-unsign
-  (let [candidate "foo bar "
-        result    (jws/sign candidate secret {:alg :hs256})
-        result'   (jws/unsign result secret {:alg :hs256})]
-    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
-
-(deftest jws-hs512-sign-unsign
-  (let [candidate "foo bar "
-        result    (jws/sign candidate secret {:alg :hs512})
-        result'   (jws/unsign result secret {:alg :hs512})]
-    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
-
-(deftest jws-rs256-sign-unsign
-  (let [candidate "foo bar "
-        result    (jws/sign candidate rsa-privkey {:alg :rs256})
-        result'   (jws/unsign result rsa-pubkey {:alg :rs256})]
-    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
-
-(deftest jws-rs512-sign-unsign
-  (let [candidate "foo bar "
-        result    (jws/sign candidate rsa-privkey {:alg :rs512})
-        result'   (jws/unsign result rsa-pubkey {:alg :rs512})]
-    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
-
-(deftest jws-ps256-sign-unsign
-  (let [candidate "foo bar "
-        result    (jws/sign candidate rsa-privkey {:alg :ps256})
-        result'   (jws/unsign result rsa-pubkey {:alg :ps256})]
-    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
-
-(deftest jws-ps512-sign-unsign
-  (let [candidate "foo bar "
-        result    (jws/sign candidate rsa-privkey {:alg :ps512})
-        result'   (jws/unsign result rsa-pubkey {:alg :ps512})]
-    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
-
-(deftest jws-es256-sign-unsign
-  (let [candidate "foo bar "
-        result    (jws/sign candidate ec-privkey {:alg :es256})
-        result'   (jws/unsign result ec-pubkey {:alg :es256})]
-    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
-
-(deftest jws-es512-sign-unsign
-  (let [candidate "foo bar "
-        result    (jws/sign candidate ec-privkey {:alg :es512})
-        result'   (jws/unsign result ec-pubkey {:alg :es512})]
-    (is (bytes/equals? result' (codecs/to-bytes candidate)))))
-
 (deftest jws-wrong-key
   (let [candidate "foo bar "
         result    (jws/sign candidate ec-privkey {:alg :es512})]
     (unsign-exp-fail result :signature)))
 
-(deftest jws-wrong-data
-  (unsign-exp-fail "xyz" :signature)
-  (let [data (str "."
-                  "eyJmb28iOiJiYXIifQ."
-                  "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")]
-    (unsign-exp-fail data :signature))
-  (let [data (str "eyJmb28iOiJiYXIifQ."
-                  "FvlogSd-xDr6o2zKLNfNDbREbCf1TcQri3N7LkvRYDs")]
-    (unsign-exp-fail data :signature)))
+(defspec jws-spec-alg-hs 10000
+  (props/for-all
+   [key (gen/one-of [gen/bytes gen/string])
+    data (gen/one-of [gen/bytes gen/string])
+    alg (gen/elements [:hs512 :hs256])]
+   (let [res1 (jws/sign data key {:alg alg})
+         res2 (jws/unsign res1 key {:alg alg})]
+     (is (bytes/equals? res2 (codecs/to-bytes data))))))
+
+(defspec jws-spec-alg-ps-and-rs 1000
+  (props/for-all
+   [data (gen/one-of [gen/bytes gen/string])
+    alg (gen/elements [:ps512 :ps256 :rs512 :rs256])]
+   (let [res1 (jws/sign data rsa-privkey {:alg alg})
+         res2 (jws/unsign res1 rsa-pubkey {:alg alg})]
+     (is (bytes/equals? res2 (codecs/to-bytes data))))))
+
+(defspec jws-spec-alg-es 1000
+  (props/for-all
+   [data (gen/one-of [gen/bytes gen/string])
+    alg (gen/elements [:es512 :es256])]
+   (let [res1 (jws/sign data ec-privkey {:alg alg})
+         res2 (jws/unsign res1 ec-pubkey {:alg alg})]
+     (is (bytes/equals? res2 (codecs/to-bytes data))))))
+
+(defspec jwe-spec-wrong-data 10000
+  (props/for-all
+   [data gen/string-ascii]
+   (try
+    (jws/unsign data secret)
+    (throw (Exception. "unexpected"))
+    (catch clojure.lang.ExceptionInfo e
+      (let [cause (:cause (ex-data e))]
+        (is (or (= cause :signature)
+                (= cause :header))))))))
+
+(defspec jwe-spec-wrong-token 10000
+  (props/for-all
+   [data1 gen/string-alphanumeric
+    data2 gen/string-alphanumeric
+    data3 gen/string-alphanumeric]
+   (let [data (str data1 "." data2 "." data3)]
+     (try
+       (jws/unsign data secret)
+       (throw (Exception. "unexpected"))
+       (catch clojure.lang.ExceptionInfo e
+         (let [cause (:cause (ex-data e))]
+           (is (or (= cause :signature)
+                   (= cause :header)))))))))

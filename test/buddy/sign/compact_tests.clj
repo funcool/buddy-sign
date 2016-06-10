@@ -14,6 +14,9 @@
 
 (ns buddy.sign.compact-tests
   (:require [clojure.test :refer :all]
+            [clojure.test.check.clojure-test :refer (defspec)]
+            [clojure.test.check.generators :as gen]
+            [clojure.test.check.properties :as props]
             [buddy.core.codecs :as codecs]
             [buddy.core.crypto :as crypto]
             [buddy.core.hash :as hash]
@@ -29,44 +32,58 @@
 (def ec-privkey (keys/private-key "test/_files/privkey.ecdsa.pem" "secret"))
 (def ec-pubkey (keys/public-key "test/_files/pubkey.ecdsa.pem"))
 
-(deftest compact-sign-unsign
-  (testing "Signing with compat implementation using :hs256."
-    (let [data {:foo1 "bar1"}
-          signed (compact/encode data secret)]
-      (is (= data (compact/decode signed secret)))))
+(def not-nan? (complement #(Double/isNaN %)))
 
-  (testing "Using :poly1305-aes mac algorithm"
-    (let [data {:foo1 "bar1"}
-          signed (compact/sign data secret {:alg :poly1305-aes})]
-      (is (= data (compact/unsign signed secret {:alg :poly1305-aes})))))
+(def map-gen
+  (gen/map gen/keyword
+           (gen/one-of [gen/string-alphanumeric
+                        gen/symbol
+                        gen/keyword
+                        (gen/such-that not-nan? gen/double)
+                        gen/int])))
 
-  (testing "Using :rs256 digital signature"
-    (let [candidate {:foo "bar"}
-          result    (-> (compact/sign candidate rsa-privkey {:alg :rs256})
-                        (compact/unsign rsa-pubkey {:alg :rs256}))]
-      (is (= result candidate))))
 
-  (testing "Using :ps512 digital signature"
-    (let [candidate {:foo "bar"}
-          result    (-> (compact/sign candidate rsa-privkey {:alg :ps512})
-                        (compact/unsign rsa-pubkey {:alg :ps512}))]
-      (is (= result candidate))))
+(defspec compact-spec-alg-hs 50
+  (props/for-all
+   [key (gen/one-of [gen/bytes gen/string])
+    alg (gen/elements [:hs512 :hs256])
+    data map-gen]
+   (let [res1 (compact/sign data key {:alg alg})
+         res2 (compact/unsign res1 key {:alg alg})]
+     (is (= res2 data)))))
 
-  (testing "Using :ec512 digital signature"
-    (let [candidate {:foo "bar"}
-          result    (-> (compact/sign candidate ec-privkey {:alg :es512})
-                        (compact/unsign ec-pubkey {:alg :es512}))]
-      (is (= result candidate))))
+(defspec compact-spec-alg-poly 50
+  (props/for-all
+   [alg (gen/elements [:poly1305-aes :poly1305-serpent :poly1305-twofish])
+    data map-gen]
+   (let [res1 (compact/sign data secret {:alg alg})
+         res2 (compact/unsign res1 secret {:alg alg})]
+     (is (= res2 data)))))
 
-  (testing "Using :hs256 with max-age"
-    (let [candidate {:foo "bar"}
-          signed    (compact/sign candidate secret)
-          unsigned1 (compact/decode signed secret {:max-age 1})]
-      (Thread/sleep 2000)
-      (is (= unsigned1 candidate))
-      (try
-        (compact/decode signed secret {:max-age 1})
-        (catch clojure.lang.ExceptionInfo e
-          (let [data (ex-data e)]
-            (is (= (:cause data) :max-age)))))))
-  )
+(defspec compact-spec-alg-rsa 50
+  (props/for-all
+   [alg (gen/elements [:rs256 :rs512 :ps512 :ps256])
+    data map-gen]
+   (let [res1 (compact/sign data rsa-privkey {:alg alg})
+         res2 (compact/unsign res1 rsa-pubkey {:alg alg})]
+     (is (= res2 data)))))
+
+(defspec compact-spec-alg-ec 50
+  (props/for-all
+   [alg (gen/elements [:es512 :es256])
+    data map-gen]
+   (let [res1 (compact/sign data ec-privkey {:alg alg})
+         res2 (compact/unsign res1 ec-pubkey {:alg alg})]
+     (is (= res2 data)))))
+
+(deftest compact-test-validation
+  (let [candidate {:foo "bar"}
+        signed    (compact/sign candidate secret)
+        unsigned1 (compact/decode signed secret {:max-age 1})]
+    (Thread/sleep 2000)
+    (is (= unsigned1 candidate))
+    (try
+      (compact/decode signed secret {:max-age 1})
+      (catch clojure.lang.ExceptionInfo e
+        (let [data (ex-data e)]
+          (is (= (:cause data) :max-age)))))))
