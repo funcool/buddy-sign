@@ -11,6 +11,7 @@ Date: 2016-06-10
   to JWE when compressed tokens are used.
 - Fix varios jwe/jws/jwt validations bugs found thanks to using
   generative tests with test.check.
+- The `aud` claim validation can be a set.
 
 
 == Version 1.0.0
