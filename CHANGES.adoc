@@ -1,5 +1,18 @@
 = Changelog
 
+== Version 1.1.0
+
+Date: 2016-06-10
+
+- Test everything with generative tests (with test.check)
+- Drop direct support to clojure 1.5 and 1.6
+  (because test.check has hard dependency with clojure >= 1.7)
+- Update to buddy 0.13.0 that fixes some bugs that affects
+  to JWE when compressed tokens are used.
+- Fix varios jwe/jws/jwt validations bugs found thanks to using
+  generative tests with test.check.
+
+
 == Version 1.0.0
 
 Date: 2016-05-20
@@ -20,7 +33,7 @@ The api is preserved so, the migration is pretty easy; just replace your `jws` o
 ;; Old imports:
 (require '[buddy.sign.jws :as jws])
 (require '[buddy.sign.jwe :as jwe])
-  
+
 ;; New import:
 (require '[buddy.sign.jwt :as jwt])
 ----
