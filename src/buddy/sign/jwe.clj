@@ -52,10 +52,13 @@
 
 (defn- parse-header
   [^String data]
-  (let [{:keys [alg typ enc zip]} (-> (b64/decode data)
-                                      (codecs/bytes->str)
-                                      (json/parse-string true))]
-    (cond-> {:typ typ :zip (= zip "DEF") }
+  (let [{:keys [alg typ enc zip] :as header} (-> (b64/decode data)
+                                                 (codecs/bytes->str)
+                                                 (json/parse-string true))]
+    (when-not (map? header)
+      (throw (ex-info "Message seems corrupt or manipulated."
+                      {:type :validation :cause :header})))
+    (cond-> {:typ typ :zip (= zip "DEF")}
       alg (assoc :alg (keyword (str/lower-case alg)))
       enc (assoc :enc (keyword (str/lower-case enc))))))
 
@@ -76,8 +79,9 @@
 
 (defn- decode-payload
   [payload zip]
-  (cond-> payload
-    zip (deflate/uncompress)))
+  (if zip
+    (deflate/uncompress payload)
+    payload))
 
 (defmulti aead-encrypt :alg)
 (defmulti aead-decrypt :alg)
@@ -233,29 +237,31 @@
   "Decrypt the jwe compliant message and return its payload."
   ([input key] (decrypt input key nil))
   ([input key {:keys [alg enc] :or {alg :dir enc :a128cbc-hs256} :as opts}]
-   (try
-     (let [[header ecek iv ciphertext authtag] (split-jwe-message input)
-
-           {:keys [zip] :as hdr} (parse-header header)
-           ecek (b64/decode ecek)
-           scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
-           iv (b64/decode iv)
-           header (codecs/str->bytes header)
-           ciphertext (b64/decode ciphertext)
-           authtag (b64/decode authtag)
-           payload (aead-decrypt {:ciphertext ciphertext
-                                  :authtag authtag
-                                  :alg enc
-                                  :aad header
-                                  :secret scek
-                                  :iv iv})]
-       (decode-payload payload zip))
-     (catch com.fasterxml.jackson.core.JsonParseException e
+   (let [[header ecek iv ciphertext authtag] (split-jwe-message input)]
+     (when (or (nil? ecek) (nil? iv) (nil? ciphertext) (nil? authtag))
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature})))
-     (catch org.bouncycastle.crypto.InvalidCipherTextException e
-       (throw (ex-info "Message seems corrupt or manipulated."
-                       {:type :validation :cause :signature}))))))
+     (try
+       (let [{:keys [zip] :as hdr} (parse-header header)
+             ecek (b64/decode ecek)
+             scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
+             iv (b64/decode iv)
+             header (codecs/str->bytes header)
+             ciphertext (b64/decode ciphertext)
+             authtag (b64/decode authtag)
+             payload (aead-decrypt {:ciphertext ciphertext
+                                    :authtag authtag
+                                    :alg enc
+                                    :aad header
+                                    :secret scek
+                                    :iv iv})]
+         (decode-payload payload zip))
+       (catch com.fasterxml.jackson.core.JsonParseException e
+         (throw (ex-info "Message seems corrupt or manipulated."
+                         {:type :validation :cause :signature})))
+       (catch org.bouncycastle.crypto.InvalidCipherTextException e
+         (throw (ex-info "Message seems corrupt or manipulated."
+                         {:type :validation :cause :signature})))))))
 
 (util/defalias encode encrypt)
 (util/defalias decode decrypt)
