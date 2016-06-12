@@ -90,10 +90,9 @@
      (is (= "JWT" (:typ hdr1)) "typ header not found")
      (is (= "JWT" (:typ hdr2)) "typ header not found"))))
 
-(deftest jwt-claims-validation
-  (let [make-jwt-fn #(jwt/sign % secret {:alg :hs256})
-        get-claims-fn #(jwt/unsign %1 secret (merge {:alg :hs256} %2))
-        unsign-exp-succ (partial unsign-exp-succ get-claims-fn)
+(defn jwt-claims-validation
+  [make-jwt-fn get-claims-fn]
+  (let [unsign-exp-succ (partial unsign-exp-succ get-claims-fn)
         unsign-exp-fail (partial unsign-exp-fail get-claims-fn)]
 
     (testing "current time claims validation"
@@ -146,6 +145,16 @@
           (doseq [aud audience]
             (unsign-exp-succ signed candidate {:aud aud}))
           (unsign-exp-fail signed :aud {:aud "bar:foo"}))))))
+
+(deftest jwt-jws-claims-validation
+  (jwt-claims-validation
+    #(jwt/sign % secret {:alg :hs256})
+    #(jwt/unsign %1 secret (merge {:alg :hs256} %2))))
+
+(deftest jwt-jwe-claims-validation
+  (jwt-claims-validation
+    #(jwt/encrypt % key16 {:alg :a128kw :enc :a128gcm})
+    #(jwt/decrypt %1 key16 (merge {:alg :a128kw :enc :a128gcm} %2))))
 
 (deftest jwt-jwtio-example
   (let [jwt (str "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
