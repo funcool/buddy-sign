@@ -18,11 +18,11 @@ Date: 2016-06-10
 
 Date: 2016-05-20
 
-**Important**: This is an major release beacause it inclused a breaking api changes.
+**Important**: This is an major release beacause it includes breaking api changes.
 
 Important changes:
 
-**JWS and JWE becomes a more low level functions** for sign or encrypt arbitrary
+**JWS and JWE becomes a more low level function** for sign or encrypt arbitrary
 data (as RFC specifies) and all claims and json related stuff is moved into
 specific **JWT** related namespace.
 
@@ -46,8 +46,8 @@ avaliable in the classpath.
 
 Add jdk8 java.time.Instant support for time related claims.
 
-Removed hardcoded dependency to `nippy` for compatct signing ns. Now the user
-should specify a own dependency in order to be able use the compat message
+Removed hardcoded dependency to `nippy` for compact signing ns. Now the user
+should specify their own dependency in order to be able use the compact message
 signing implementation.
 
 
