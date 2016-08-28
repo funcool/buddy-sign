@@ -17,14 +17,17 @@
 
 (defprotocol ITimestamp
   "Default protocol for convert any type to
-  unix timestamp in UTC."
+  unix timestamp."
   (to-timestamp [obj] "Covert to timestamp"))
 
-(extend-type java.util.Date
-  ITimestamp
+(extend-protocol ITimestamp
+  java.util.Date
   (to-timestamp [obj]
     (-> (.getTime ^java.util.Date obj)
-        (quot 1000))))
+        (quot 1000)))
+
+  java.lang.Long
+  (to-timestamp [obj] obj))
 
 (defmacro ^:private apply-jodatime-extensions
   []
