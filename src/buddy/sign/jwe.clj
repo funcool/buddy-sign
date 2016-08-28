@@ -29,7 +29,6 @@
             [buddy.core.bytes :as bytes]
             [buddy.core.nonce :as nonce]
             [buddy.core.crypto :as crypto]
-            [buddy.core.padding :as padding]
             [buddy.core.keys :as keys]
             [buddy.util.deflate :as deflate]
             [buddy.sign.jws :as jws]
