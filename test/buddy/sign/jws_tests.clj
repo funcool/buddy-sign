@@ -53,7 +53,7 @@
         result    (jws/sign candidate ec-privkey {:alg :es512})]
     (unsign-exp-fail result :signature)))
 
-(defspec jws-spec-alg-hs 10000
+(defspec jws-spec-alg-hs 500
   (props/for-all
    [key (gen/one-of [gen/bytes gen/string])
     data (gen/one-of [gen/bytes gen/string])
@@ -62,7 +62,7 @@
          res2 (jws/unsign res1 key {:alg alg})]
      (is (bytes/equals? res2 (codecs/to-bytes data))))))
 
-(defspec jws-spec-alg-ps-and-rs 1000
+(defspec jws-spec-alg-ps-and-rs 500
   (props/for-all
    [data (gen/one-of [gen/bytes gen/string])
     alg (gen/elements [:ps512 :ps256 :rs512 :rs256])]
@@ -70,7 +70,7 @@
          res2 (jws/unsign res1 rsa-pubkey {:alg alg})]
      (is (bytes/equals? res2 (codecs/to-bytes data))))))
 
-(defspec jws-spec-alg-es 1000
+(defspec jws-spec-alg-es 500
   (props/for-all
    [data (gen/one-of [gen/bytes gen/string])
     alg (gen/elements [:es512 :es256])]
@@ -78,7 +78,7 @@
          res2 (jws/unsign res1 ec-pubkey {:alg alg})]
      (is (bytes/equals? res2 (codecs/to-bytes data))))))
 
-(defspec jwe-spec-wrong-data 10000
+(defspec jwe-spec-wrong-data 500
   (props/for-all
    [data gen/string-ascii]
    (try
@@ -89,7 +89,7 @@
         (is (or (= cause :signature)
                 (= cause :header))))))))
 
-(defspec jwe-spec-wrong-token 10000
+(defspec jwe-spec-wrong-token 500
   (props/for-all
    [data1 gen/string-alphanumeric
     data2 gen/string-alphanumeric
