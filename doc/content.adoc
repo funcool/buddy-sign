@@ -1,6 +1,6 @@
 = buddy-sign - High level message signing.
 Andrey Antukh, <niwi@niwi.be>
-1.3.0
+1.4.0
 :toc: left
 :!numbered:
 :source-highlighter: pygments
@@ -45,10 +45,11 @@ dependency vector on your *_project.clj_* file:
 
 [source,clojure]
 ----
-[buddy/buddy-sign "1.3.0"]
+[buddy/buddy-sign "1.4.0"]
 ----
 
 And is tested under JDK7 and JDK8.
+
 
 [[jwt]]
 == Json Web Token
