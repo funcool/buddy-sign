@@ -1,4 +1,4 @@
-(defproject buddy/buddy-sign "1.3.0"
+(defproject buddy/buddy-sign "1.4.0"
   :description "High level message signing for Clojure"
   :url "https://github.com/funcool/buddy-sign"
   :license {:name "Apache 2.0"
