@@ -13,7 +13,9 @@
 ;; limitations under the License.
 
 (ns buddy.sign.util
-  (:require [buddy.core.codecs :as codecs]))
+  (:require [buddy.core.codecs :as codecs])
+  (:import java.lang.reflect.Method
+           clojure.lang.Reflector))
 
 (defprotocol ITimestamp
   "Default protocol for convert any type to
@@ -29,40 +31,24 @@
   java.lang.Long
   (to-timestamp [obj] obj))
 
-(defmacro ^:private apply-jodatime-extensions
-  []
-  (try
-    (Class/forName "org.joda.time.DateTime")
-    (Class/forName "org.joda.time.Instant")
+;; apply Joda-Time extensions. DateTime and Instant implement ReadableInstant so this works for both
+(when-let [klass (try (Class/forName "org.joda.time.ReadableInstant")
+                      (catch ClassNotFoundException _))]
+  (let [[^Method method] (Reflector/getMethods klass 0 "getMillis" false)]
+    (extend klass
+      ITimestamp
+      {:to-timestamp (fn [this]
+                       (-> (.invoke method this (make-array Object 0))
+                           (quot 1000)))})))
 
-    `(extend-protocol ITimestamp
-       org.joda.time.DateTime
-       (to-timestamp [obj#]
-         (-> (.getMillis ^org.joda.time.DateTime obj#)
-             (quot 1000)))
-
-       org.joda.time.Instant
-       (to-timestamp [obj#]
-         (-> (.getMillis ^org.joda.time.Instant obj#)
-             (quot 1000))))
-    (catch ClassNotFoundException e
-      ;; pass
-      )))
-
-(defmacro ^:private apply-jdk8-extensions
-  []
-  (try
-    (Class/forName "java.time.Instant")
-    `(extend-protocol ITimestamp
-       java.time.Instant
-       (to-timestamp [obj#]
-         (.getEpochSecond ^java.time.Instant obj#)))
-    (catch ClassNotFoundException e
-      ;; pass
-      )))
-
-(apply-jodatime-extensions)
-(apply-jdk8-extensions)
+;; apply Java 8 extensions
+(when-let [klass (try (Class/forName "java.time.Instant")
+                      (catch ClassNotFoundException _))]
+  (let [[^Method method] (Reflector/getMethods klass 0 "getEpochSecond" false)]
+    (extend klass
+      ITimestamp
+      {:to-timestamp (fn [this]
+                       (.invoke method this (make-array Object 0)))})))
 
 (defn now
   "Get a current timestamp."
