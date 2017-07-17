@@ -126,10 +126,18 @@
         (unsign-exp-succ signed candidate {:now 11})))
 
     (testing ":iss claim validation"
-      (let [candidate {:foo "bar" :iss "foo:bar"}
-            signed    (make-jwt-fn candidate)]
-        (unsign-exp-succ signed candidate)
-        (unsign-exp-fail signed :iss {:iss "bar:foo"})))
+      (testing "single issuer special case"
+        (let [candidate {:foo "bar" :iss "foo:bar"}
+              signed    (make-jwt-fn candidate)]
+          (unsign-exp-succ signed candidate)
+          (unsign-exp-fail signed :iss {:iss "bar:foo"})))
+
+      (testing "multi-issuers case"
+        (let [issuers   ["foo:bar" "bar:baz"]
+              candidate {:foo "bar" :iss "foo:bar"}
+              signed    (make-jwt-fn candidate)]
+          (unsign-exp-succ signed candidate {:iss issuers})
+          (unsign-exp-fail signed :iss {:iss ["bar:foo" "baz:bar"]}))))
 
     (testing ":aud claim validation"
       (testing "single audience special case"
