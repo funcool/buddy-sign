@@ -23,7 +23,10 @@
                                {now (util/now)}}]
 
   (let [now (util/to-timestamp now)]
-    (when (and iss (not= iss (:iss claims)))
+    (when (and iss (let [iss-claim (:iss claims)]
+                     (if (coll? iss)
+                       (not-any? #{iss-claim} iss)
+                       (not= iss-claim iss))))
       (throw (ex-info (str "Issuer does not match " iss)
                       {:type :validation :cause :iss})))
     (when (and aud (let [aud-claim (:aud claims)]
