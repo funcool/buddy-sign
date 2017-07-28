@@ -1,5 +1,14 @@
 = Changelog
 
+== Version 1.6.0
+
+Date: 2017-07-28
+
+- Update to use Clojure 1.9-alpha17
+- Update cheshire to 5.7.1
+- Update nippy to 2.13.0
+- Allows not just a single issuer, but also a collection of issuers, to be provided for validating the `iss` claim in a token
+
 == Version 1.5.0
 
 Date: 2017-03-30
