@@ -255,6 +255,9 @@
                                     :secret scek
                                     :iv iv})]
          (decode-payload payload zip))
+       (catch java.lang.AssertionError e
+         (throw (ex-info "Message seems corrupt or manipulated."
+                         {:type :validation :cause :token})))
        (catch com.fasterxml.jackson.core.JsonParseException e
          (throw (ex-info "Message seems corrupt or manipulated."
                          {:type :validation :cause :signature})))
