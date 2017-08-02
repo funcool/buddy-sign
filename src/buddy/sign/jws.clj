@@ -31,18 +31,26 @@
   "Supported algorithms."
   {:hs256 {:signer   #(mac/hash %1 {:alg :hmac+sha256 :key %2})
            :verifier #(mac/verify %1 %2 {:alg :hmac+sha256 :key %3})}
+   :hs384 {:signer   #(mac/hash %1 {:alg :hmac+sha384 :key %2})
+           :verifier #(mac/verify %1 %2 {:alg :hmac+sha384 :key %3})}
    :hs512 {:signer   #(mac/hash %1 {:alg :hmac+sha512 :key %2})
            :verifier #(mac/verify %1 %2 {:alg :hmac+sha512 :key %3})}
    :rs256 {:signer   #(dsa/sign %1 {:alg :rsassa-pkcs15+sha256 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pkcs15+sha256 :key %3})}
+   :rs384 {:signer   #(dsa/sign %1 {:alg :rsassa-pkcs15+sha384 :key %2})
+           :verifier #(dsa/verify %1 %2 {:alg :rsassa-pkcs15+sha384 :key %3})}
    :rs512 {:signer   #(dsa/sign %1 {:alg :rsassa-pkcs15+sha512 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pkcs15+sha512 :key %3})}
    :ps256 {:signer   #(dsa/sign %1 {:alg :rsassa-pss+sha256 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pss+sha256 :key %3})}
+   :ps384 {:signer   #(dsa/sign %1 {:alg :rsassa-pss+sha384 :key %2})
+           :verifier #(dsa/verify %1 %2 {:alg :rsassa-pss+sha384 :key %3})}
    :ps512 {:signer   #(dsa/sign %1 {:alg :rsassa-pss+sha512 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pss+sha512 :key %3})}
    :es256 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha256 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha256 :key %3 })}
+   :es384 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha384 :key %2})
+           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha384 :key %3 })}
    :es512 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha512 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha512 :key %3})}})
 
