@@ -51,7 +51,7 @@
                        (.invoke method this (make-array Object 0)))})))
 
 (defn now
-  "Get a current timestamp."
+  "Get a current timestamp in seconds."
   []
   (quot (System/currentTimeMillis) 1000))
 

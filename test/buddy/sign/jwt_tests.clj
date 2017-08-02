@@ -106,14 +106,18 @@
             signed    (make-jwt-fn candidate)]
         (unsign-exp-succ signed candidate {:now 0})
         (unsign-exp-succ signed candidate {:now 9})
+        (unsign-exp-succ signed candidate {:now 10 :leeway 1})
         (unsign-exp-fail signed :exp {:now 10})
-        (unsign-exp-fail signed :exp {:now 11})))
+        (unsign-exp-fail signed :exp {:now 11})
+        (unsign-exp-fail signed :exp {:now 12 :leeway 1})))
 
     (testing ":nbf claim validation"
       (let [candidate {:foo "bar" :nbf 10}
             signed    (make-jwt-fn candidate)]
         (unsign-exp-fail signed :nbf {:now 0})
+        (unsign-exp-fail signed :nbf {:now 8 :leeway 1})
         (unsign-exp-fail signed :nbf {:now 9})
+        (unsign-exp-succ signed candidate {:now 9 :leeway 1})
         (unsign-exp-succ signed candidate {:now 10})
         (unsign-exp-succ signed candidate {:now 11})))
 

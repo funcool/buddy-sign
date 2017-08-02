@@ -19,28 +19,37 @@
             [buddy.sign.util :as util]
             [cheshire.core :as json]))
 
-(defn- validate-claims [claims {:keys [max-age iss aud now] :or
-                               {now (util/now)}}]
-
+(defn- validate-claims
+  [claims {:keys [max-age iss aud now leeway] :or {now (util/now) leeway 0}}]
   (let [now (util/to-timestamp now)]
+
+    ;; Check the `:iss` claim.
     (when (and iss (let [iss-claim (:iss claims)]
                      (if (coll? iss)
                        (not-any? #{iss-claim} iss)
                        (not= iss-claim iss))))
       (throw (ex-info (str "Issuer does not match " iss)
                       {:type :validation :cause :iss})))
+
+    ;; Check the `:aud` claim.
     (when (and aud (let [aud-claim (:aud claims)]
                      (if (coll? aud-claim)
                        (not-any? #{aud} aud-claim)
                        (not= aud aud-claim))))
       (throw (ex-info (str "Audience does not match " aud)
                       {:type :validation :cause :aud})))
-    (when (and (:exp claims) (>= now (:exp claims)))
+
+    ;; Check the `:exp` claim.
+    (when (and (:exp claims) (<= (:exp claims) (- now leeway)))
       (throw (ex-info (format "Token is expired (%s)" (:exp claims))
                       {:type :validation :cause :exp})))
-    (when (and (:nbf claims) (< now (:nbf claims)))
+
+    ;; Check the `:nbf` claim.
+    (when (and (:nbf claims) (> (:nbf claims) (+ now leeway)))
       (throw (ex-info (format "Token is not yet valid (%s)" (:nbf claims))
                       {:type :validation :cause :nbf})))
+
+    ;; Check the `:max-age` option.
     (when (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
       (throw (ex-info (format "Token is older than max-age (%s)" max-age)
                       {:type :validation :cause :max-age})))
