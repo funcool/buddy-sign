@@ -163,6 +163,9 @@ is posterior to the current date time (UTC) an validation exception will be rais
 Alternatively, the time to validate token against can be specified as `:now`
 option to `unsign`.
 
+Additionaly, if you want to provide some leeway for the claims validation, you
+can pass the `:leeway` option to the `unsign` function.
+
 Let see an example using direct api:
 
 [source, clojure]
@@ -185,6 +188,7 @@ Let see an example using direct api:
 (jwt/unsign token "key" {:now (time/minus (time/now) (time/seconds 5))})
 ;; => {:user 1}
 ----
+
 
 === Encrypting data
 

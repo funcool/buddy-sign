@@ -1,4 +1,4 @@
-;; Copyright 2014-2016 Andrey Antukh <niwi@niwi.nz>
+;; Copyright 2014-2017 Andrey Antukh <niwi@niwi.nz>
 ;;
 ;; Licensed under the Apache License, Version 2.0 (the "License")
 ;; you may not use this file except in compliance with the License.
@@ -20,6 +20,25 @@
             [cheshire.core :as json]))
 
 (defn- validate-claims
+
+  "Checks the issuer in the `:iss` claim against one of the allowed issuers in the passed `:iss`. Passed `:iss` may be a string or a vector of strings.
+  If no `:iss` is passed, this check is not performed.
+
+  Checks one or more audiences in the `:aud` claim against the single valid audience in the passed `:aud`.
+  If no `:aud` is passed, this check is not performed.
+
+  Checks the `:exp` claim is not less than the passed `:now`, with a leeway of the passed `:leeway`.
+  If no `:exp` claim exists, this check is not performed.
+
+  Checks the `:nbf` claim is less than the passed `:now`, with a leeway of the passed `:leeway`.
+  If no `:nbf` claim exists, this check is not performed.
+
+  Checks the passed `:now` is greater than the `:iat` claim plus the passed `:max-age`. If no `:iat` claim exists, this check is not performed.
+
+  A check that fails raises an exception with `:type` of `:validation` and `:cause` indicating which check failed.
+
+  `:now` is an integer POSIX time and defaults to the current time.
+  `:leeway` is an integer number of seconds and defaults to zero."
   [claims {:keys [max-age iss aud now leeway] :or {now (util/now) leeway 0}}]
   (let [now (util/to-timestamp now)]
 
