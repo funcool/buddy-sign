@@ -1,15 +1,26 @@
 = Changelog
 
-== Version 1.6.0
+## Version 2.0.0
+
+Date: 2017-08-08
+
+- Stop rejecting tokens with future `:iat` claim values. (BACKWARD
+  INCOMPATIBLE CHANGE, more info in #39)
+- Fix unexpected exception in some malformed tokens.
+- Add `:leeway` option to `jwt/unsign` function.
+
+
+## Version 1.6.0
 
 Date: 2017-07-28
 
 - Update to use Clojure 1.9-alpha17
 - Update cheshire to 5.7.1
 - Update nippy to 2.13.0
-- Allows not just a single issuer, but also a collection of issuers, to be provided for validating the `iss` claim in a token
+- Allows not just a single issuer, but also a collection of issuers,
+  to be provided for validating the `iss` claim in a token
 
-== Version 1.5.0
+## Version 1.5.0
 
 Date: 2017-03-30
 
@@ -17,7 +28,7 @@ Date: 2017-03-30
   jars using JDK8.
 
 
-== Version 1.4.0
+## Version 1.4.0
 
 Date: 2017-01-24
 
@@ -25,14 +36,14 @@ Date: 2017-01-24
 - Update cheshire to 5.7.0
 
 
-== Version 1.3.0
+## Version 1.3.0
 
 Date: 2016-11-15
 
 - Update buddy-core to 1.1.1
 
 
-== Version 1.2.0
+## Version 1.2.0
 
 Date: 2016-08-28
 
@@ -43,13 +54,13 @@ Date: 2016-08-28
   as value to the `:now` parameter on JWT api.
 
 
-== Version 1.1.0
+## Version 1.1.0
 
 Date: 2016-06-10
 
 - Test everything with generative tests (with test.check)
 - Drop direct support to clojure 1.5 and 1.6
-  (because test.check has hard dependency with clojure >= 1.7)
+  (because test.check has hard dependency with clojure ># 1.7)
 - Update to buddy 0.13.0 that fixes some bugs that affects
   to JWE when compressed tokens are used.
 - Fix varios jwe/jws/jwt validations bugs found thanks to using
@@ -57,7 +68,7 @@ Date: 2016-06-10
 - The `aud` claim validation can be a set.
 
 
-== Version 1.0.0
+## Version 1.0.0
 
 Date: 2016-05-20
 
@@ -94,7 +105,7 @@ should specify their own dependency in order to be able use the compact message
 signing implementation.
 
 
-== Version 0.13.0
+## Version 0.13.0
 
 Date: 2016-04-24
 
@@ -104,7 +115,7 @@ Date: 2016-04-24
 - Add improved `:iat` validation (thanks @dottedmag) for JWS/JWE.
 
 
-== Version 0.12.0
+## Version 0.12.0
 
 Date: 2016-04-08
 
@@ -114,7 +125,7 @@ Date: 2016-04-08
 - Adapt to buddy-core api changes.
 
 
-== Version 0.11.0
+## Version 0.11.0
 
 Date: 2016-03-27
 
@@ -122,7 +133,7 @@ Date: 2016-03-27
 - Remove user.clj accindentally pulled into the jar.
 
 
-== Version 0.10.0
+## Version 0.10.0
 
 Date: 2016-03-26
 
@@ -132,7 +143,7 @@ Date: 2016-03-26
 - Fix wrong documentation about auto detection of the alg.
 
 
-== Version 0.9.0
+## Version 0.9.0
 
 Date: 2016-01-06
 
@@ -140,7 +151,7 @@ Date: 2016-01-06
 - Minor cosmetic changes.
 
 
-== Version 0.8.1
+## Version 0.8.1
 
 Date: 2015-11-17
 
@@ -148,7 +159,7 @@ Date: 2015-11-17
 - Fix wrong arguments on jws and compact sign methods.
 
 
-== Version 0.8.0
+## Version 0.8.0
 
 Date: 2015-11-15
 
@@ -159,7 +170,7 @@ Date: 2015-11-15
   api on the each ns.
 
 
-== Version 0.7.1
+## Version 0.7.1
 
 Date: 2015-09-23
 
@@ -167,7 +178,7 @@ Date: 2015-09-23
   (thanks to @jonpither for report it)
 
 
-== Version 0.7.0
+## Version 0.7.0
 
 Date: 2015-09-19
 
@@ -180,7 +191,7 @@ Date: 2015-09-19
   (maybe breaking change)
 
 
-== Version 0.6.1
+## Version 0.6.1
 
 Date: 2015-08-02
 
@@ -188,7 +199,7 @@ Date: 2015-08-02
 * Update cats version to 0.6.1
 
 
-== Version 0.6.0
+## Version 0.6.0
 
 Date: 2015-06-28
 
@@ -201,14 +212,14 @@ Date: 2015-06-28
 * Update cheshire dependency to 5.5.0
 
 
-== Version 0.5.1
+## Version 0.5.1
 
 Date: 2015-05-09
 
 * Improved error reporting when validating wrong jwe/jws tokens.
 
 
-== Version 0.5.0
+## Version 0.5.0
 
 Date: 2015-04-03
 
@@ -227,14 +238,14 @@ Date: 2015-04-03
   https://auth0.com/blog/2015/03/31/critical-vulnerabilities-in-json-web-token-libraries/
 
 
-== Version 0.4.2
+## Version 0.4.2
 
 Date: 2015-03-29
 
 * Bug fix related to :iat param validating on jws. (thanks to @tvanhens)
 
 
-== Version 0.4.1
+## Version 0.4.1
 
 Date: 2015-03-14
 
@@ -243,7 +254,7 @@ Date: 2015-03-14
 * Update cats from 0.3.2 to 0.3.4
 
 
-== Version 0.4.0
+## Version 0.4.0
 
 Date: 2015-02-22
 
@@ -258,7 +269,7 @@ Date: 2015-02-22
 * Update buddy-core version to 0.4.0
 
 
-== Version 0.3.0
+## Version 0.3.0
 
 Date: 2014-01-18
 
