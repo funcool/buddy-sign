@@ -8,6 +8,7 @@ Date: 2017-08-08
   INCOMPATIBLE CHANGE, more info in #39)
 - Fix unexpected exception in some malformed tokens.
 - Add `:leeway` option to `jwt/unsign` function.
+- Update buddy-core to 1.3.0
 
 
 ## Version 1.6.0
