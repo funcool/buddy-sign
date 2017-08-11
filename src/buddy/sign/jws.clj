@@ -48,29 +48,30 @@
    :ps512 {:signer   #(dsa/sign %1 {:alg :rsassa-pss+sha512 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pss+sha512 :key %3})}
    :es256 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha256 :key %2})
-           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha256 :key %3 })}
+           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha256 :key %3})}
    :es384 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha384 :key %2})
-           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha384 :key %3 })}
+           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha384 :key %3})}
    :es512 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha512 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha512 :key %3})}})
 
 ;; --- Implementation
 
 (defn- encode-header
-  [alg typ]
-  (let [alg (.toUpperCase (name alg))
-        typ (.toUpperCase (name typ))]
-    (-> {:alg alg :typ typ}
-        (json/generate-string)
-        (b64/encode true)
-        (codecs/bytes->str))))
+  [headers]
+  (-> headers
+      (update :alg #(.toUpperCase (name %)))
+      (update :typ #(.toUpperCase (name %)))
+      (json/generate-string)
+      (b64/encode true)
+      (codecs/bytes->str)))
 
 (defn- parse-header
   [^String data]
-  (let [{:keys [alg typ]} (-> (b64/decode data)
-                              (codecs/bytes->str)
-                              (json/parse-string true))]
-    (cond-> {:typ typ}
+  (let [header  (-> (b64/decode data)
+                    (codecs/bytes->str)
+                    (json/parse-string true))
+        alg (:alg header)]
+    (cond-> header
       alg (assoc :alg (keyword (str/lower-case alg))))))
 
 (defn- encode-payload
@@ -124,7 +125,10 @@
   json web token/signature."
   [payload pkey & [{:keys [alg typ] :or {alg :hs256 typ :jws} :as opts}]]
   {:pre [payload]}
-  (let [header (encode-header alg typ)
+  (let [header-extra (:header opts)
+        full-header (cond-> {:alg alg :typ typ}
+                      header-extra (merge header-extra))
+        header (encode-header full-header)
         payload (encode-payload payload)
         signature (calculate-signature {:key pkey
                                         :alg alg

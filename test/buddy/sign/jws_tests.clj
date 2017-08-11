@@ -70,6 +70,18 @@
          res2 (jws/unsign res1 rsa-pubkey {:alg alg})]
      (is (bytes/equals? res2 (codecs/to-bytes data))))))
 
+(defspec jws-spec-custom-headers 500
+  (props/for-all
+   [data (gen/one-of [gen/bytes gen/string])
+    nonce (gen/one-of [gen/string])
+    alg (gen/elements [:ps512 :ps384 :ps256 :rs512 :rs384 :rs256])]
+   (let [header-data {:url "https://example.com" :nonce nonce}
+         res1 (jws/sign data rsa-privkey {:alg alg :header header-data})
+         res2 (jws/unsign res1 rsa-pubkey {:alg alg})
+         header (jws/decode-header res1)]
+     (is (bytes/equals? res2 (codecs/to-bytes data)))
+     (is (= header (merge header-data {:alg alg :typ "JWS"}))))))
+
 (defspec jws-spec-alg-es 500
   (props/for-all
    [data (gen/one-of [gen/bytes gen/string])
