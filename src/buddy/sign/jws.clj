@@ -147,5 +147,14 @@
                        {:type :validation :cause :signature})))
      (decode-payload payload))))
 
+(defn decode-no-signature
+  [message]
+  (let [[header payload signature] (split-jws-message message)
+        body (-> payload
+               (decode-payload)
+               (codecs/bytes->str)
+               (json/parse-string true))]
+    [(decode-header header) body]))
+
 (util/defalias encode sign)
 (util/defalias decode unsign)
