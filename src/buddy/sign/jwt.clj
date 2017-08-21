@@ -39,7 +39,8 @@
 
   `:now` is an integer POSIX time and defaults to the current time.
   `:leeway` is an integer number of seconds and defaults to zero."
-  [claims {:keys [max-age iss aud now leeway] :or {now (util/now) leeway 0}}]
+  [claims {:keys [max-age iss aud now leeway allow-expired]
+           :or {now (util/now) leeway 0 allow-expired false}}]
   (let [now (util/to-timestamp now)]
 
     ;; Check the `:iss` claim.
@@ -59,7 +60,8 @@
                       {:type :validation :cause :aud})))
 
     ;; Check the `:exp` claim.
-    (when (and (:exp claims) (<= (:exp claims) (- now leeway)))
+    (when (and (:exp claims) (<= (:exp claims) (- now leeway))
+            (not allow-expired))
       (throw (ex-info (format "Token is expired (%s)" (:exp claims))
                       {:type :validation :cause :exp})))
 
