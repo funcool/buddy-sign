@@ -40,24 +40,22 @@
 ;; --- Implementation details
 
 (defn- encode-header
-  [{:keys [alg typ enc zip]}]
-  (let [alg (if (= alg :dir) "dir" (str/upper-case (name alg)))
-        typ (.toUpperCase (name typ))
-        enc (.toUpperCase (name enc))
-        header (merge {:alg alg :typ typ :enc enc}
-                      (when zip {:zip "DEF"}))]
-    (-> (json/generate-string header)
-        (b64/encode true))))
+  [header]
+  (-> header
+      (update :alg #(if (= % :dir) "dir" (str/upper-case (name %))))
+      (update :enc #(str/upper-case (name %)))
+      (json/generate-string)
+      (b64/encode true)))
 
 (defn- parse-header
   [^String data]
-  (let [{:keys [alg typ enc zip] :as header} (-> (b64/decode data)
-                                                 (codecs/bytes->str)
-                                                 (json/parse-string true))]
+  (let [{:keys [alg enc] :as header} (-> (b64/decode data)
+                                         (codecs/bytes->str)
+                                         (json/parse-string true))]
     (when-not (map? header)
       (throw (ex-info "Message seems corrupt or manipulated."
                       {:type :validation :cause :header})))
-    (cond-> {:typ typ :zip (= zip "DEF")}
+    (cond-> header
       alg (assoc :alg (keyword (str/lower-case alg)))
       enc (assoc :enc (keyword (str/lower-case enc))))))
 
@@ -213,13 +211,15 @@
 (defn encrypt
   "Encrypt then sign arbitrary length string/byte array using
   json web encryption."
-  [payload key & [{:keys [alg enc zip typ]
-                  :or {alg :dir enc :a128cbc-hs256 zip false typ :jwe}
+  [payload key & [{:keys [alg enc zip header]
+                  :or {alg :dir enc :a128cbc-hs256 zip false}
                   :as opts}]]
   (let [scek (cek/generate {:key key :alg alg :enc enc})
         ecek (cek/encrypt {:key key :cek scek :alg alg :enc enc})
         iv (generate-iv {:enc enc})
-        header (encode-header {:alg alg :enc enc :zip zip :typ typ})
+        header (cond-> (merge {:alg alg :enc enc} header)
+                 zip (assoc :zip "DEF"))
+        header (encode-header header)
         payload (encode-payload payload zip)
         [ciphertext authtag] (aead-encrypt {:alg enc
                                             :plaintext payload
