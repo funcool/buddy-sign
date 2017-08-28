@@ -79,17 +79,6 @@
          res2 (jwt/decrypt res1 key16 {:alg :a128kw :enc enc :zip zip})]
      (is (= res2 data)))))
 
-(defspec jwt-spec-jwt-typ-on-header 100
-  (props/for-all
-   [data (gen/map (gen/resize 4 gen/keyword)
-                  (gen/one-of [gen/string-alphanumeric gen/int]))]
-   (let [res1 (jwt/encrypt data key16 {:alg :a128kw :enc :a128gcm :zip true})
-         res2 (jwt/sign data key16 {:alg :hs256})
-         hdr1 (jwe/decode-header res1)
-         hdr2 (jws/decode-header res2)]
-     (is (= "JWT" (:typ hdr1)) "typ header not found")
-     (is (= "JWT" (:typ hdr2)) "typ header not found"))))
-
 (defn jwt-claims-validation
   [make-jwt-fn get-claims-fn]
   (let [unsign-exp-succ (partial unsign-exp-succ get-claims-fn)
@@ -110,7 +99,7 @@
         (unsign-exp-fail signed :exp {:now 10})
         (unsign-exp-fail signed :exp {:now 11})
         (unsign-exp-fail signed :exp {:now 12 :leeway 1})
-        (unsign-exp-succ signed candidate {:now 11 :allow-expired true})))
+        (unsign-exp-succ signed candidate {:now 11 :skip-validation true})))
 
     (testing ":nbf claim validation"
       (let [candidate {:foo "bar" :nbf 10}
