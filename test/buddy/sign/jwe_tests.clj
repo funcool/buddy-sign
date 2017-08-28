@@ -52,9 +52,9 @@
 
 (deftest jwe-decode-header
   (let [candidate "foo bar"
-        encrypted (jwe/encrypt candidate secret {:typ "FOO"})
+        encrypted (jwe/encrypt candidate secret)
         header (jwe/decode-header encrypted)]
-    (is (= {:alg :dir, :enc :a128cbc-hs256, :typ "FOO", :zip false} header))))
+    (is (= {:alg :dir, :enc :a128cbc-hs256} header))))
 
 (deftest jwe-wrong-date-specific-test
   (let [token (str "eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.."

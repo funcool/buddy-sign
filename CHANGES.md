@@ -1,5 +1,17 @@
 = Changelog
 
+## Version 2.1.0
+
+Date: 2017-08-28
+
+- Add `:skip-validation` option to **jwt** functions, for allow inspect invalid tokens.
+- Add support for custom header through `:header` option on jws, jwe and jwt.
+- The `typ` header is no longer set by default (is optional on the RFC
+  and is removed for save some bytes on all tokens)
+- Now only the `:alg` and `:enc` headers are treated specially
+  (keywordized on header decoding), tha rest are returned as is.
+
+
 ## Version 2.0.0
 
 Date: 2017-08-08

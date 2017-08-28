@@ -39,7 +39,8 @@
 
   `:now` is an integer POSIX time and defaults to the current time.
   `:leeway` is an integer number of seconds and defaults to zero."
-  [claims {:keys [max-age iss aud now leeway] :or {now (util/now) leeway 0}}]
+  [claims {:keys [max-age iss aud now leeway]
+           :or {now (util/now) leeway 0}}]
   (let [now (util/to-timestamp now)]
 
     ;; Check the `:iss` claim.
@@ -101,16 +102,18 @@
    {:pre [(map? claims)]}
    (let [payload (-> (prepare-claims claims opts)
                      (json/generate-string))]
-     (jws/sign payload pkey (merge opts {:typ "JWT"})))))
+     (jws/sign payload pkey opts))))
 
 (defn unsign
   ([message pkey] (unsign message pkey {}))
-  ([message pkey opts]
+  ([message pkey {:keys [skip-validation] :or {skip-validation false} :as opts}]
    (try
-     (-> (jws/unsign message pkey opts)
-         (codecs/bytes->str)
-         (json/parse-string true)
-         (validate-claims opts))
+     (let [claims (-> (jws/unsign message pkey opts)
+                      (codecs/bytes->str)
+                      (json/parse-string true))]
+       (if skip-validation
+         claims
+         (validate-claims claims opts)))
      (catch com.fasterxml.jackson.core.JsonParseException e
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature}))))))
@@ -121,16 +124,18 @@
    {:pre [(map? claims)]}
    (let [payload (-> (prepare-claims claims opts)
                      (json/generate-string))]
-     (jwe/encrypt payload pkey (merge opts {:typ "JWT"})))))
+     (jwe/encrypt payload pkey opts))))
 
 (defn decrypt
   ([message pkey] (decrypt message pkey nil))
-  ([message pkey opts]
+  ([message pkey {:keys [skip-validation] :or {skip-validation false} :as opts}]
    (try
-     (-> (jwe/decrypt message pkey opts)
-         (codecs/bytes->str)
-         (json/parse-string true)
-         (validate-claims opts))
+     (let [claims (-> (jwe/decrypt message pkey opts)
+                      (codecs/bytes->str)
+                      (json/parse-string true))]
+       (if skip-validation
+         claims
+         (validate-claims claims opts)))
      (catch com.fasterxml.jackson.core.JsonParseException e
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature}))))))

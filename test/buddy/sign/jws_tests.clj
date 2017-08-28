@@ -80,7 +80,7 @@
          res2 (jws/unsign res1 rsa-pubkey {:alg alg})
          header (jws/decode-header res1)]
      (is (bytes/equals? res2 (codecs/to-bytes data)))
-     (is (= header (merge header-data {:alg alg :typ "JWS"}))))))
+     (is (= header (merge header-data {:alg alg}))))))
 
 (defspec jws-spec-alg-es 500
   (props/for-all

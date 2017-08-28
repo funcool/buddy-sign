@@ -57,22 +57,22 @@
 ;; --- Implementation
 
 (defn- encode-header
-  [headers]
-  (-> headers
-      (update :alg #(.toUpperCase (name %)))
-      (update :typ #(.toUpperCase (name %)))
+  [header]
+  (-> header
+      (update :alg #(str/upper-case (name %)))
       (json/generate-string)
       (b64/encode true)
       (codecs/bytes->str)))
 
 (defn- parse-header
   [^String data]
-  (let [header  (-> (b64/decode data)
-                    (codecs/bytes->str)
-                    (json/parse-string true))
-        alg (:alg header)]
-    (cond-> header
-      alg (assoc :alg (keyword (str/lower-case alg))))))
+  (let [header (-> (b64/decode data)
+                   (codecs/bytes->str)
+                   (json/parse-string true))]
+    (when-not (map? header)
+      (throw (ex-info "Message seems corrupt or manipulated."
+                      {:type :validation :cause :header})))
+    (update header :alg #(keyword (str/lower-case %)))))
 
 (defn- encode-payload
   [input]
@@ -123,12 +123,10 @@
 (defn sign
   "Sign arbitrary length string/byte array using
   json web token/signature."
-  [payload pkey & [{:keys [alg typ] :or {alg :hs256 typ :jws} :as opts}]]
+  [payload pkey & [{:keys [alg header] :or {alg :hs256} :as opts}]]
   {:pre [payload]}
-  (let [header-extra (:header opts)
-        full-header (cond-> {:alg alg :typ typ}
-                      header-extra (merge header-extra))
-        header (encode-header full-header)
+  (let [header (-> (merge {:alg alg} header)
+                   (encode-header))
         payload (encode-payload payload)
         signature (calculate-signature {:key pkey
                                         :alg alg
