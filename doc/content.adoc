@@ -1,6 +1,6 @@
 = buddy-sign - High level message signing.
 Andrey Antukh, <niwi@niwi.be>
-2.0.0
+2.1.0
 :toc: left
 :!numbered:
 :source-highlighter: pygments
@@ -45,7 +45,7 @@ dependency vector on your *_project.clj_* file:
 
 [source,clojure]
 ----
-[buddy/buddy-sign "2.0.0"]
+[buddy/buddy-sign "2.1.0"]
 ----
 
 And is tested under JDK7 and JDK8.
