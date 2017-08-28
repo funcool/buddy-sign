@@ -109,7 +109,8 @@
         (unsign-exp-succ signed candidate {:now 10 :leeway 1})
         (unsign-exp-fail signed :exp {:now 10})
         (unsign-exp-fail signed :exp {:now 11})
-        (unsign-exp-fail signed :exp {:now 12 :leeway 1})))
+        (unsign-exp-fail signed :exp {:now 12 :leeway 1})
+        (unsign-exp-succ signed candidate {:now 11 :allow-expired true})))
 
     (testing ":nbf claim validation"
       (let [candidate {:foo "bar" :nbf 10}
