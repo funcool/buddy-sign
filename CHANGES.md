@@ -1,5 +1,12 @@
 = Changelog
 
+## Version 2.2.0
+
+Date: 2017-08-29
+
+- Update buddy-core to 1.4.0
+
+
 ## Version 2.1.0
 
 Date: 2017-08-28
