@@ -7,7 +7,10 @@
                  [com.taoensso/nippy "2.13.0" :scope "provided"]
                  [org.clojure/test.check "0.9.0" :scope "test"]
                  [buddy/buddy-core "1.4.0"]
-                 [cheshire "5.8.0"]]
+                 [cheshire "5.8.0"]
+                 [org.clojure/core.cache "0.6.5"]
+                 [aleph "0.4.3"]
+                 [byte-streams "0.2.3"]]
   :source-paths ["src"]
   :javac-options ["-target" "1.7" "-source" "1.7" "-Xlint:-options"]
   :test-paths ["test"])
