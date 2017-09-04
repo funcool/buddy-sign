@@ -31,8 +31,8 @@
     (when (map? edn)
       edn)))
 
-(defn- oidc-data
-  "Obtain JWK discovery data and parse it into a Clojure map"
+(defn- fetch
+  "Obtain HTTP resource and parse it into a Clojure map"
   [endpoint]
   (-> @(http/get endpoint)
       :body
@@ -48,18 +48,17 @@
 ;; It is not necessary or efficient to obtain these discovery docs on every verification
 ;; Compose the behaviour of these two caches to limit the number of and length of time
 ;; that certs that can be held in the cache
-(def ^:private discovery-cache (atom (-> {}
-                                         (cache/fifo-cache-factory)
-                                         (cache/ttl-cache-factory :ttl one-day))))
+(def ^:private jwk-cache (atom (-> {}
+                                   (cache/fifo-cache-factory)
+                                   (cache/ttl-cache-factory :ttl one-day))))
 
-(defn- jwks
+(defn- fetch-jwk
   "Obtain the JWKs based on the issuer's .well-known URL, cache the result"
   [well-known-endpoint]
-  (if (cache/has? @discovery-cache well-known-endpoint)
-    (get (cache/hit @discovery-cache well-known-endpoint) well-known-endpoint)
-    (when-let [discovery-doc (oidc-data well-known-endpoint)]
-      (let [updated-cache (swap! discovery-cache
-                                 #(cache/miss % well-known-endpoint discovery-doc))]
+  (if (cache/has? @jwk-cache well-known-endpoint)
+    (get (cache/hit @jwk-cache well-known-endpoint) well-known-endpoint)
+    (when-let [discovery-doc (fetch well-known-endpoint)]
+      (let [updated-cache (swap! jwk-cache #(cache/miss % well-known-endpoint discovery-doc))]
         (get updated-cache well-known-endpoint)))))
 
 (defn- cert->pem
@@ -72,7 +71,7 @@
 (defn get-public-key
   "Obtain the JWK public key from the well-known endpoint that matches the kid"
   [well-known-endpoint kid]
-  (when-let [jwks-doc (jwks well-known-endpoint)]
+  (when-let [jwks-doc (fetch-jwk well-known-endpoint)]
     (when-let [signing-key (first (filter #(= kid (:kid %)) (:keys jwks-doc)))]
       (cert->pem (first (:x5c signing-key))))))
 
