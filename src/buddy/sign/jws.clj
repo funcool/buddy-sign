@@ -140,11 +140,17 @@
   ([input pkey] (unsign input pkey nil))
   ([input pkey {:keys [alg] :or {alg :hs256}}]
    (let [[header payload signature] (split-jws-message input)]
-     (when-not (verify-signature {:key pkey
-                                  :signature signature
-                                  :alg alg
-                                  :header header
-                                  :payload payload})
+     (when-not
+       (try
+         (verify-signature {:key       pkey
+                            :signature signature
+                            :alg       alg
+                            :header    header
+                            :payload   payload})
+         (catch java.security.SignatureException se
+           (throw (ex-info "Message seems corrupt or manipulated."
+                           {:type :validation :cause :signature}
+                           se))))
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature})))
      (decode-payload payload))))
