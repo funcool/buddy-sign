@@ -25,7 +25,8 @@
             [buddy.core.dsa :as dsa]
             [buddy.sign.util :as util]
             [clojure.string :as str]
-            [cheshire.core :as json]))
+            [cheshire.core :as json])
+  (:import (buddy.com.nimbusds.jose.crypto ECDSA)))
 
 (def +signers-map+
   "Supported algorithms."
@@ -47,14 +48,24 @@
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pss+sha384 :key %3})}
    :ps512 {:signer   #(dsa/sign %1 {:alg :rsassa-pss+sha512 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pss+sha512 :key %3})}
-   :es256 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha256 :key %2})
-           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha256 :key %3})}
-   :es384 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha384 :key %2})
-           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha384 :key %3})}
-   :es512 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha512 :key %2})
-           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha512 :key %3})}
+
+   ;; ECDSA with signature conversions
+   :es256 {:signer   #(ECDSA/transcodeSignatureToConcat
+                        (dsa/sign %1 {:alg :ecdsa+sha256 :key %2}) 64)
+           :verifier #(dsa/verify %1 (ECDSA/transcodeSignatureToDER %2)
+                                  {:alg :ecdsa+sha256 :key %3})}
+   :es384 {:signer   #(ECDSA/transcodeSignatureToConcat
+                        (dsa/sign %1 {:alg :ecdsa+sha384 :key %2}) 96)
+           :verifier #(dsa/verify %1 (ECDSA/transcodeSignatureToDER %2)
+                                  {:alg :ecdsa+sha384 :key %3})}
+   :es512 {:signer   #(ECDSA/transcodeSignatureToConcat
+                        (dsa/sign %1 {:alg :ecdsa+sha512 :key %2}) 132)
+           :verifier #(dsa/verify %1 (ECDSA/transcodeSignatureToDER %2)
+                                  {:alg :ecdsa+sha512 :key %3})}
+
    :eddsa {:signer   #(dsa/sign %1 {:alg :eddsa :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :eddsa :key %3})}})
+
 
 ;; --- Implementation
 
