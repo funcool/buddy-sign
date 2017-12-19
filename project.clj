@@ -7,7 +7,9 @@
                  [com.taoensso/nippy "2.13.0" :scope "provided"]
                  [org.clojure/test.check "0.9.0" :scope "test"]
                  [buddy/buddy-core "1.4.0"]
-                 [cheshire "5.8.0"]]
+                 [cheshire "5.8.0"]
+                 ;; JWK thumbprint
+                 [buddy/buddy-hashers "1.2.0"]]
   :source-paths ["src"]
   :java-source-paths ["java"]
   :javac-options ["-target" "1.7" "-source" "1.7" "-Xlint:-options"]
