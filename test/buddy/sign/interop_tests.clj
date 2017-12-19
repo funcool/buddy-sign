@@ -39,7 +39,11 @@
            com.nimbusds.jose.crypto.MACSigner
            com.nimbusds.jose.crypto.MACVerifier
            com.nimbusds.jose.crypto.DirectEncrypter
-           com.nimbusds.jose.crypto.DirectDecrypter))
+           com.nimbusds.jose.crypto.DirectDecrypter
+           (com.nimbusds.jose.crypto ECDSAVerifier)
+           (javax.crypto KeyGenerator)
+           (java.security SecureRandom KeyPairGenerator)
+           (java.security.spec ECGenParameterSpec)))
 
 (def secret (codecs/hex->bytes (str "000102030405060708090a0b0c0d0e0f"
                                     "101112131415161718191a1b1c1d1e1f")))
@@ -115,3 +119,17 @@
     (is (.verify jwt (MACVerifier. key32)))
     (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
 
+(let [kg (KeyPairGenerator/getInstance "EC")
+      ;; for speed
+      sr (SecureRandom/getInstance "SHA1PRNG")
+      ;; Nimbus can't handle BouncyCastle's ECDSA keys so we use Java EC spec
+      _ (.initialize kg (ECGenParameterSpec. "secp256r1") sr)
+      pair (.generateKeyPair kg)]
+  (def ecdsa-priv-sun (.getPrivate pair))
+  (def ecdsa-pub-sun (.getPublic pair)))
+
+(deftest interoperability-test-7
+  (let [token (jws/sign (json/generate-string {:test1 "test"}) ecdsa-priv-sun {:alg :es256})
+        jwt (SignedJWT/parse token)]
+    (is (.verify jwt (ECDSAVerifier. ecdsa-pub-sun)))
+    (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
