@@ -40,7 +40,7 @@
            com.nimbusds.jose.crypto.MACVerifier
            com.nimbusds.jose.crypto.DirectEncrypter
            com.nimbusds.jose.crypto.DirectDecrypter
-           (com.nimbusds.jose.crypto ECDSAVerifier)
+           com.nimbusds.jose.crypto.ECDSAVerifier
            (javax.crypto KeyGenerator)
            (java.security SecureRandom KeyPairGenerator)
            (java.security.spec ECGenParameterSpec)))
@@ -119,17 +119,31 @@
     (is (.verify jwt (MACVerifier. key32)))
     (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
 
-(let [kg (KeyPairGenerator/getInstance "EC")
-      ;; for speed
-      sr (SecureRandom/getInstance "SHA1PRNG")
-      ;; Nimbus can't handle BouncyCastle's ECDSA keys so we use Java EC spec
-      _ (.initialize kg (ECGenParameterSpec. "secp256r1") sr)
-      pair (.generateKeyPair kg)]
-  (def ecdsa-priv-sun (.getPrivate pair))
-  (def ecdsa-pub-sun (.getPublic pair)))
+(defn generate-ecdsa-pair [curvename]
+  (let [kg (KeyPairGenerator/getInstance "EC" "BC")
+        _ (.initialize kg (ECGenParameterSpec. curvename) (SecureRandom/getInstance "SHA1PRNG"))
+        pair (.generateKeyPair kg)
+        public (.getPublic pair)
+        private (.getPrivate pair)]
+    [public private]))
 
-(deftest interoperability-test-7
-  (let [token (jws/sign (json/generate-string {:test1 "test"}) ecdsa-priv-sun {:alg :es256})
+(deftest interoperability-test-es256
+  (let [[public private] (generate-ecdsa-pair "P-256")
+        token (jws/sign (json/generate-string {:test1 "test"}) private {:alg :es256})
         jwt (SignedJWT/parse token)]
-    (is (.verify jwt (ECDSAVerifier. ecdsa-pub-sun)))
+    (is (.verify jwt (ECDSAVerifier. public)))
+    (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
+
+(deftest interoperability-test-es384
+  (let [[public private] (generate-ecdsa-pair "P-384")
+        token (jws/sign (json/generate-string {:test1 "test"}) private {:alg :es384})
+        jwt (SignedJWT/parse token)]
+    (is (.verify jwt (ECDSAVerifier. public)))
+    (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
+
+(deftest interoperability-test-es512
+  (let [[public private] (generate-ecdsa-pair "P-521")
+        token (jws/sign (json/generate-string {:test1 "test"}) private {:alg :es512})
+        jwt (SignedJWT/parse token)]
+    (is (.verify jwt (ECDSAVerifier. public)))
     (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
