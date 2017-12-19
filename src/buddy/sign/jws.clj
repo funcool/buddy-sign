@@ -52,14 +52,16 @@
    :es384 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha384 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha384 :key %3})}
    :es512 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha512 :key %2})
-           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha512 :key %3})}})
+           :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha512 :key %3})}
+   :eddsa {:signer   #(dsa/sign %1 {:alg :eddsa :key %2})
+           :verifier #(dsa/verify %1 %2 {:alg :eddsa :key %3})}})
 
 ;; --- Implementation
 
 (defn- encode-header
   [header]
   (-> header
-      (update :alg #(str/upper-case (name %)))
+      (update :alg #(if (= % :eddsa) "EdDSA" (str/upper-case (name %))))
       (json/generate-string)
       (b64/encode true)
       (codecs/bytes->str)))
