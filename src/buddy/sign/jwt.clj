@@ -30,6 +30,9 @@
   Checks the `:exp` claim is not less than the passed `:now`, with a leeway of the passed `:leeway`.
   If no `:exp` claim exists, this check is not performed.
 
+  Checks the `:expires_in` plus the `:iat` claims are not more than the passed `:now`, with a leeway of the passed `:leeway`.
+  If no `:expires_in` or `:iat` claim exists, this check is not performed.\n
+
   Checks the `:nbf` claim is less than the passed `:now`, with a leeway of the passed `:leeway`.
   If no `:nbf` claim exists, this check is not performed.
 
@@ -63,6 +66,12 @@
     (when (and (:exp claims) (<= (:exp claims) (- now leeway)))
       (throw (ex-info (format "Token is expired (%s)" (:exp claims))
                       {:type :validation :cause :exp})))
+
+    ;; Check the `:expires_in` claim.
+    (let [exp (:expires_in claims)]
+      (when (and exp (:iat claims) (> (- now (:iat claims)) (- exp leeway)))
+        (throw (ex-info (format "Token is expired (%s)" exp)
+                 {:type :validation :cause :expires_in}))))
 
     ;; Check the `:nbf` claim.
     (when (and (:nbf claims) (> (:nbf claims) (+ now leeway)))
