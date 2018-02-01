@@ -348,7 +348,7 @@ _buddy-sign_ provides functions for reading and saving JCA keys in JWK format
 
 Currently supported JWK key types are
 
-* RSA key pairs
+* RSA key pairs (No RSA-CRT support yet)
 * OKP key pairs (Ed25519)
 * EC key pairs (P-256, P-384, P-521 curves)
 
@@ -421,7 +421,7 @@ You can also convert from PEM to JWK like this
 ;; :x "JbbhB16SaghHiGHx3FutVMfVTgu9-SCtZGfZyoDZSbQ"}
 ----
 
-You can also calculate JWK thumbprint by using `thumbprint` function
+You can also calculate JWK thumbprint using `thumbprint` function
 
 [source,clojure]
 ----
@@ -436,6 +436,8 @@ You can also calculate JWK thumbprint by using `thumbprint` function
 
 (-> (jwk/thumbprint edkey)
     (codecs/bytes->hex))
+;; =>
+;; "90facafea9b1556698540f70c0117a22ea37bd5cf3ed3c47093c1707282b4b89"
 ----
 
 [[compact]]
@@ -509,7 +511,7 @@ privacy, JWE is the solution that should be used.
 === ECDSA vs EdDSA ?
 
 ECDSA algorithm has one very weak point - it requires cryptographically secure
-random numbers not  for key generation but also for EVERY signature creation.
+random numbers not only for key generation but also for EVERY signature creation.
 
 If attacker has two signatures for same data and can guess random number used
 for their creation, then she can calculate private key (see PS3 ECDSA exploit
@@ -517,7 +519,7 @@ for example).
 
 Ed25519 on the other hand is specifically designed to avoid this kind of errors,
 it also has very good performance characteristics both for signing and verification,
-it's recently been standardized
+see https://tools.ietf.org/html/rfc8032[RFC8032] for details
 
 [[generate-keypairs]]
 === How I can generate keypairs?
