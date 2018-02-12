@@ -1,4 +1,4 @@
-;; Copyright (c) 2014-2016 Andrey Antukh <niwi@niwi.nz>
+;; Copyright (c) 2014-2018 Andrey Antukh <niwi@niwi.nz>
 ;;
 ;; Licensed under the Apache License, Version 2.0 (the "License")
 ;; you may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@
             [buddy.core.mac :as mac]
             [buddy.core.dsa :as dsa]
             [buddy.sign.util :as util]
+            [buddy.util.ecdsa :refer [transcode-to-der transcode-to-concat]]
             [clojure.string :as str]
-            [cheshire.core :as json])
-  (:import (buddy.com.nimbusds.jose.crypto ECDSA)))
+            [cheshire.core :as json]))
 
 (def +signers-map+
   "Supported algorithms."
@@ -50,18 +50,15 @@
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pss+sha512 :key %3})}
 
    ;; ECDSA with signature conversions
-   :es256 {:signer   #(ECDSA/transcodeSignatureToConcat
-                        (dsa/sign %1 {:alg :ecdsa+sha256 :key %2}) 64)
-           :verifier #(dsa/verify %1 (ECDSA/transcodeSignatureToDER %2)
-                                  {:alg :ecdsa+sha256 :key %3})}
-   :es384 {:signer   #(ECDSA/transcodeSignatureToConcat
-                        (dsa/sign %1 {:alg :ecdsa+sha384 :key %2}) 96)
-           :verifier #(dsa/verify %1 (ECDSA/transcodeSignatureToDER %2)
-                                  {:alg :ecdsa+sha384 :key %3})}
-   :es512 {:signer   #(ECDSA/transcodeSignatureToConcat
-                        (dsa/sign %1 {:alg :ecdsa+sha512 :key %2}) 132)
-           :verifier #(dsa/verify %1 (ECDSA/transcodeSignatureToDER %2)
-                                  {:alg :ecdsa+sha512 :key %3})}
+   :es256 {:signer   #(-> (dsa/sign %1 {:alg :ecdsa+sha256 :key %2})
+                          (transcode-to-concat 64))
+           :verifier #(dsa/verify %1 (transcode-to-der %2) {:alg :ecdsa+sha256 :key %3})}
+   :es384 {:signer   #(-> (dsa/sign %1 {:alg :ecdsa+sha384 :key %2})
+                          (transcode-to-concat 96))
+           :verifier #(dsa/verify %1 (transcode-to-der %2) {:alg :ecdsa+sha384 :key %3})}
+   :es512 {:signer   #(-> (dsa/sign %1 {:alg :ecdsa+sha512 :key %2})
+                          (transcode-to-concat 132))
+           :verifier #(dsa/verify %1 (transcode-to-der %2) {:alg :ecdsa+sha512 :key %3})}
 
    :eddsa {:signer   #(dsa/sign %1 {:alg :eddsa :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :eddsa :key %3})}})
