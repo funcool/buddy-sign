@@ -113,7 +113,7 @@
                       (json/parse-string true))]
        (if skip-validation
          claims
-         (validation-fn claims opts)))
+         (validation-fn claims (dissoc opts :validation-fn))))
      (catch com.fasterxml.jackson.core.JsonParseException e
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature}))))))
