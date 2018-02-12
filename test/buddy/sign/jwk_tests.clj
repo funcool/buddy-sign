@@ -17,7 +17,6 @@
   (:require [clojure.test :refer :all]
             [buddy.core.codecs.base64 :as b64]
             [buddy.core.codecs :as codecs]
-            [buddy.core.dsa :as dsa]
             [buddy.core.keys :as keys]
             [buddy.sign.jws :as jws]))
 
