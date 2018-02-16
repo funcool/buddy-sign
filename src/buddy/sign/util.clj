@@ -17,10 +17,28 @@
   (:import java.lang.reflect.Method
            clojure.lang.Reflector))
 
+(defprotocol IKeyProvider
+  (resolve-key [key header] "Resolve a key"))
+
 (defprotocol ITimestamp
   "Default protocol for convert any type to
   unix timestamp."
   (to-timestamp [obj] "Covert to timestamp"))
+
+;; Default impl for the key provider
+
+(extend-protocol IKeyProvider
+  (Class/forName "[B")
+  (resolve-key [key header] key)
+
+  String
+  (resolve-key [key header] key)
+
+  clojure.lang.IFn
+  (resolve-key [key header] (key header))
+
+  java.security.Key
+  (resolve-key [key header] key))
 
 (extend-protocol ITimestamp
   java.util.Date

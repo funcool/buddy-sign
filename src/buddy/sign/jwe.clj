@@ -49,15 +49,19 @@
 
 (defn- parse-header
   [^String data]
-  (let [{:keys [alg enc] :as header} (-> (b64/decode data)
-                                         (codecs/bytes->str)
-                                         (json/parse-string true))]
-    (when-not (map? header)
+  (try
+    (let [{:keys [alg enc] :as header} (-> (b64/decode data)
+                                           (codecs/bytes->str)
+                                           (json/parse-string true))]
+      (when-not (map? header)
+        (throw (ex-info "Message seems corrupt or manipulated."
+                        {:type :validation :cause :header})))
+      (cond-> header
+        alg (assoc :alg (keyword (str/lower-case alg)))
+        enc (assoc :enc (keyword (str/lower-case enc)))))
+    (catch com.fasterxml.jackson.core.JsonParseException e
       (throw (ex-info "Message seems corrupt or manipulated."
-                      {:type :validation :cause :header})))
-    (cond-> header
-      alg (assoc :alg (keyword (str/lower-case alg)))
-      enc (assoc :enc (keyword (str/lower-case enc))))))
+                      {:type :validation :cause :header})))))
 
 (defn- generate-iv
   [{:keys [enc]}]
@@ -76,9 +80,8 @@
 
 (defn- decode-payload
   [payload zip]
-  (if zip
-    (deflate/uncompress payload)
-    payload))
+  (cond-> payload
+    zip (deflate/uncompress payload)))
 
 (defmulti aead-encrypt :alg)
 (defmulti aead-decrypt :alg)
@@ -201,12 +204,8 @@
   "Given a message, decode the header.
   WARNING: This does not perform any signature validation."
   [input]
-  (try
-    (let [[header] (split-jwe-message input)]
-      (parse-header header))
-    (catch com.fasterxml.jackson.core.JsonParseException e
-      (throw (ex-info "Message seems corrupt or manipulated."
-                      {:type :validation :cause :header})))))
+  (let [[header] (split-jwe-message input)]
+    (parse-header header)))
 
 (defn encrypt
   "Encrypt then sign arbitrary length string/byte array using
@@ -241,7 +240,7 @@
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature})))
      (try
-       (let [{:keys [zip] :as hdr} (parse-header header)
+       (let [{:keys [zip]} (parse-header header)
              ecek (b64/decode ecek)
              scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
              iv (b64/decode iv)

@@ -76,13 +76,17 @@
 
 (defn- parse-header
   [^String data]
-  (let [header (-> (b64/decode data)
-                   (codecs/bytes->str)
-                   (json/parse-string true))]
-    (when-not (map? header)
+  (try
+    (let [header (-> (b64/decode data)
+                     (codecs/bytes->str)
+                     (json/parse-string true))]
+      (when-not (map? header)
+        (throw (ex-info "Message seems corrupt or manipulated."
+                        {:type :validation :cause :header})))
+      (update header :alg #(keyword (str/lower-case %))))
+    (catch com.fasterxml.jackson.core.JsonParseException e
       (throw (ex-info "Message seems corrupt or manipulated."
-                      {:type :validation :cause :header})))
-    (update header :alg #(keyword (str/lower-case %)))))
+                      {:type :validation :cause :header})))))
 
 (defn- encode-payload
   [input]
@@ -123,12 +127,8 @@
   "Given a message, decode the header.
   WARNING: This does not perform any signature validation."
   [input]
-  (try
-    (let [[header] (split-jws-message input)]
-      (parse-header header))
-    (catch com.fasterxml.jackson.core.JsonParseException e
-      (throw (ex-info "Message seems corrupt or manipulated."
-                      {:type :validation :cause :header})))))
+  (let [[header] (split-jws-message input)]
+    (parse-header header)))
 
 (defn sign
   "Sign arbitrary length string/byte array using
@@ -149,10 +149,11 @@
   the decoded payload."
   ([input pkey] (unsign input pkey nil))
   ([input pkey {:keys [alg] :or {alg :hs256}}]
-   (let [[header payload signature] (split-jws-message input)]
+   (let [[header payload signature] (split-jws-message input)
+         header-data (parse-header header)]
      (when-not
        (try
-         (verify-signature {:key       pkey
+         (verify-signature {:key       (util/resolve-key pkey header-data)
                             :signature signature
                             :alg       alg
                             :header    header
