@@ -1,5 +1,14 @@
 = Changelog
 
+## Version 3.0.0
+
+- Update buddy-core to 1.5.0
+- Proper handling of SignatureException (jws).
+- Add EdDSA signer.
+- Add KeyProvider abstraction for enably dynamic selection
+  of key on JWS.
+  
+
 ## Version 2.2.0
 
 Date: 2017-08-29
