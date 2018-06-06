@@ -49,7 +49,7 @@
                        (not-any? #{iss-claim} iss)
                        (not= iss-claim iss))))
       (throw (ex-info (str "Issuer does not match " iss)
-                      {:type :validation :cause :iss})))
+               {:type :validation :cause :iss})))
 
     ;; Check the `:aud` claim.
     (when (and aud (let [aud-claim (:aud claims)]
@@ -57,22 +57,22 @@
                        (not-any? #{aud} aud-claim)
                        (not= aud aud-claim))))
       (throw (ex-info (str "Audience does not match " aud)
-                      {:type :validation :cause :aud})))
+               {:type :validation :cause :aud})))
 
     ;; Check the `:exp` claim.
     (when (and (:exp claims) (<= (:exp claims) (- now leeway)))
       (throw (ex-info (format "Token is expired (%s)" (:exp claims))
-                      {:type :validation :cause :exp})))
+               {:type :validation :cause :exp})))
 
     ;; Check the `:nbf` claim.
     (when (and (:nbf claims) (> (:nbf claims) (+ now leeway)))
       (throw (ex-info (format "Token is not yet valid (%s)" (:nbf claims))
-                      {:type :validation :cause :nbf})))
+               {:type :validation :cause :nbf})))
 
     ;; Check the `:max-age` option.
     (when (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
       (throw (ex-info (format "Token is older than max-age (%s)" max-age)
-                      {:type :validation :cause :max-age})))
+               {:type :validation :cause :max-age})))
     claims))
 
 (defn- normalize-date-claims
@@ -106,14 +106,14 @@
 
 (defn unsign
   ([message pkey] (unsign message pkey {}))
-  ([message pkey {:keys [skip-validation] :or {skip-validation false} :as opts}]
+  ([message pkey {:keys [skip-validation validation-fn] :or {skip-validation false validation-fn validate-claims} :as opts}]
    (try
      (let [claims (-> (jws/unsign message pkey opts)
                       (codecs/bytes->str)
                       (json/parse-string true))]
        (if skip-validation
          claims
-         (validate-claims claims opts)))
+         (validation-fn claims (dissoc opts :validation-fn))))
      (catch com.fasterxml.jackson.core.JsonParseException e
        (throw (ex-info "Message seems corrupt or manipulated."
                        {:type :validation :cause :signature}))))))
