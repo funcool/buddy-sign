@@ -142,7 +142,7 @@ json objects in the current version.
 
 === Unsigning data
 
-It's time to unsing data. That process consists on verify the signature of incoming
+It's time to unsign data. That process consists on verify the signature of incoming
 data and return the plain data (without signature). For it we will use the `unsign`
 function from `buddy.sign.jwt` namespace:
 
@@ -268,7 +268,7 @@ Then, having ready the key pair, you can strart using one of the supported
 key encryption algorithm in the JWE specification such as `:rsa1_5`, `:rsa-oaep`
 or `:rsa-oaep-256`.
 
-Let see an demostration example:
+Let see an demonstration example:
 
 [source, clojure]
 ----
