@@ -33,7 +33,7 @@ Date: 2017-08-28
 Date: 2017-08-08
 
 - Stop rejecting tokens with future `:iat` claim values. (BACKWARD
-  INCOMPATIBLE CHANGE, more info in #39)
+  INCOMPATIBLE CHANGE, more info in [#49](https://github.com/funcool/buddy-sign/pull/49))
 - Fix unexpected exception in some malformed tokens.
 - Add `:leeway` option to `jwt/unsign` function.
 - Update buddy-core to 1.3.0
