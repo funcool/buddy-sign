@@ -125,6 +125,13 @@
           (unsign-exp-succ signed candidate {:iss issuers})
           (unsign-exp-fail signed :iss {:iss ["bar:foo" "baz:bar"]}))))
 
+    (testing ":sub claim validation"
+      (testing "subject claim presention case"
+        (let [candidate {:foo "bar" :sub "foo:bar"}
+              signed    (make-jwt-fn candidate)]
+          (unsign-exp-succ signed candidate)
+          (unsign-exp-fail signed :sub {:sub "bar:foo"}))))
+
     (testing ":aud claim validation"
       (testing "single audience special case"
         (let [candidate {:foo "bar" :aud "foo:bar"}
