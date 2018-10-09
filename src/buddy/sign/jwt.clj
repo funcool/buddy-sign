@@ -27,6 +27,9 @@
   Checks one or more audiences in the `:aud` claim against the single valid audience in the passed `:aud`.
   If no `:aud` is passed, this check is not performed.
 
+  Checks the subject in the `:sub` claim.
+  If no `:sub` is passed, this check is not performed.  
+
   Checks the `:exp` claim is not less than the passed `:now`, with a leeway of the passed `:leeway`.
   If no `:exp` claim exists, this check is not performed.
 
@@ -39,7 +42,7 @@
 
   `:now` is an integer POSIX time and defaults to the current time.
   `:leeway` is an integer number of seconds and defaults to zero."
-  [claims {:keys [max-age iss aud now leeway]
+  [claims {:keys [max-age iss aud sub now leeway]
            :or {now (util/now) leeway 0}}]
   (let [now (util/to-timestamp now)]
 
@@ -73,6 +76,14 @@
     (when (and (:iat claims) (number? max-age) (> (- now (:iat claims)) max-age))
       (throw (ex-info (format "Token is older than max-age (%s)" max-age)
                       {:type :validation :cause :max-age})))
+
+    ;; Check the `:sub` claim.
+    (when (and sub (let [sub-claim (:sub claims)]
+                     (if (coll? sub-claim)
+                       (not-any? #{sub} sub-claim)
+                       (not= sub sub-claim))))
+      (throw (ex-info (str "The subject does not match " sub)
+                      {:type :validation :cause :sub})))
     claims))
 
 (defn- normalize-date-claims
