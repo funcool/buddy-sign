@@ -7,7 +7,7 @@
                  [com.taoensso/nippy "2.14.0" :scope "provided"]
                  [org.clojure/test.check "0.9.0" :scope "test"]
                  [buddy/buddy-core "1.5.0"]]
+  :global-vars {*warn-on-reflection* true}
   :source-paths ["src"]
   :javac-options ["-target" "1.7" "-source" "1.7" "-Xlint:-options"]
   :test-paths ["test"])
-

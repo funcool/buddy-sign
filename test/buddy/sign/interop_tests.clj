@@ -42,6 +42,7 @@
            com.nimbusds.jose.crypto.DirectDecrypter
            com.nimbusds.jose.crypto.ECDSAVerifier
            (javax.crypto KeyGenerator)
+           (java.security.interfaces ECPublicKey ECPrivateKey)
            (java.security SecureRandom KeyPairGenerator)
            (java.security.spec ECGenParameterSpec)))
 
@@ -67,16 +68,16 @@
         claims (.build claimsbuilder)
 
         jwt (doto (EncryptedJWT. header claims)
-              (.encrypt (DirectEncrypter. key16)))
+              (.encrypt (DirectEncrypter. ^bytes key16)))
 
         result (.serialize jwt)]
     (let [data (jwt/decrypt result key16 {:alg :dir :enc :a128gcm})]
       (is (= data {:test1 "test"})))))
 
 (deftest interoperability-test-2
-  (let [token (jwt/encrypt {:test1 "test"} key16 {:alg :dir :enc :a128gcm})
+  (let [^String token (jwt/encrypt {:test1 "test"} key16 {:alg :dir :enc :a128gcm})
         jwt (doto (EncryptedJWT/parse token)
-              (.decrypt (DirectDecrypter. key16)))]
+              (.decrypt (DirectDecrypter. ^bytes key16)))]
     (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
 
 (deftest interoperability-test-3
@@ -86,16 +87,16 @@
         claims (.build claimsbuilder)
 
         jwt (doto (EncryptedJWT. header claims)
-              (.encrypt (DirectEncrypter. key32)))
+              (.encrypt (DirectEncrypter. ^bytes key32)))
 
         result (.serialize jwt)]
     (let [data (jwt/decrypt result key32 {:alg :dir :enc :a128cbc-hs256})]
       (is (= data {:test1 "test"})))))
 
 (deftest interoperability-test-4
-  (let [token (jwt/encrypt {:test1 "test"} key32 {:alg :dir :enc :a128cbc-hs256})
+  (let [^String token (jwt/encrypt {:test1 "test"} key32 {:alg :dir :enc :a128cbc-hs256})
         jwt (doto (EncryptedJWT/parse token)
-              (.decrypt (DirectDecrypter. key32)))]
+              (.decrypt (DirectDecrypter. ^bytes key32)))]
     (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
 
 (deftest interoperability-test-5
@@ -105,7 +106,7 @@
         claims (.build claimsbuilder)
 
         jwt (doto (SignedJWT. header claims)
-              (.sign (MACSigner. key32)))
+              (.sign (MACSigner. ^bytes key32)))
 
         result (.serialize jwt)]
     (let [data (-> (jws/unsign result key32 {:alg :hs256})
@@ -114,9 +115,9 @@
       (is (= data {:test1 "test"})))))
 
 (deftest interoperability-test-6
-  (let [token (jws/sign (json/generate-string {:test1 "test"}) key32 {:alg :hs256})
+  (let [^String token (jws/sign (json/generate-string {:test1 "test"}) key32 {:alg :hs256})
         jwt (SignedJWT/parse token)]
-    (is (.verify jwt (MACVerifier. key32)))
+    (is (.verify jwt (MACVerifier. ^bytes key32)))
     (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
 
 (defn generate-ecdsa-pair [curvename]
@@ -128,22 +129,22 @@
     [public private]))
 
 (deftest interoperability-test-es256
-  (let [[public private] (generate-ecdsa-pair "P-256")
-        token (jws/sign (json/generate-string {:test1 "test"}) private {:alg :es256})
+  (let [[^ECPublicKey public ^ECPrivateKey private] (generate-ecdsa-pair "P-256")
+        ^String token (jws/sign (json/generate-string {:test1 "test"}) private {:alg :es256})
         jwt (SignedJWT/parse token)]
     (is (.verify jwt (ECDSAVerifier. public)))
     (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
 
 (deftest interoperability-test-es384
-  (let [[public private] (generate-ecdsa-pair "P-384")
-        token (jws/sign (json/generate-string {:test1 "test"}) private {:alg :es384})
+  (let [[^ECPublicKey public ^ECPrivateKey private] (generate-ecdsa-pair "P-384")
+        ^String token (jws/sign (json/generate-string {:test1 "test"}) private {:alg :es384})
         jwt (SignedJWT/parse token)]
     (is (.verify jwt (ECDSAVerifier. public)))
     (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
 
 (deftest interoperability-test-es512
-  (let [[public private] (generate-ecdsa-pair "P-521")
-        token (jws/sign (json/generate-string {:test1 "test"}) private {:alg :es512})
+  (let [[^ECPublicKey public ^ECPrivateKey private] (generate-ecdsa-pair "P-521")
+        ^String token (jws/sign (json/generate-string {:test1 "test"}) private {:alg :es512})
         jwt (SignedJWT/parse token)]
     (is (.verify jwt (ECDSAVerifier. public)))
     (is (= "test" (.. jwt getJWTClaimsSet (getClaim "test1"))))))
