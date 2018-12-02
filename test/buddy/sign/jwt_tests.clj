@@ -30,17 +30,7 @@
 (def secret (codecs/hex->bytes (str "000102030405060708090a0b0c0d0e0f"
                                     "101112131415161718191a1b1c1d1e1f")))
 
-(def data (codecs/to-bytes "test-data"))
 (def key16 (nonce/random-bytes 16))
-(def key24 (nonce/random-bytes 24))
-(def key32 (nonce/random-bytes 32))
-(def key32' (nonce/random-bytes 32))
-(def key48 (nonce/random-bytes 48))
-(def key64 (nonce/random-bytes 64))
-(def rsa-privkey (keys/private-key "test/_files/privkey.3des.rsa.pem" "secret"))
-(def rsa-pubkey (keys/public-key "test/_files/pubkey.3des.rsa.pem"))
-(def ec-privkey (keys/private-key "test/_files/privkey.ecdsa.pem" "secret"))
-(def ec-pubkey (keys/public-key "test/_files/pubkey.ecdsa.pem"))
 
 (defn- unsign-exp-succ
   ([get-claims-fn signed claims]
