@@ -125,7 +125,7 @@ The api is preserved so, the migration is pretty easy; just replace your `jws` o
 Many thanks to @FreekPaans for the initial work on split JWS and JWT.
 
 The **clj-time** dependency is removed. JodaTime directly is used if it is
-avaliable in the classpath.
+available in the classpath.
 
 Add jdk8 java.time.Instant support for time related claims.
 
