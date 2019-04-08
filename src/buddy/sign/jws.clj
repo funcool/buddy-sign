@@ -148,14 +148,14 @@
   "Given a signed message, verify it and return
   the decoded payload."
   ([input pkey] (unsign input pkey nil))
-  ([input pkey {:keys [alg] :or {alg :hs256}}]
+  ([input pkey {:keys [alg]}]
    (let [[header payload signature] (split-jws-message input)
          header-data (parse-header header)]
      (when-not
        (try
          (verify-signature {:key       (util/resolve-key pkey header-data)
                             :signature signature
-                            :alg       alg
+                            :alg       (or alg (:alg header-data) :hs256)
                             :header    header
                             :payload   payload})
          (catch java.security.SignatureException se

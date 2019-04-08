@@ -51,7 +51,7 @@
 (deftest jws-wrong-key
   (let [candidate "foo bar "
         result    (jws/sign candidate ec-privkey {:alg :es512})]
-    (unsign-exp-fail result :signature)))
+    (unsign-exp-fail result :signature {:alg :hs256})))
 
 (defspec jws-spec-alg-hs 500
   (props/for-all
@@ -69,6 +69,14 @@
    (let [res1 (jws/sign data rsa-privkey {:alg alg})
          res2 (jws/unsign res1 rsa-pubkey {:alg alg})]
      (is (bytes/equals? res2 (codecs/to-bytes data))))))
+
+(defspec jws-spec-alg-ps-and-rs-from-header 500
+   (props/for-all
+    [data (gen/one-of [gen/bytes gen/string])
+     alg (gen/elements [:ps512 :ps384 :ps256 :rs512 :rs384 :rs256])]
+     (let [res1 (jws/sign data rsa-privkey {:alg alg})
+           res2 (jws/unsign res1 rsa-pubkey)]
+       (is (bytes/equals? res2 (codecs/to-bytes data))))))
 
 (defspec jws-spec-custom-headers 500
   (props/for-all
