@@ -8,4 +8,5 @@ script:
 jdk:
   - oraclejdk8
   - openjdk7
-  - oraclejdk7
+  - openjdk8
+  - openjdk9
