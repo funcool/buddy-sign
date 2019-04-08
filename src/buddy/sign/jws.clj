@@ -77,13 +77,16 @@
 (defn- parse-header
   [^String data]
   (try
-    (let [header (-> (b64/decode data)
-                     (codecs/bytes->str)
-                     (json/parse-string true))]
+    (let [{:keys [alg] :as header} (-> (b64/decode data)
+                                       (codecs/bytes->str)
+                                       (json/parse-string true))]
       (when-not (map? header)
         (throw (ex-info "Message seems corrupt or manipulated."
                         {:type :validation :cause :header})))
-      (update header :alg #(keyword (str/lower-case %))))
+
+      (if alg
+        (assoc header :alg (keyword (str/lower-case alg)))
+        header))
     (catch com.fasterxml.jackson.core.JsonParseException e
       (throw (ex-info "Message seems corrupt or manipulated."
                       {:type :validation :cause :header})))))
