@@ -17,6 +17,7 @@
             [clojure.test.check.clojure-test :refer (defspec)]
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as props]
+            [clojure.string :as str]
             [buddy.core.codecs :as codecs]
             [buddy.core.nonce :as nonce]
             [buddy.core.keys :as keys]
@@ -178,3 +179,8 @@
       (is false "unsign should throw")
       (catch clojure.lang.ExceptionInfo e
         (is (= (:cause (ex-data e)) :signature))))))
+
+(deftest jwt-unsign-key-fn-example
+   (let [jwt (jwt/sign {:foo 1 :bar 2 :baz 3} secret {:alg :hs256})
+         actual (jwt/unsign jwt secret {:alg :hs256 :key-fn str/upper-case})]
+     (is (= actual {"FOO" 1 "BAR" 2 "BAZ" 3}))))

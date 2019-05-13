@@ -117,11 +117,11 @@
 
 (defn unsign
   ([message pkey] (unsign message pkey {}))
-  ([message pkey {:keys [skip-validation] :or {skip-validation false} :as opts}]
+  ([message pkey {:keys [skip-validation key-fn] :or {skip-validation false key-fn true} :as opts}]
    (try
      (let [claims (-> (jws/unsign message pkey opts)
                       (codecs/bytes->str)
-                      (json/parse-string true))]
+                      (json/parse-string key-fn))]
        (if skip-validation
          claims
          (validate-claims claims opts)))
