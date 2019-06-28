@@ -1,5 +1,12 @@
 = Changelog
 
+## Version 3.1.0
+
+Date: 2019-06-28
+
+- Update buddy-core to 1.6.0
+
+
 ## Version 3.0.0
 
 - Update buddy-core to 1.5.0
@@ -7,7 +14,7 @@
 - Add EdDSA signer.
 - Add KeyProvider abstraction for enably dynamic selection
   of key on JWS.
-  
+
 
 ## Version 2.2.0
 
