@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="generator" content="Asciidoctor 1.5.5">
+<meta name="generator" content="Asciidoctor 1.5.8">
 <meta name="author" content="Andrey Antukh, &lt;niwi@niwi.be&gt;">
 <title>buddy-sign - High level message signing.</title>
 <style>
@@ -86,7 +86,7 @@
 <h1>buddy-sign - High level message signing.</h1>
 <div class="details">
 <span id="author" class="author">Andrey Antukh, &lt;niwi@niwi.be&gt;</span><br>
-<span id="revdate">2.2.0</span>
+<span id="revdate">3.1.0</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
@@ -115,8 +115,9 @@
 <li><a href="#faq">FAQ</a>
 <ul class="sectlevel2">
 <li><a href="#when-i-should-use-jwe-and-when-jws">When I should use JWE and when JWS?</a></li>
+<li><a href="#ecdsa-vs-eddsa">ECDSA vs EdDSA ?</a></li>
 <li><a href="#generate-keypairs">How I can generate keypairs?</a></li>
-<li><a href="#involved-rfc-s">Involved RFC&#8217;s?</a></li>
+<li><a href="#involved-rfcs">Involved RFC&#8217;s?</a></li>
 </ul>
 </li>
 <li><a href="#developers-guide">Developers Guide</a>
@@ -185,11 +186,11 @@ dependency vector on your <strong><em>project.clj</em></strong> file:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">[</span><span class="tok-nv">buddy/buddy-sign</span> <span class="tok-s">&quot;2.2.0&quot;</span><span class="tok-p">]</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">[</span><span class="tok-nv">buddy/buddy-sign</span> <span class="tok-s">&quot;3.1.0&quot;</span><span class="tok-p">]</span></code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>And is tested under JDK7 and JDK8.</p>
+<p>And is tested under JDK8.</p>
 </div>
 </div>
 </div>
@@ -213,7 +214,7 @@ to be digitally signed or MACed and/or encrypted.</p>
 <p>Here a table of supported algorithms for signing JWT claims using
 JWS (Json Web Signature):</p>
 </div>
-<table class="tableblock frame-all grid-all spread">
+<table class="tableblock frame-all grid-all stretch">
 <colgroup>
 <col style="width: 25%;">
 <col style="width: 25%;">
@@ -233,6 +234,12 @@ JWS (Json Web Signature):</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Elliptic Curve DSA</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">sha256, sha512</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>:es256</code>, <code>:es512</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Edwards Curve DSA</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">sha512</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><code>:eddsa</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Yes</p></td>
 </tr>
 <tr>
@@ -267,7 +274,7 @@ encryption algorithms and content encryption algorithms.</p>
 used for encrypt the content. This is a table that exposes the currently
 supported <em>Key Encryption Algorithms</em> (specified in JWA RFC):</p>
 </div>
-<table class="tableblock frame-all grid-all spread">
+<table class="tableblock frame-all grid-all stretch">
 <colgroup>
 <col style="width: 20%;">
 <col style="width: 40%;">
@@ -333,7 +340,7 @@ encryption algorithm)</p></td>
 is a table that exposes the currently supported <em>Content Encryption Algorithms</em>
 (all specified in the JWA RFC):</p>
 </div>
-<table class="tableblock frame-all grid-all spread">
+<table class="tableblock frame-all grid-all stretch">
 <colgroup>
 <col style="width: 25%;">
 <col style="width: 25%;">
@@ -397,7 +404,7 @@ is a table that exposes the currently supported <em>Content Encryption Algorithm
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.sign.jwt</span> <span class="tok-ss">:as</span> <span class="tok-nv">jwt</span><span class="tok-p">])</span>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.sign.jwt</span> <span class="tok-ss">:as</span> <span class="tok-nv">jwt</span><span class="tok-p">])</span>
 
 <span class="tok-p">(</span><span class="tok-nf">jwt/sign</span> <span class="tok-p">{</span><span class="tok-ss">:userid</span> <span class="tok-mi">1</span><span class="tok-p">}</span> <span class="tok-s">&quot;secret&quot;</span><span class="tok-p">)</span>
 <span class="tok-c1">;; &quot;eyJ0eXAiOiJKV1MiLCJhbGciOiJIU...&quot;</span></code></pre>
@@ -426,13 +433,13 @@ json objects in the current version.
 <div class="sect2">
 <h3 id="unsigning-data"><a class="link" href="#unsigning-data">Unsigning data</a></h3>
 <div class="paragraph">
-<p>It&#8217;s time to unsing data. That process consists on verify the signature of incoming
+<p>It&#8217;s time to unsign data. That process consists on verify the signature of incoming
 data and return the plain data (without signature). For it we will use the <code>unsign</code>
 function from <code>buddy.sign.jwt</code> namespace:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">jwt/unsign</span> <span class="tok-nv">data</span> <span class="tok-s">&quot;secret&quot;</span><span class="tok-p">)</span>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">jwt/unsign</span> <span class="tok-nv">data</span> <span class="tok-s">&quot;secret&quot;</span><span class="tok-p">)</span>
 <span class="tok-c1">;; =&gt; {:userid 1}</span></code></pre>
 </div>
 </div>
@@ -459,7 +466,7 @@ can pass the <code>:leeway</code> option to the <code>unsign</code> function.</p
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">clj-time.core</span> <span class="tok-ss">:as</span> <span class="tok-nv">time</span><span class="tok-p">])</span>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">clj-time.core</span> <span class="tok-ss">:as</span> <span class="tok-nv">time</span><span class="tok-p">])</span>
 
 <span class="tok-c1">;; Define claims with `:exp` key</span>
 <span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">claims</span>
@@ -487,7 +494,7 @@ can pass the <code>:leeway</code> option to the <code>unsign</code> function.</p
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.sign.jwt</span> <span class="tok-ss">:as</span> <span class="tok-nv">jwt</span><span class="tok-p">])</span>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.sign.jwt</span> <span class="tok-ss">:as</span> <span class="tok-nv">jwt</span><span class="tok-p">])</span>
 <span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.core.hash</span> <span class="tok-ss">:as</span> <span class="tok-nv">hash</span><span class="tok-p">])</span>
 
 <span class="tok-c1">;; Hash your secret key with sha256 for</span>
@@ -518,7 +525,7 @@ Let see how you can use it:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">jwt/decrypt</span> <span class="tok-nv">incoming-data</span> <span class="tok-nv">secret</span><span class="tok-p">)</span>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">jwt/decrypt</span> <span class="tok-nv">incoming-data</span> <span class="tok-nv">secret</span><span class="tok-p">)</span>
 <span class="tok-c1">;; =&gt; {:userid 1}</span></code></pre>
 </div>
 </div>
@@ -537,7 +544,7 @@ of supported digital signature algorithms.</p>
 <div class="listingblock">
 <div class="title">Example of signing a string using <em>es256</em> (eliptic curve dsa) algorithm.</div>
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.core.keys</span> <span class="tok-ss">:as</span> <span class="tok-nv">keys</span><span class="tok-p">])</span>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.core.keys</span> <span class="tok-ss">:as</span> <span class="tok-nv">keys</span><span class="tok-p">])</span>
 
 <span class="tok-c1">;; Create keys instances</span>
 <span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">ec-privkey</span> <span class="tok-p">(</span><span class="tok-nf">keys/private-key</span> <span class="tok-s">&quot;ecprivkey.pem&quot;</span><span class="tok-p">))</span>
@@ -564,11 +571,11 @@ key encryption algorithm in the JWE specification such as <code>:rsa1_5</code>, 
 or <code>:rsa-oaep-256</code>.</p>
 </div>
 <div class="paragraph">
-<p>Let see an demostration example:</p>
+<p>Let see an demonstration example:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.core.keys</span> <span class="tok-ss">:as</span> <span class="tok-nv">keys</span><span class="tok-p">])</span>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.core.keys</span> <span class="tok-ss">:as</span> <span class="tok-nv">keys</span><span class="tok-p">])</span>
 
 <span class="tok-c1">;; Create keys instances</span>
 <span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">privkey</span> <span class="tok-p">(</span><span class="tok-nf">keys/private-key</span> <span class="tok-s">&quot;privkey.pem&quot;</span><span class="tok-p">))</span>
@@ -602,7 +609,7 @@ arbitrary data (instead of json formated claims):</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.sign.jws</span> <span class="tok-ss">:as</span> <span class="tok-nv">jws</span><span class="tok-p">])</span>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.sign.jws</span> <span class="tok-ss">:as</span> <span class="tok-nv">jws</span><span class="tok-p">])</span>
 <span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.core.nonce</span> <span class="tok-ss">:as</span> <span class="tok-nv">nonce</span><span class="tok-p">])</span>
 <span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.core.bytes</span> <span class="tok-ss">:as</span> <span class="tok-nv">bytes</span><span class="tok-p">])</span>
 
@@ -629,7 +636,7 @@ messages of arbitrary data:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.sign.jws</span> <span class="tok-ss">:as</span> <span class="tok-nv">jws</span><span class="tok-p">])</span>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.sign.jws</span> <span class="tok-ss">:as</span> <span class="tok-nv">jws</span><span class="tok-p">])</span>
 <span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.core.nonce</span> <span class="tok-ss">:as</span> <span class="tok-nv">nonce</span><span class="tok-p">])</span>
 <span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.core.bytes</span> <span class="tok-ss">:as</span> <span class="tok-nv">bytes</span><span class="tok-p">])</span>
 
@@ -660,14 +667,14 @@ build on top of fantastic ptaoussanis/nippy serialization library.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">[</span><span class="tok-nv">com.taoensso/nippy</span> <span class="tok-s">&quot;2.11.1&quot;</span><span class="tok-p">]</span></code></pre>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">[</span><span class="tok-nv">com.taoensso/nippy</span> <span class="tok-s">&quot;2.11.1&quot;</span><span class="tok-p">]</span></code></pre>
 </div>
 </div>
 <div class="paragraph">
 <p>In the same way as JWS, it support a great number of different signing
 algorithms that can be used for sign your messages:</p>
 </div>
-<table class="tableblock frame-all grid-all spread">
+<table class="tableblock frame-all grid-all stretch">
 <colgroup>
 <col style="width: 25%;">
 <col style="width: 25%;">
@@ -727,7 +734,7 @@ like objects, and you can sign any clojure valid type.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.sign.compact</span> <span class="tok-ss">:as</span> <span class="tok-nv">cm</span><span class="tok-p">])</span>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">require</span> <span class="tok-o">&#39;</span><span class="tok-p">[</span><span class="tok-nv">buddy.sign.compact</span> <span class="tok-ss">:as</span> <span class="tok-nv">cm</span><span class="tok-p">])</span>
 
 <span class="tok-p">(</span><span class="tok-k">def </span><span class="tok-nv">data</span> <span class="tok-p">(</span><span class="tok-nf">cp/sign</span> <span class="tok-o">#</span><span class="tok-p">{</span><span class="tok-ss">:foo</span> <span class="tok-ss">:bar</span><span class="tok-p">}</span> <span class="tok-s">&quot;secret&quot;</span><span class="tok-p">)</span>
 
@@ -740,7 +747,7 @@ like objects, and you can sign any clojure valid type.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="clojure"><span class="tok-p">(</span><span class="tok-nf">cm/unsign</span> <span class="tok-nv">data</span> <span class="tok-s">&quot;secret&quot;</span> <span class="tok-p">{</span><span class="tok-ss">:max-age</span> <span class="tok-p">(</span><span class="tok-nb">* </span><span class="tok-mi">15</span> <span class="tok-mi">60</span><span class="tok-p">)})</span>
+<pre class="pygments highlight"><code data-lang="clojure"><span></span><span class="tok-p">(</span><span class="tok-nf">cm/unsign</span> <span class="tok-nv">data</span> <span class="tok-s">&quot;secret&quot;</span> <span class="tok-p">{</span><span class="tok-ss">:max-age</span> <span class="tok-p">(</span><span class="tok-nb">* </span><span class="tok-mi">15</span> <span class="tok-mi">60</span><span class="tok-p">)})</span>
 <span class="tok-c1">;; =&gt; ExceptionInfo: &quot;Token is older than 1427836475&quot;</span></code></pre>
 </div>
 </div>
@@ -763,11 +770,28 @@ privacy, JWE is the solution that should be used.</p>
 </div>
 </div>
 <div class="sect2">
+<h3 id="ecdsa-vs-eddsa"><a class="link" href="#ecdsa-vs-eddsa">ECDSA vs EdDSA ?</a></h3>
+<div class="paragraph">
+<p>ECDSA algorithm has one very weak point - it requires cryptographically secure
+random numbers not only for key generation but also for EVERY signature creation.</p>
+</div>
+<div class="paragraph">
+<p>If attacker has two signatures for same data and can guess random number used
+for their creation, then she can calculate private key (see PS3 ECDSA exploit
+for example).</p>
+</div>
+<div class="paragraph">
+<p>Ed25519 on the other hand is specifically designed to avoid this kind of errors,
+it also has very good performance characteristics both for signing and verification,
+see <a href="https://tools.ietf.org/html/rfc8032">RFC8032</a> for details</p>
+</div>
+</div>
+<div class="sect2">
 <h3 id="generate-keypairs"><a class="link" href="#generate-keypairs">How I can generate keypairs?</a></h3>
 <div class="listingblock">
 <div class="title">Example on how to generate one Elliptic Curve DSA keypair.</div>
 <div class="content">
-<pre class="pygments highlight"><code data-lang="bash"><span class="tok-c1"># Generating params file</span>
+<pre class="pygments highlight"><code data-lang="bash"><span></span><span class="tok-c1"># Generating params file</span>
 openssl ecparam -name prime256v1 -out ecparams.pem
 
 <span class="tok-c1"># Generate a private key from params file</span>
@@ -780,35 +804,49 @@ openssl ec -in ecprivkey.pem -pubout -out ecpubkey.pem</code></pre>
 <div class="listingblock">
 <div class="title">Example on how to generate one RSA keypair.</div>
 <div class="content">
-<pre class="pygments highlight"><code data-lang="bash"><span class="tok-c1"># Generate aes256 encrypted private key</span>
+<pre class="pygments highlight"><code data-lang="bash"><span></span><span class="tok-c1"># Generate aes256 encrypted private key</span>
 openssl genrsa -aes256 -out privkey.pem <span class="tok-m">2048</span>
 
 <span class="tok-c1"># Generate public key from previously created private key.</span>
 openssl rsa -pubout -in privkey.pem -out pubkey.pem</code></pre>
 </div>
 </div>
+<div class="paragraph">
+<p>OpenSSL&#8217;s command line utilities do not support Ed25519 keys yet.
+See <a href="#ed25519-generation">this section</a> for Ed25519 key pair generation
+example</p>
+</div>
 </div>
 <div class="sect2">
-<h3 id="involved-rfc-s"><a class="link" href="#involved-rfc-s">Involved RFC&#8217;s?</a></h3>
+<h3 id="involved-rfcs"><a class="link" href="#involved-rfcs">Involved RFC&#8217;s?</a></h3>
 <div class="ulist">
 <ul>
 <li>
-<p><a href="http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32" class="bare">http://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32</a></p>
+<p><a href="https://tools.ietf.org/html/rfc7519" class="bare">https://tools.ietf.org/html/rfc7519</a></p>
 </li>
 <li>
-<p><a href="http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-40" class="bare">http://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-40</a></p>
+<p><a href="https://tools.ietf.org/html/rfc7518" class="bare">https://tools.ietf.org/html/rfc7518</a></p>
 </li>
 <li>
-<p><a href="http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption-40" class="bare">http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption-40</a></p>
+<p><a href="https://tools.ietf.org/html/rfc7516" class="bare">https://tools.ietf.org/html/rfc7516</a></p>
 </li>
 <li>
-<p><a href="http://tools.ietf.org/html/draft-ietf-jose-json-web-signature-40" class="bare">http://tools.ietf.org/html/draft-ietf-jose-json-web-signature-40</a></p>
+<p><a href="https://tools.ietf.org/html/rfc7515" class="bare">https://tools.ietf.org/html/rfc7515</a></p>
 </li>
 <li>
 <p><a href="http://tools.ietf.org/html/draft-mcgrew-aead-aes-cbc-hmac-sha2-05" class="bare">http://tools.ietf.org/html/draft-mcgrew-aead-aes-cbc-hmac-sha2-05</a></p>
 </li>
 <li>
-<p><a href="http://tools.ietf.org/html/rfc3394" class="bare">http://tools.ietf.org/html/rfc3394</a></p>
+<p><a href="https://tools.ietf.org/html/rfc3394" class="bare">https://tools.ietf.org/html/rfc3394</a></p>
+</li>
+<li>
+<p><a href="https://tools.ietf.org/html/rfc7517" class="bare">https://tools.ietf.org/html/rfc7517</a></p>
+</li>
+<li>
+<p><a href="https://tools.ietf.org/html/rfc7638" class="bare">https://tools.ietf.org/html/rfc7638</a></p>
+</li>
+<li>
+<p><a href="https://tools.ietf.org/html/rfc8037" class="bare">https://tools.ietf.org/html/rfc8037</a></p>
 </li>
 </ul>
 </div>
@@ -864,7 +902,7 @@ have many restrictions for contributions. Just open an issue or pull request.</p
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="bash">git clone https://github.com/funcool/buddy-sign</code></pre>
+<pre class="pygments highlight"><code data-lang="bash"><span></span>git clone https://github.com/funcool/buddy-sign</code></pre>
 </div>
 </div>
 </div>
@@ -875,7 +913,7 @@ have many restrictions for contributions. Just open an issue or pull request.</p
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="pygments highlight"><code data-lang="bash">lein test-all</code></pre>
+<pre class="pygments highlight"><code data-lang="bash"><span></span>lein test-all</code></pre>
 </div>
 </div>
 </div>
@@ -891,7 +929,7 @@ of the license on the root of the repository on <code>LICENSE</code> file.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-08-29 13:54:57 CEST
+Last updated 2019-06-28 18:23:56 +0200
 </div>
 </div>
 </body>
