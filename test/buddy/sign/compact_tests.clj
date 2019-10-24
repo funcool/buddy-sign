@@ -40,7 +40,7 @@
                         gen/symbol
                         gen/keyword
                         (gen/such-that not-nan? gen/double)
-                        gen/int])))
+                        gen/small-integer])))
 
 
 (defspec compact-spec-alg-hs 50

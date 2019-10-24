@@ -5,7 +5,7 @@
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
   :dependencies [[org.clojure/clojure "1.10.1" :scope "provided"]
                  [com.taoensso/nippy "2.14.0" :scope "provided"]
-                 [org.clojure/test.check "0.9.0" :scope "test"]
+                 [org.clojure/test.check "0.10.0" :scope "test"]
                  [buddy/buddy-core "1.6.0"]]
   :source-paths ["src"]
   :javac-options ["-target" "1.7" "-source" "1.7" "-Xlint:-options"]
