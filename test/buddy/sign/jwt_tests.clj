@@ -63,7 +63,7 @@
    [key (gen/one-of [gen/bytes gen/string])
     alg (gen/elements [:hs512 :hs256])
     data (gen/map (gen/resize 4 gen/keyword)
-                  (gen/one-of [gen/string-alphanumeric gen/int]))]
+                  (gen/one-of [gen/string-alphanumeric gen/small-integer]))]
    (let [res1 (jwt/sign data key {:alg alg})
          res2 (jwt/unsign res1 key {:alg alg})]
      (is (= res2 data)))))
