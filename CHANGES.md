@@ -9,6 +9,8 @@ Date: 2019-06-28
 
 ## Version 3.0.0
 
+Date: 2018-06-02
+
 - Update buddy-core to 1.5.0
 - Proper handling of SignatureException (jws).
 - Add EdDSA signer.
