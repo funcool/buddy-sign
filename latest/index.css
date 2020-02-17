@@ -1,0 +1,35 @@
+body {
+  box-sizing: border-box;
+  padding: 30px 80px 30px 160px;
+  font-family: sans-serif;
+  max-width: 900px;
+}
+
+code {
+  box-sizing: border-box;
+  padding: 5px 7px;
+  background-color: #f0f0f0;
+  display: inline-block;
+}
+
+p {
+  line-height: 1.1rem;
+}
+
+li {
+  line-height: 1.5rem;
+}
+
+h2 {
+  margin-top: 80px;
+}
+
+h3 {
+  margin-top: 40px;
+}
+
+.pygments code {
+  padding: 20px 15px;
+  box-sizing: border-box;
+  font-size: 0.9rem;
+}
