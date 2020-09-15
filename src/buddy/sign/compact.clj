@@ -34,7 +34,6 @@
             [buddy.core.mac :as mac]
             [buddy.core.dsa :as dsa]
             [buddy.core.nonce :as nonce]
-            [buddy.sign.jws :as jws]
             [buddy.sign.util :as util]
             [clojure.string :as str]
             [taoensso.nippy :as nippy]

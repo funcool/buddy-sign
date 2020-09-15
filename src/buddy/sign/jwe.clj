@@ -215,7 +215,7 @@
                   :as opts}]]
   (let [scek (cek/generate {:key key :alg alg :enc enc})
         ecek (cek/encrypt {:key key :cek scek :alg alg :enc enc})
-        iv (generate-iv {:enc enc})
+        iv   (generate-iv {:enc enc})
         header (cond-> (merge {:alg alg :enc enc} header)
                  zip (assoc :zip "DEF"))
         header (encode-header header)

@@ -36,12 +36,15 @@
            :verifier #(mac/verify %1 %2 {:alg :hmac+sha384 :key %3})}
    :hs512 {:signer   #(mac/hash %1 {:alg :hmac+sha512 :key %2})
            :verifier #(mac/verify %1 %2 {:alg :hmac+sha512 :key %3})}
+
+   ;; NOT RECOMMENDED
    :rs256 {:signer   #(dsa/sign %1 {:alg :rsassa-pkcs15+sha256 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pkcs15+sha256 :key %3})}
    :rs384 {:signer   #(dsa/sign %1 {:alg :rsassa-pkcs15+sha384 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pkcs15+sha384 :key %3})}
    :rs512 {:signer   #(dsa/sign %1 {:alg :rsassa-pkcs15+sha512 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pkcs15+sha512 :key %3})}
+
    :ps256 {:signer   #(dsa/sign %1 {:alg :rsassa-pss+sha256 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :rsassa-pss+sha256 :key %3})}
    :ps384 {:signer   #(dsa/sign %1 {:alg :rsassa-pss+sha384 :key %2})

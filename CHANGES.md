@@ -1,4 +1,11 @@
-= Changelog
+# Changelog
+
+## Version 3.2.0
+
+Date: 2020-09-15
+
+- Update buddy-core to 1.8.0
+
 
 ## Version 3.1.0
 
