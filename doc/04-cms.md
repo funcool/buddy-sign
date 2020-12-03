@@ -10,10 +10,10 @@ In order to use this you shall include the concrete `nippy` library because
 
 ```clojure
 ;; project.clj
-[com.taoensso/nippy "2.15.3"]
+[com.taoensso/nippy "3.1.1"]
 
 ;; deps.edn
-com.taoensso/nippy {:mvn/version "2.15.3"}
+com.taoensso/nippy {:mvn/version "3.1.1"}
 ```
 
 In the same way as JWS, it support a great number of different signing

@@ -1,5 +1,13 @@
 # Changelog
 
+## Version 3.3.0
+
+Date: 2020-12-03
+
+- Update buddy-core to 1.8.0
+- Update nippy to 3.1.1 (provided)
+
+
 ## Version 3.2.0
 
 Date: 2020-09-15
