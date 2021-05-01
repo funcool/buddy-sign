@@ -87,6 +87,9 @@
         (throw (ex-info "Message seems corrupt or manipulated."
                         {:type :validation :cause :header})))
       (update header :alg #(keyword (str/lower-case %))))
+    (catch java.lang.NullPointerException e
+      (throw (ex-info "Message seems corrupt or manipulated."
+                      {:type :validation :cause :header})))
     (catch com.fasterxml.jackson.core.JsonParseException e
       (throw (ex-info "Message seems corrupt or manipulated."
                       {:type :validation :cause :header})))))

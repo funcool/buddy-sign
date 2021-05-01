@@ -2,10 +2,10 @@
  {:aliases {"test-all" ["with-profile" "dev:dev,1.9:dev,1.8:dev" "test"]}
   :plugins
   [[lein-codox "0.10.7"]
-   [lein-ancient "0.6.15"]]
+   [lein-ancient "0.7.0"]]
 
   :dependencies
-  [[org.clojure/tools.reader "1.1.0"]
+  [[org.clojure/tools.reader "1.3.5"]
    [org.clojure/test.check "1.1.0" :scope "test"]
    [com.nimbusds/nimbus-jose-jwt "4.13.1"]
    [codox-theme-rdash "0.1.2"]]
