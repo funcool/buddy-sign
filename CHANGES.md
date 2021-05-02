@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 3.4.1
+
+Date: 2021-05-02
+
+- Update buddy-core to 1.10.1
+
+
 ## Version 3.4.0
 
 Date: 2021-05-01

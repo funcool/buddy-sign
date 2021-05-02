@@ -1,7 +1,6 @@
 # buddy-sign
 
 [![Travis Badge](https://img.shields.io/travis/funcool/buddy-sign.svg?style=flat)](https://travis-ci.org/funcool/buddy-sign "Travis Badge")
-[![Dependencies Status](http://jarkeeper.com/funcool/buddy-sign/status.svg)](http://jarkeeper.com/funcool/buddy-sign)
 
 A library that provides a high level message signing api for Clojure.
 
