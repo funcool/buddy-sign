@@ -18,7 +18,7 @@ Date: 2021-05-01
 
 Date: 2020-12-03
 
-- Update buddy-core to 1.8.0
+- Update buddy-core to 1.9.0
 - Update nippy to 3.1.1 (provided)
 
 
