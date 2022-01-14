@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 3.4.333
+
+Date: 2022-01-14
+
+- Update dependencies.
+
+
 ## Version 3.4.1
 
 Date: 2021-05-02
