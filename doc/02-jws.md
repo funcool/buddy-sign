@@ -1,12 +1,12 @@
 # JWS (Json Web Signature)
 
 JSON Web Signature (JWS) is a signing part of Json Web Token (JWT)
-specification and represents a content secured with digital signatures
+specification and represents content secured with digital signatures
 or Message Authentication Codes (MACs) using JavaScript Object
 Notation (JSON) as serialization format.
 
 In difference to JWT, this is more lowlevel signing primitive and
-allows signining arbitrary binary data (instead of json formated
+allows signing arbitrary binary data (instead of json formated
 claims):
 
 ```clojure
@@ -21,5 +21,5 @@ claims):
 ;; => true
 ```
 
-The supported algorightms are documented on the [jwt
+The supported algorithms are documented on the [jwt
 document](01-jwt.md).

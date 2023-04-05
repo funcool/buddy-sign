@@ -109,9 +109,6 @@
     (= alg :rsa-oaep-256)
     (encrypt-with-rsaaoep-sha256 cek key)
 
-    (= alg :rsa-oaep-256)
-    (encrypt-with-rsaaoep-sha256 cek key)
-
     (= alg :rsa1_5)
     (encrypt-with-rsa-pkcs15 cek key)
 

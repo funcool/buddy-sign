@@ -30,7 +30,7 @@ algorithms that can be used for sign your messages:
 In difference with jwt, this implementation is not limited to hash-map
 like objects, and you can sign any clojure valid type.
 
-Let see an example:
+Let's see an example:
 
 ```clojure
 (require '[buddy.sign.compact :as cms])
@@ -41,14 +41,12 @@ Let see an example:
 ;; => #{:foo :bar}
 ```
 
-Then, you also will be able validate the signed message based in its age:
+Then, you also will be able validate the signed message based on its age:
 
 ```clojure
 (cm/unsign data "secret" {:max-age (* 15 60)})
 ;; => ExceptionInfo: "Token is older than 1427836475"
 ```
 
-**NOTE:** Only `:max-age` validation is bundlind all other validation
-are delegated to the user code.
-
-
+**NOTE:** Only `:max-age` validation is bundled all other validation
+is delegated to the user code.
