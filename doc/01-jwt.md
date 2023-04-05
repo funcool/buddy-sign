@@ -11,7 +11,7 @@ claims to be digitally signed or MACed and/or encrypted.
 
 ## Supported algorithms
 
-Here a table of supported algorithms for signing JWT claims using JWS
+Here is a table of supported algorithms for signing JWT claims using JWS
 (Json Web Signature):
 
 |Algorithm name     | Hash algorithms   | Keywords           | Priv/Pub Key? |
@@ -26,7 +26,7 @@ The JWE (Json Web Encryption) in difference to JWS uses two types of
 algoritms: key encryption algorithms and content encryption
 algorithms.
 
-The *key encryption algorithms* are responsible of encrypt the key
+The *key encryption algorithms* are responsible to encrypt the key
 that will be used for encrypt the content. This is a table that
 exposes the currently supported _Key Encryption Algorithms_ (specified
 in JWA RFC):
@@ -42,7 +42,7 @@ in JWA RFC):
 | RSA-OAEP-256   | RSA OAEP with SHA256 | `:rsa-oaep-256` | Asymetric key pair |
 
 
-The *content encryption algoritms* are responsible of encrypt the
+The *content encryption algoritms* are responsible to encrypt the
 content. This is a table that exposes the currently supported _Content
 Encryption Algorithms_ (all specified in the JWA RFC):
 
@@ -58,9 +58,9 @@ Encryption Algorithms_ (all specified in the JWA RFC):
 
 ## Signing data
 
-Let start with signing data. For it we will use the `sign` function
+Let's start with signing data. For it we will use the `sign` function
 from `buddy.sign.jws` namespace, and the `hs256` algorithm for
-signining:
+signing:
 
 ```clojure
 (require '[buddy.sign.jwt :as jwt])
@@ -72,7 +72,7 @@ signining:
 The `sign` function return a encoded and signed token as plain
 `String` instance or an exception in case of something goes wrong. As
 you can observe, no algorithm is passed as parameter. In this
-situations the default one will be used, and in this case is `:hs256`.
+situation the default one will be used, and in this case is `:hs256`.
 
 **NOTE**: Due to the nature of the storage format, the input is
 restricted mainly to json objects in the current version.
@@ -101,11 +101,11 @@ found and is posterior to the current date time (UTC) an validation
 exception will be raised.  Alternatively, the time to validate token
 against can be specified as `:now` option to `unsign`.
 
-Additionaly, if you want to provide some leeway for the claims
+Additionally, if you want to provide some leeway for the claims
 validation, you can pass the `:leeway` option to the `unsign`
 function.
 
-Let see an example using direct api:
+Let's see an example using direct api:
 
 ```clojure
 (require '[clj-time.core :as time])
@@ -129,7 +129,7 @@ Let see an example using direct api:
 
 ## Encrypting data
 
-Let start with encrypting data. For it we will use the `encrypt`
+Let's start with encrypting data. For it we will use the `encrypt`
 function from the `buddy.sign.jwt` namespace:
 
 ```clojure
@@ -197,8 +197,8 @@ In order to use any asymetric encryption algorithm, you should have
 private/public key pair. If you don't have one, don't worry, it is
 very easy to generate it using *openssl* ([look on FAQ](./05-faq.md)).
 
-Then, having ready the key pair, you can strart using one of the supported
-key encryption algorithm in the JWE specification such as `:rsa1_5`, `:rsa-oaep`
+Then, having ready the key pair, you can start using one of the supported
+key encryption algorithms in the JWE specification such as `:rsa1_5`, `:rsa-oaep`
 or `:rsa-oaep-256`.
 
 Let see an demonstration example:

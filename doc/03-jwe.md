@@ -1,10 +1,10 @@
 # JWE (Json Web Encryption)
 
 JSON Web Encryption (JWE) is a encryption part of Json Web Token (JWT)
-specification and represents a encrypted content using JavaScript
+specification and represents encrypted content using JavaScript
 Object Notation (JSON) based data structures.
 
-In same way as JWS, this is a low level primitive that allows create
+In same way as JWS, this is a low level primitive that allows creating
 fully encrypted messages of arbitrary data:
 
 ```clojure
@@ -20,6 +20,5 @@ fully encrypted messages of arbitrary data:
 ;; => true
 ```
 
-The supported algorightms are documented on the [jwt
+The supported algorithms are documented on the [jwt
 document](01-jwt.md).
-
