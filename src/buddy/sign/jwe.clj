@@ -144,7 +144,7 @@
                                  :key secret
                                  :iv iv
                                  :aad aad})
-        resultlen (alength result)
+        resultlen  (alength ^bytes result)
         ciphertext (bytes/slice result 0 (- resultlen 16))
         tag (bytes/slice result (- resultlen 16) resultlen)]
     [ciphertext tag]))

@@ -18,6 +18,7 @@
             [buddy.core.nonce :as nonce]
             [buddy.core.keys :as keys])
   (:import javax.crypto.Cipher
+           java.security.Key
            java.security.SecureRandom))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -36,42 +37,42 @@
     :a256kw (= (count key) 32)))
 
 (defn- encrypt-with-rsaaoep
-  [cek pubkey]
+  [^bytes cek ^Key pubkey]
   (let [cipher (Cipher/getInstance "RSA/ECB/OAEPWithSHA-1AndMGF1Padding" "BC")
-        sr (SecureRandom.)]
-    (.init cipher Cipher/ENCRYPT_MODE pubkey sr)
+        sr     (SecureRandom.)]
+    (.init ^Cipher cipher Cipher/ENCRYPT_MODE pubkey sr)
     (.doFinal cipher cek)))
 
 (defn- decrypt-with-rsaaoep
-  [ecek privkey]
+  [^bytes ecek ^Key privkey]
   (let [cipher (Cipher/getInstance "RSA/ECB/OAEPWithSHA-1AndMGF1Padding" "BC")
-        sr (SecureRandom.)]
-    (.init cipher Cipher/DECRYPT_MODE privkey  sr)
+        sr     (SecureRandom.)]
+    (.init cipher Cipher/DECRYPT_MODE privkey sr)
     (.doFinal cipher ecek)))
 
 (defn- encrypt-with-rsaaoep-sha256
-  [cek pubkey]
+  [^bytes cek ^Key pubkey]
   (let [cipher (Cipher/getInstance "RSA/ECB/OAEPWithSHA-256AndMGF1Padding" "BC")
         sr (SecureRandom.)]
     (.init cipher Cipher/ENCRYPT_MODE pubkey sr)
     (.doFinal cipher cek)))
 
 (defn- decrypt-with-rsaaoep-sha256
-  [ecek privkey]
+  [^bytes ecek ^Key privkey]
   (let [cipher (Cipher/getInstance "RSA/ECB/OAEPWithSHA-256AndMGF1Padding" "BC")
         sr (SecureRandom.)]
     (.init cipher Cipher/DECRYPT_MODE privkey  sr)
     (.doFinal cipher ecek)))
 
 (defn- encrypt-with-rsa-pkcs15
-  [cek pubkey]
+  [^bytes cek ^Key pubkey]
   (let [cipher (Cipher/getInstance "RSA/ECB/PKCS1Padding" "BC")
         sr (SecureRandom.)]
     (.init cipher Cipher/ENCRYPT_MODE pubkey sr)
     (.doFinal cipher cek)))
 
 (defn- decrypt-with-rsa-pkcs15
-  [ecek privkey]
+  [^bytes ecek ^Key privkey]
   (let [cipher (Cipher/getInstance "RSA/ECB/PKCS1Padding" "BC")
         sr (SecureRandom.)]
     (.init cipher Cipher/DECRYPT_MODE privkey  sr)
