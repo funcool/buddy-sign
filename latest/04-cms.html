@@ -23,7 +23,7 @@ com.taoensso/nippy {:mvn/version "3.1.1"}
 </tbody>
 </table>
 <p>In difference with jwt, this implementation is not limited to hash-map like objects, and you can sign any clojure valid type.</p>
-<p>Let see an example:</p>
+<p>Let’s see an example:</p>
 <pre><code class="language-clojure">(require '[buddy.sign.compact :as cms])
 
 (def data (cms/sign #{:foo :bar} "secret")
@@ -31,9 +31,9 @@ com.taoensso/nippy {:mvn/version "3.1.1"}
 (cms/unsign data "secret")
 ;; =&gt; #{:foo :bar}
 </code></pre>
-<p>Then, you also will be able validate the signed message based in its age:</p>
+<p>Then, you also will be able validate the signed message based on its age:</p>
 <pre><code class="language-clojure">(cm/unsign data "secret" {:max-age (* 15 60)})
 ;; =&gt; ExceptionInfo: "Token is older than 1427836475"
 </code></pre>
-<p><strong>NOTE:</strong> Only <code>:max-age</code> validation is bundlind all other validation are delegated to the user code.</p>
+<p><strong>NOTE:</strong> Only <code>:max-age</code> validation is bundled all other validation is delegated to the user code.</p>
 </div></div></div></body></html>
