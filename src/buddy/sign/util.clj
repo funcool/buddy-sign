@@ -13,9 +13,13 @@
 ;; limitations under the License.
 
 (ns buddy.sign.util
-  (:require [buddy.core.codecs :as codecs])
-  (:import java.lang.reflect.Method
-           clojure.lang.Reflector))
+  (:require
+   [buddy.core.codecs :as bc]
+   [cheshire.core :as json]
+   [clojure.string :as str])
+  (:import
+   java.lang.reflect.Method
+   clojure.lang.Reflector))
 
 (defprotocol IKeyProvider
   (resolve-key [key header] "Resolve a key"))
@@ -87,3 +91,44 @@
       #(conj (dissoc % :macro)
              (apply dissoc (meta (var ~orig)) (remove #{:macro} (keys %)))))
      (var ~name)))
+
+(defn parse-jose-header
+  [^bytes data]
+  (try
+    (let [{:keys [alg enc] :as header} (-> data
+                                           (bc/b64->bytes true)
+                                           (bc/bytes->str)
+                                           (json/parse-string true))]
+      (when-not (map? header)
+        (throw (ex-info "Message seems corrupt or manipulated"
+                        {:type :validation :cause :header})))
+      (cond-> header
+        (string? alg) (assoc :alg (keyword (str/lower-case alg)))
+        (string? enc) (assoc :enc (keyword (str/lower-case enc)))))
+
+    (catch java.lang.IllegalArgumentException e
+      (throw (ex-info "Message seems corrupt or manipulated"
+                      {:type :validation :cause :header})))
+
+    (catch java.lang.NullPointerException e
+      (throw (ex-info "Message seems corrupt or manipulated"
+                      {:type :validation :cause :header})))
+
+    (catch com.fasterxml.jackson.core.JsonParseException e
+      (throw (ex-info "Message seems corrupt or manipulated"
+                      {:type :validation :cause :header})))))
+
+(defn encode-jose-header
+  [{:keys [alg enc] :as header}]
+  (let [header (cond-> header
+                 (keyword? alg)
+                 (assoc :alg (case alg
+                               :eddsa "EdDSA"
+                               :dir   "dir"
+                               (-> alg name str/upper-case)))
+                 (keyword? enc)
+                 (assoc :enc (str/upper-case (name enc))))]
+    (-> header
+        (json/generate-string)
+        (bc/str->bytes)
+        (bc/bytes->b64 true))))

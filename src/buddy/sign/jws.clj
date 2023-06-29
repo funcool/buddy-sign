@@ -18,18 +18,18 @@
 ;; - https://tools.ietf.org/html/draft-ietf-jose-json-web-algorithms-40
 
 (ns buddy.sign.jws
-  "Json Web Signature implementation."
-  (:require [buddy.core.codecs :as codecs]
-            [buddy.core.codecs.base64 :as b64]
-            [buddy.core.mac :as mac]
-            [buddy.core.dsa :as dsa]
-            [buddy.sign.util :as util]
-            [buddy.util.ecdsa :refer [transcode-to-der transcode-to-concat]]
-            [clojure.string :as str]
-            [cheshire.core :as json]))
+  "Json Web Signature implementation"
+  (:require
+   [buddy.core.codecs :as bc]
+   [buddy.core.dsa :as dsa]
+   [buddy.core.mac :as mac]
+   [buddy.sign.util :as util]
+   [buddy.util.ecdsa :refer [transcode-to-der transcode-to-concat]]
+   [cheshire.core :as json]
+   [clojure.string :as str]))
 
 (def +signers-map+
-  "Supported algorithms."
+  "Supported algorithms"
   {:hs256 {:signer   #(mac/hash %1 {:alg :hmac+sha256 :key %2})
            :verifier #(mac/verify %1 %2 {:alg :hmac+sha256 :key %3})}
    :hs384 {:signer   #(mac/hash %1 {:alg :hmac+sha384 :key %2})
@@ -66,111 +66,90 @@
    :eddsa {:signer   #(dsa/sign %1 {:alg :eddsa :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :eddsa :key %3})}})
 
-
 ;; --- Implementation
-
-(defn- encode-header
-  [header]
-  (-> header
-      (update :alg #(if (= % :eddsa) "EdDSA" (str/upper-case (name %))))
-      (json/generate-string)
-      (b64/encode true)
-      (codecs/bytes->str)))
-
-(defn- parse-header
-  [^String data]
-  (try
-    (let [header (-> (b64/decode data)
-                     (codecs/bytes->str)
-                     (json/parse-string true))]
-      (when-not (map? header)
-        (throw (ex-info "Message seems corrupt or manipulated."
-                        {:type :validation :cause :header})))
-      (update header :alg #(keyword (str/lower-case %))))
-    (catch java.lang.NullPointerException e
-      (throw (ex-info "Message seems corrupt or manipulated."
-                      {:type :validation :cause :header})))
-    (catch com.fasterxml.jackson.core.JsonParseException e
-      (throw (ex-info "Message seems corrupt or manipulated."
-                      {:type :validation :cause :header})))))
-
-(defn- encode-payload
-  [input]
-  (-> (b64/encode input true)
-      (codecs/bytes->str)))
-
-(defn- decode-payload
-  [payload]
-  (b64/decode payload))
 
 (defn- calculate-signature
   "Given the bunch of bytes, a private key and algorithm,
-  return a calculated signature as byte array."
+  return a calculated signature as byte array"
   [{:keys [key alg header payload]}]
-  (let [signer (get-in +signers-map+ [alg :signer])
-        authdata (str/join "." [header payload])]
+  (let [signer   (get-in +signers-map+ [alg :signer])
+        authdata (str header "." payload)]
     (-> (signer authdata key)
-        (b64/encode true)
-        (codecs/bytes->str))))
+        (bc/bytes->b64 true)
+        (bc/bytes->str))))
 
 (defn- verify-signature
   "Given a bunch of bytes, a previously generated
   signature, the private key and algorithm, return
-  signature matches or not."
+  signature matches or not"
   [{:keys [alg signature key header payload]}]
-  (let [verifier (get-in +signers-map+ [alg :verifier])
-        authdata (str/join "." [header payload])
-        signature (b64/decode signature)]
-    (verifier authdata signature key)))
+  (try
+    (let [verifier  (get-in +signers-map+ [alg :verifier])
+          authdata  (str header "." payload)
+          signature (-> signature
+                        (bc/str->bytes)
+                        (bc/b64->bytes true))]
+      (verifier authdata signature key))
 
-(defn- split-jws-message
-  [message]
-  (str/split message #"\." 3))
+    (catch java.lang.IllegalArgumentException e
+      (throw (ex-info "Message seems corrupt or manipulated"
+                      {:type :validation :cause :signature}
+                      e)))
+    (catch java.security.SignatureException e
+      (throw (ex-info "Message seems corrupt or manipulated"
+                      {:type :validation :cause :signature}
+                      e)))))
 
 ;; --- Public Api
 
 (defn decode-header
-  "Given a message, decode the header.
-  WARNING: This does not perform any signature validation."
+  "Given a message, decode the header
+
+  WARNING: This does not perform any signature validation"
   [input]
-  (let [[header] (split-jws-message input)]
-    (parse-header header)))
+  (let [[header] (str/split input #"\." 2)]
+    (util/parse-jose-header header)))
 
 (defn sign
-  "Sign arbitrary length string/byte array using
-  json web token/signature."
-  [payload pkey & [{:keys [alg header] :or {alg :hs256} :as opts}]]
-  {:pre [payload]}
-  (let [header (-> (merge {:alg alg} header)
-                   (encode-header))
-        payload (encode-payload payload)
-        signature (calculate-signature {:key pkey
-                                        :alg alg
-                                        :header header
-                                        :payload payload})]
-    (str/join "." [header payload signature])))
+  "Sign arbitrary length string/byte array using json web
+  token/signature"
+  ([payload pkey] (sign payload pkey nil))
+  ([payload pkey {:keys [alg header] :or {alg :hs256} :as opts}]
+   (assert (some? payload) "expected payload to be provided")
+   (assert (some? pkey) "expected pkey to be provided")
+   (let [header    (-> (into {:alg alg} header)
+                       (util/encode-jose-header)
+                       (bc/bytes->str))
+         payload   (-> (bc/->bytes payload)
+                       (bc/bytes->b64 true)
+                       (bc/bytes->str))
+         signature (calculate-signature {:key pkey
+                                         :alg alg
+                                         :header header
+                                         :payload payload})]
+     (str header "." payload "." signature))))
 
 (defn unsign
-  "Given a signed message, verify it and return
-  the decoded payload."
+  "Given a signed message, verify it and return the decoded payload"
   ([input pkey] (unsign input pkey nil))
   ([input pkey {:keys [alg] :or {alg :hs256}}]
-   (let [[header payload signature] (split-jws-message input)
-         header-data (parse-header header)]
-     (when-not
-       (try
-         (verify-signature {:key       (util/resolve-key pkey header-data)
-                            :signature signature
-                            :alg       alg
-                            :header    header
-                            :payload   payload})
-         (catch java.security.SignatureException se
-           (throw (ex-info "Message seems corrupt or manipulated."
-                           {:type :validation :cause :signature}
-                           se))))
-       (throw (ex-info "Message seems corrupt or manipulated."
+   (let [[header payload signature] (some-> input (str/split #"\." 3))]
+     (when (or (nil? header) (nil? payload) (nil? signature))
+       (throw (ex-info "Message seems corrupt or manipulated"
                        {:type :validation :cause :signature})))
-     (decode-payload payload))))
+     (let [header-data (util/parse-jose-header header)
+           params      {:key       (util/resolve-key pkey header-data)
+                        :signature signature
+                        :alg       alg
+                        :header    header
+                        :payload   payload}]
+       (when-not (verify-signature params)
+         (throw (ex-info "Message seems corrupt or manipulated"
+                         {:type :validation :cause :signature})))
+
+       (-> payload
+           (bc/str->bytes)
+           (bc/b64->bytes true))))))
 
 (util/defalias encode sign)
 (util/defalias decode unsign)

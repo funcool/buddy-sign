@@ -21,47 +21,24 @@
 ;; - http://tools.ietf.org/html/rfc3447 (RSA OAEP)
 
 (ns buddy.sign.jwe
-  "Json Web Encryption."
-  (:require [clojure.string :as str]
-            [cheshire.core :as json]
-            [buddy.core.codecs :as codecs]
-            [buddy.core.codecs.base64 :as b64]
-            [buddy.core.bytes :as bytes]
-            [buddy.core.nonce :as nonce]
-            [buddy.core.crypto :as crypto]
-            [buddy.core.keys :as keys]
-            [buddy.util.deflate :as deflate]
-            [buddy.sign.jws :as jws]
-            [buddy.sign.jwe.cek :as cek]
-            [buddy.sign.util :as util])
-  (:import org.bouncycastle.crypto.InvalidCipherTextException
-           java.nio.ByteBuffer))
+  "Json Web Encryption"
+  (:require
+   [buddy.core.bytes :as bytes]
+   [buddy.core.codecs :as bc]
+   [buddy.core.codecs.base64 :as b64]
+   [buddy.core.crypto :as crypto]
+   [buddy.core.keys :as keys]
+   [buddy.core.nonce :as nonce]
+   [buddy.sign.jwe.cek :as cek]
+   [buddy.sign.jws :as jws]
+   [buddy.sign.util :as util]
+   [buddy.util.deflate :as deflate]
+   [cheshire.core :as json]
+   [clojure.string :as str])
+  (:import
+   org.bouncycastle.crypto.InvalidCipherTextException))
 
 ;; --- Implementation details
-
-(defn- encode-header
-  [header]
-  (-> header
-      (update :alg #(if (= % :dir) "dir" (str/upper-case (name %))))
-      (update :enc #(str/upper-case (name %)))
-      (json/generate-string)
-      (b64/encode true)))
-
-(defn- parse-header
-  [^String data]
-  (try
-    (let [{:keys [alg enc] :as header} (-> (b64/decode data)
-                                           (codecs/bytes->str)
-                                           (json/parse-string true))]
-      (when-not (map? header)
-        (throw (ex-info "Message seems corrupt or manipulated."
-                        {:type :validation :cause :header})))
-      (cond-> header
-        alg (assoc :alg (keyword (str/lower-case alg)))
-        enc (assoc :enc (keyword (str/lower-case enc)))))
-    (catch com.fasterxml.jackson.core.JsonParseException e
-      (throw (ex-info "Message seems corrupt or manipulated."
-                      {:type :validation :cause :header})))))
 
 (defn- generate-iv
   [{:keys [enc]}]
@@ -75,13 +52,14 @@
 
 (defn- encode-payload
   [input zip]
-  (cond-> (codecs/to-bytes input)
+  (cond-> (bc/to-bytes input)
     zip (deflate/compress)))
 
 (defn- decode-payload
-  [payload zip]
-  (cond-> payload
-    zip (deflate/uncompress payload)))
+  [payload header]
+  (let [{:keys [zip]} (util/parse-jose-header header)]
+    (cond-> payload
+      zip (deflate/uncompress payload))))
 
 (defmulti aead-encrypt :alg)
 (defmulti aead-decrypt :alg)
@@ -159,11 +137,14 @@
 
 (defmethod aead-encrypt :a192gcm
   [{:keys [alg plaintext secret iv aad] :as params}]
-  (let [result (crypto/-encrypt {:alg :aes192-gcm :input plaintext
-                                 :key secret :iv iv :aad aad})
-        resultlen (count result)
+  (let [result     (crypto/-encrypt {:alg :aes192-gcm
+                                     :input plaintext
+                                     :key secret
+                                     :iv iv
+                                     :aad aad})
+        resultlen  (count result)
         ciphertext (bytes/slice result 0 (- resultlen 16))
-        tag (bytes/slice result (- resultlen 16) resultlen)]
+        tag        (bytes/slice result (- resultlen 16) resultlen)]
     [ciphertext tag]))
 
 (defmethod aead-decrypt :a192gcm
@@ -191,78 +172,95 @@
                     :iv iv
                     :aad aad}))
 
-(defn- split-jwe-message
-  [message]
-  (str/split message #"\." 5))
-
 ;; --- Public Api
 
-(def ^:private bytes->base64str
-  (comp codecs/bytes->str #(b64/encode % true)))
+(def ^:private bytes->base64
+  (comp bc/bytes->str #(bc/bytes->b64 % true)))
 
 (defn decode-header
   "Given a message, decode the header.
-  WARNING: This does not perform any signature validation."
+  WARNING: This does not perform any signature validation"
   [input]
-  (let [[header] (split-jwe-message input)]
-    (parse-header header)))
+  (let [[header] (str/split input #"\." 2)]
+    (util/parse-jose-header (bc/str->bytes header))))
 
 (defn encrypt
   "Encrypt then sign arbitrary length string/byte array using
-  json web encryption."
-  [payload key & [{:keys [alg enc zip header]
-                  :or {alg :dir enc :a128cbc-hs256 zip false}
-                  :as opts}]]
-  (let [scek (cek/generate {:key key :alg alg :enc enc})
-        ecek (cek/encrypt {:key key :cek scek :alg alg :enc enc})
-        iv   (generate-iv {:enc enc})
-        header (cond-> (merge {:alg alg :enc enc} header)
-                 zip (assoc :zip "DEF"))
-        header (encode-header header)
-        payload (encode-payload payload zip)
-        [ciphertext authtag] (aead-encrypt {:alg enc
-                                            :plaintext payload
-                                            :secret scek
-                                            :aad header
-                                            :iv iv})]
-    (str/join "." [(codecs/bytes->str header)
-                   (bytes->base64str ecek)
-                   (bytes->base64str iv)
-                   (bytes->base64str ciphertext)
-                   (bytes->base64str authtag)])))
+  json web encryption"
+  ([payload key] (encrypt payload key nil))
+  ([payload key {:keys [alg enc zip header]
+                 :or {alg :dir enc :a128cbc-hs256 zip false}}]
+   (let [scek    (cek/generate {:key key :alg alg :enc enc})
+         ecek    (cek/encrypt {:key key :cek scek :alg alg :enc enc})
+         iv      (generate-iv {:enc enc})
+         header  (cond-> (into {:alg alg :enc enc} header)
+                   zip (assoc :zip "DEF"))
+         header  (util/encode-jose-header header)
+         payload (encode-payload payload zip)
+
+         [ciphertext authtag]
+         (aead-encrypt {:alg enc
+                        :plaintext payload
+                        :secret scek
+                        :aad header
+                        :iv iv})]
+
+     (str (bc/bytes->str header) "."
+          (bytes->base64 ecek) "."
+          (bytes->base64 iv) "."
+          (bytes->base64 ciphertext) "."
+          (bytes->base64 authtag)))))
 
 (defn decrypt
-  "Decrypt the jwe compliant message and return its payload."
+  "Decrypt the jwe compliant message and return its payload"
   ([input key] (decrypt input key nil))
   ([input key {:keys [alg enc] :or {alg :dir enc :a128cbc-hs256} :as opts}]
-   (let [[header ecek iv ciphertext authtag] (split-jwe-message input)]
+   (let [[header ecek iv ciphertext authtag] (some-> input (str/split #"\." 5))]
      (when (or (nil? ecek) (nil? iv) (nil? ciphertext) (nil? authtag))
-       (throw (ex-info "Message seems corrupt or manipulated."
+       (throw (ex-info "Message seems corrupt or manipulated"
                        {:type :validation :cause :signature})))
      (try
-       (let [{:keys [zip]} (parse-header header)
-             ecek (b64/decode ecek)
-             scek (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
-             iv (b64/decode iv)
-             header (codecs/str->bytes header)
-             ciphertext (b64/decode ciphertext)
-             authtag (b64/decode authtag)
-             payload (aead-decrypt {:ciphertext ciphertext
+       (let [ecek    (-> ecek
+                         (bc/str->bytes)
+                         (bc/b64->bytes true))
+             iv      (-> iv
+                         (bc/str->bytes)
+                         (bc/b64->bytes true))
+             ctxt    (-> ciphertext
+                         (bc/str->bytes)
+                         (bc/b64->bytes true))
+             authtag (-> authtag
+                         (bc/str->bytes)
+                         (bc/b64->bytes true))
+
+             header  (bc/str->bytes header)
+
+             scek    (cek/decrypt {:key key :ecek ecek :alg alg :enc enc})
+
+             payload (aead-decrypt {:ciphertext ctxt
                                     :authtag authtag
                                     :alg enc
                                     :aad header
                                     :secret scek
                                     :iv iv})]
-         (decode-payload payload zip))
+         (decode-payload payload header))
+
+       (catch java.lang.IllegalArgumentException e
+         (throw (ex-info "Message seems corrupt or manipulated"
+                         {:type :validation :cause :token}
+                         e)))
        (catch java.lang.AssertionError e
-         (throw (ex-info "Message seems corrupt or manipulated."
-                         {:type :validation :cause :token})))
+         (throw (ex-info "Message seems corrupt or manipulated"
+                         {:type :validation :cause :token}
+                         e)))
        (catch com.fasterxml.jackson.core.JsonParseException e
-         (throw (ex-info "Message seems corrupt or manipulated."
-                         {:type :validation :cause :signature})))
+         (throw (ex-info "Message seems corrupt or manipulated"
+                         {:type :validation :cause :signature}
+                         e)))
        (catch org.bouncycastle.crypto.InvalidCipherTextException e
-         (throw (ex-info "Message seems corrupt or manipulated."
-                         {:type :validation :cause :signature})))))))
+         (throw (ex-info "Message seems corrupt or manipulated"
+                         {:type :validation :cause :signature}
+                         e)))))))
 
 (util/defalias encode encrypt)
 (util/defalias decode decrypt)

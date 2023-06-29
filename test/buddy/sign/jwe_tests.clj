@@ -86,7 +86,7 @@
   (is (thrown? AssertionError (jwe/encrypt data key16 {:enc :a128gcm :alg :a256kw})))
   )
 
-(defspec jwe-spec-alg-dir-enc-a256gcm 500
+(defspec jwe-spec-alg-dir-enc-a256gcm 1000
   (props/for-all
    [zip gen/boolean
     data gen/bytes]
@@ -94,7 +94,7 @@
          res2 (jwe/decrypt res1 key32 {:enc :a256gcm :alg :dir :zip zip})]
      (is (bytes/equals? res2 data)))))
 
-(defspec jwe-spec-alg-dir-enc-a192gcm 500
+(defspec jwe-spec-alg-dir-enc-a192gcm 1000
   (props/for-all
    [zip gen/boolean
     data gen/bytes]
@@ -102,7 +102,7 @@
          res2 (jwe/decrypt res1 key24 {:enc :a192gcm :alg :dir :zip zip})]
      (is (bytes/equals? res2 data)))))
 
-(defspec jwe-spec-alg-dir-enc-a128gcm 500
+(defspec jwe-spec-alg-dir-enc-a128gcm 1000
   (props/for-all
    [zip gen/boolean
     data gen/bytes]
@@ -110,7 +110,7 @@
          res2 (jwe/decrypt res1 key16 {:enc :a128gcm :alg :dir :zip zip})]
      (is (bytes/equals? res2 data)))))
 
-(defspec jwe-spec-alg-dir-enc-a256cbc-hs512 500
+(defspec jwe-spec-alg-dir-enc-a256cbc-hs512 1000
   (props/for-all
    [zip gen/boolean
     data gen/bytes]
@@ -118,7 +118,7 @@
          res2 (jwe/decrypt res1 key64 {:enc :a256cbc-hs512 :zip zip})]
      (is (bytes/equals? res2 data)))))
 
-(defspec jwe-spec-alg-dir-enc-a192cbc-hs384 500
+(defspec jwe-spec-alg-dir-enc-a192cbc-hs384 1000
   (props/for-all
    [zip gen/boolean
     data gen/bytes]
@@ -126,7 +126,7 @@
          res2 (jwe/decrypt res1 key48 {:enc :a192cbc-hs384 :zip zip})]
      (is (bytes/equals? res2 data)))))
 
-(defspec jwe-spec-alg-dir-enc-a128cbc-hs256 500
+(defspec jwe-spec-alg-dir-enc-a128cbc-hs256 1000
   (props/for-all
    [zip gen/boolean
     data gen/bytes]
@@ -134,7 +134,7 @@
          res2 (jwe/decrypt res1 key32 {:enc :a128cbc-hs256 :zip zip})]
      (is (bytes/equals? res2 data)))))
 
-(defspec jwe-spec-wrong-data 500
+(defspec jwe-spec-wrong-data 1000
   (props/for-all
    [data gen/string-ascii]
    (try
@@ -143,9 +143,11 @@
     (catch clojure.lang.ExceptionInfo e
       (let [cause (:cause (ex-data e))]
         (is (or (= cause :signature)
+                (= cause :token)
+                (= cause :authtag)
                 (= cause :header))))))))
 
-(defspec jwe-spec-wrong-token 500
+(defspec jwe-spec-wrong-token 1000
   (props/for-all
    [data1 gen/string-alphanumeric
     data2 gen/string-alphanumeric
@@ -159,18 +161,11 @@
        (catch clojure.lang.ExceptionInfo e
          (let [cause (:cause (ex-data e))]
            (is (or (= cause :signature)
+                   (= cause :token)
+                   (= cause :authtag)
                    (= cause :header)))))))))
 
-;; (deftest jwe-spec-wrong-data
-;;   (try
-;;     (jwe/decrypt ">e31kI6Gr)u2#FGRtGOGeK6^GM:\\]OuUgR7Qwqs[`pUw^Ll~VC?V:ddTa%l@$&]/T%z<`[]6[" secret)
-;;     (throw (Exception. "unexpected"))
-;;     (catch clojure.lang.ExceptionInfo e
-;;       (let [cause (:cause (ex-data e))]
-;;         (is (or (= cause :signature)
-;;                 (= cause :header)))))))
-
-(defspec jwe-spec-alg-rsa 100
+(defspec jwe-spec-alg-rsa 500
   (props/for-all
    [enc (gen/elements encs)
     alg (gen/elements rsa-algs)
@@ -180,7 +175,7 @@
          res2 (jwe/decrypt res1 rsa-privkey {:enc enc :alg alg :zip zip})]
      (is (bytes/equals? res2 data)))))
 
-(defspec jwe-spec-alg-a128kw 500
+(defspec jwe-spec-alg-a128kw 1000
   (props/for-all
    [enc (gen/elements encs)
     zip gen/boolean
@@ -189,7 +184,7 @@
          res2 (jwe/decrypt res1 key16 {:enc enc :alg :a128kw :zip zip})]
      (is (bytes/equals? res2 data)))))
 
-(defspec jwe-spec-alg-a192kw 500
+(defspec jwe-spec-alg-a192kw 1000
   (props/for-all
    [enc (gen/elements encs)
     zip gen/boolean
@@ -198,7 +193,7 @@
          res2 (jwe/decrypt res1 key24 {:enc enc :alg :a192kw :zip zip})]
      (is (bytes/equals? res2 data)))))
 
-(defspec jwe-spec-alg-a256kw 500
+(defspec jwe-spec-alg-a256kw 1000
   (props/for-all
    [enc (gen/elements encs)
     zip gen/boolean

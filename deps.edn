@@ -1,5 +1,8 @@
 {:deps
- {buddy/buddy-core {:mvn/version "1.11.418"}}
+ {buddy/buddy-core
+  {:mvn/version "1.11.423"
+   ;; :local/root "../buddy-core"
+   }}
  :paths ["src" "resources" "target/classes"]
  :aliases
  {:dev
@@ -10,20 +13,18 @@
     org.clojure/clojure {:mvn/version "1.11.1"}
     com.bhauman/rebel-readline {:mvn/version "RELEASE"}
     criterium/criterium {:mvn/version "RELEASE"}
-
     com.taoensso/nippy {:mvn/version "3.2.0"}
     com.nimbusds/nimbus-jose-jwt {:mvn/version "9.31"}
     }
    :extra-paths ["test" "dev"]}
-
 
   :test
   {:extra-paths ["test"]
    :extra-deps
    {io.github.cognitect-labs/test-runner
     {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
-   :main-opts ["-m" "cognitect.test-runner"]
-   :exec-fn cognitect.test-runner.api/test}
+   :exec-fn cognitect.test-runner.api/test
+   :exec-args {:patterns [".*-test.*"]}}
 
   :build
   {:extra-deps

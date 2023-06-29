@@ -13,11 +13,20 @@
 ;; limitations under the License.
 
 (ns buddy.sign.jwt
-  (:require [buddy.core.codecs :as codecs]
-            [buddy.sign.jws :as jws]
-            [buddy.sign.jwe :as jwe]
-            [buddy.sign.util :as util]
-            [cheshire.core :as json]))
+  (:require
+   [buddy.core.codecs :as bc]
+   [buddy.sign.jwe :as jwe]
+   [buddy.sign.jws :as jws]
+   [buddy.sign.util :as util]
+   [cheshire.core :as json]
+   [clojure.string :as str]))
+
+(defn decode-header
+  "Given a message, decode the header.
+  WARNING: This does not perform any signature validation"
+  [input]
+  (let [[header] (str/split input #"\." 2)]
+    (util/parse-jose-header (bc/str->bytes header))))
 
 (defn- validate-claims
   "Checks the issuer in the `:iss` claim against one of the allowed
@@ -105,7 +114,7 @@
   "Given a raw headers, try normalize it removing any
   key with null values."
   [data]
-  (into {} (remove (comp nil? second) data)))
+  (into {} (remove (comp nil? val) data)))
 
 (defn- prepare-claims [claims opts]
   (let [additionalclaims (-> (select-keys opts [:exp :nbf :iat :iss :aud])
@@ -127,7 +136,7 @@
   ([message pkey {:keys [skip-validation] :or {skip-validation false} :as opts}]
    (try
      (let [claims (-> (jws/unsign message pkey opts)
-                      (codecs/bytes->str)
+                      (bc/bytes->str)
                       (json/parse-string true))]
        (if skip-validation
          claims
@@ -149,7 +158,7 @@
   ([message pkey {:keys [skip-validation] :or {skip-validation false} :as opts}]
    (try
      (let [claims (-> (jwe/decrypt message pkey opts)
-                      (codecs/bytes->str)
+                      (bc/bytes->str)
                       (json/parse-string true))]
        (if skip-validation
          claims
