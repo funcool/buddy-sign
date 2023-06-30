@@ -1,5 +1,23 @@
 # Changelog
 
+## Version 3.4.351
+
+Date: 2023-06-30
+
+- Update buddy-core to 1.11.423
+- Improve input validation on JWT/JWE/JWS
+- Add convencience helper `decode-header` to JWT ns
+- Add `buddy.sign.jwk` namespace with convenience helpers for creating
+  public and private key instances from JWKs
+
+
+## Version 3.5.346
+
+Date: 2023-05-20
+
+- Fix reflection warnings
+- Update dependencies
+
 ## Version 3.4.333
 
 Date: 2022-01-14
