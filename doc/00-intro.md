@@ -28,13 +28,13 @@ The simplest way to use _buddy-sign_ in a clojure project, is by including it in
 dependency vector on your *_project.clj_* file:
 
 ```clojure
-[buddy/buddy-sign "3.5.346"]
+[buddy/buddy-sign "3.5.351"]
 ```
 
 Or deps.edn:
 
 ```clojure
-buddy/buddy-sign {:mvn/version "3.5.346"}
+buddy/buddy-sign {:mvn/version "3.5.351"}
 ```
 
 And is tested under JDK >= 8
