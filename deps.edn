@@ -1,6 +1,6 @@
 {:deps
  {buddy/buddy-core
-  {:mvn/version "1.11.423"
+  {:mvn/version "1.12.0-430"
    ;; :local/root "../buddy-core"
    }}
  :paths ["src" "resources" "target/classes"]
@@ -10,11 +10,11 @@
    {org.clojure/tools.namespace {:mvn/version "RELEASE"}
     org.clojure/test.check {:mvn/version "RELEASE"}
     org.clojure/tools.deps.alpha {:mvn/version "RELEASE"}
-    org.clojure/clojure {:mvn/version "1.11.1"}
+    org.clojure/clojure {:mvn/version "1.11.3"}
     com.bhauman/rebel-readline {:mvn/version "RELEASE"}
     criterium/criterium {:mvn/version "RELEASE"}
-    com.taoensso/nippy {:mvn/version "3.2.0"}
-    com.nimbusds/nimbus-jose-jwt {:mvn/version "9.31"}
+    com.taoensso/nippy {:mvn/version "3.4.2"}
+    com.nimbusds/nimbus-jose-jwt {:mvn/version "9.40"}
     }
    :extra-paths ["test" "dev"]}
 
@@ -27,8 +27,7 @@
    :exec-args {:patterns [".*-test.*"]}}
 
   :build
-  {:extra-deps
-   {io.github.clojure/tools.build {:git/tag "v0.9.3" :git/sha "e537cd1"}}
+  {:extra-deps {io.github.clojure/tools.build {:git/tag "v0.10.5" :git/sha "2a21b7a"}}
    :ns-default build}
 
   :codox
