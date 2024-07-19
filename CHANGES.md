@@ -1,5 +1,12 @@
 # Changelog
 
+## Version 3.6.1-359
+
+Date: 2024-07-19
+
+- Add missing resolve-key call on sign method
+
+
 ## Version 3.6.0-357
 
 Date: 2024-07-19
