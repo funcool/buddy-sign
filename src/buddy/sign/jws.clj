@@ -117,7 +117,9 @@
   ([payload pkey {:keys [alg header] :or {alg :hs256} :as opts}]
    (assert (some? payload) "expected payload to be provided")
    (assert (some? pkey) "expected pkey to be provided")
-   (let [header    (-> (into {:alg alg} header)
+   (let [header    (into {:alg alg} header)
+         pkey      (util/resolve-key pkey header)
+         header    (-> header
                        (util/encode-jose-header)
                        (bc/bytes->str))
          payload   (-> (bc/->bytes payload)
