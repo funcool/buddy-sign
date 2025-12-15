@@ -72,6 +72,8 @@
            :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha256 :key %3 })}
    :es512 {:signer   #(dsa/sign %1 {:alg :ecdsa+sha512 :key %2})
            :verifier #(dsa/verify %1 %2 {:alg :ecdsa+sha512 :key %3})}
+   :eddsa {:signer #(dsa/sign %1 {:alg :eddsa :key %2})
+           :verifier #(dsa/verify %1 %2 {:alg :eddsa :key %3})}
    :poly1305-aes {:signer   #(sign-poly %1 {:alg :poly1305+aes :key %2})
                   :verifier #(verify-poly %1 %2 {:alg :poly1305+aes :key %3})}
    :poly1305-serpent {:signer   #(sign-poly %1 {:alg :poly1305+serpent :key %2})
